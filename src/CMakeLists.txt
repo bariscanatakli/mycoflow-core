@@ -2,6 +2,14 @@
 include(CheckIncludeFile)
 set(SOURCES
     main.c
+    myco_log.c
+    myco_config.c
+    myco_sense.c
+    myco_persona.c
+    myco_control.c
+    myco_act.c
+    myco_ebpf.c
+    myco_ubus.c
 )
 
 # eBPF object build (requires clang/llvm)
@@ -25,6 +33,9 @@ endif()
 
 # Executable oluştur (mycoflowd)
 add_executable(mycoflowd ${SOURCES})
+
+# Math library (needed for fabs in sense module)
+target_link_libraries(mycoflowd PRIVATE m)
 
 # Optional ubus support (OpenWrt)
 check_include_file(libubus.h HAVE_UBUS_H)

@@ -9,7 +9,6 @@ mycoflow_test
 
 # Editor/IDE files
 .vscode/
-.devcontainer/
 *.swp
 *.swo
 *~

@@ -1,0 +1,30 @@
+{
+  "name": "MycoFlow Dev (OpenWrt ARM64)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+        "C_Cpp.default.cStandard": "c11",
+        "cmake.configureArgs": [],
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake"
+      ]
+    }
+  },
+
+  "postCreateCommand": "echo '✅ MycoFlow DevContainer hazır!' && echo 'Native build:  cd build && cmake .. && make' && echo 'Cross build:   cd build && cmake -DCMAKE_TOOLCHAIN_FILE=/opt/openwrt-toolchain.cmake .. && make'",
+
+  "remoteUser": "root"
+}
