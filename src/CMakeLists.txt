@@ -10,6 +10,7 @@ set(SOURCES
     myco_act.c
     myco_ewma.c
     myco_ebpf.c
+    myco_netlink.c
     myco_ubus.c
 )
 

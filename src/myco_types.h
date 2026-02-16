@@ -50,6 +50,10 @@ typedef struct {
     double rx_bps;
     double tx_bps;
     double cpu_pct;
+    /* Qdisc stats (from netlink) */
+    uint32_t qdisc_backlog;
+    uint32_t qdisc_drops;
+    uint32_t qdisc_overlimits;
 } metrics_t;
 
 /* ── Persona ────────────────────────────────────────────────── */

@@ -178,8 +178,9 @@ int main(void) {
         pthread_mutex_unlock(&g_state_mutex);
 
         log_msg(LOG_INFO, "loop",
-                "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% persona=%s bw=%dkbit reason=%s",
+                "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% qbl=%u qdr=%u persona=%s bw=%dkbit reason=%s",
                 metrics.rtt_ms, raw_rtt, metrics.jitter_ms, raw_jitter, metrics.tx_bps, metrics.rx_bps, metrics.cpu_pct,
+                metrics.qdisc_backlog, metrics.qdisc_drops,
                 persona_name(persona), control_state.current.bandwidth_kbit, reason);
 
         dump_metrics(&cfg, &metrics, persona, reason);

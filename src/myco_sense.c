@@ -4,6 +4,7 @@
  */
 #include "myco_sense.h"
 #include "myco_log.h"
+#include "myco_netlink.h"
 
 #include <errno.h>
 #include <math.h>
@@ -141,6 +142,7 @@ int sense_init(const char *iface, int dummy_metrics) {
     g_prev_rtt = 10.0;
     g_prev_cpu_total = 0;
     g_prev_cpu_idle = 0;
+    netlink_init();
     return 0;
 }
 
@@ -180,6 +182,12 @@ int sense_sample(const char *iface, const char *probe_host, double interval_s, i
     g_prev_rtt = out->rtt_ms;
 
     out->cpu_pct = read_cpu_pct();
+
+    /* Qdisc stats via netlink */
+    netlink_get_qdisc_stats(iface,
+                            &out->qdisc_backlog,
+                            &out->qdisc_drops,
+                            &out->qdisc_overlimits);
 
     return 0;
 }
