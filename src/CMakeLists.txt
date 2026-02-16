@@ -36,7 +36,8 @@ endif()
 add_executable(mycoflowd ${SOURCES})
 
 # Math library (needed for fabs in sense module)
-target_link_libraries(mycoflowd PRIVATE m)
+find_package(Threads REQUIRED)
+target_link_libraries(mycoflowd PRIVATE m Threads::Threads)
 
 # Optional ubus support (OpenWrt)
 check_include_file(libubus.h HAVE_UBUS_H)

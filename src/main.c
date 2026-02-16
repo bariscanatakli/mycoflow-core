@@ -37,6 +37,7 @@ metrics_t g_last_baseline;
 policy_t  g_last_policy;
 persona_t g_last_persona = PERSONA_UNKNOWN;
 char      g_last_reason[128];
+pthread_mutex_t g_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* ── Signal handler ─────────────────────────────────────────── */
 
@@ -153,21 +154,28 @@ int main(void) {
         metrics.jitter_ms = ewma_update(&ewma_jitter, metrics.jitter_ms, cfg.ewma_alpha);
 
         /* Infer */
+        pthread_mutex_lock(&g_state_mutex);
+        int persona_override = g_persona_override_active;
+        persona_t override_val = g_persona_override;
+        pthread_mutex_unlock(&g_state_mutex);
+
         persona_t persona = persona_update(&persona_state, &metrics);
-        if (g_persona_override_active) {
-            persona = g_persona_override;
+        if (persona_override) {
+            persona = override_val;
         }
         policy_t desired;
         char reason[128];
         int change = control_decide(&control_state, &cfg, &metrics, &baseline, persona, &desired, reason, sizeof(reason));
 
         /* Update shared state */
+        pthread_mutex_lock(&g_state_mutex);
         g_last_metrics = metrics;
         g_last_baseline = baseline;
         g_last_persona = persona;
         g_last_policy = control_state.current;
         strncpy(g_last_reason, reason, sizeof(g_last_reason) - 1);
         g_last_reason[sizeof(g_last_reason) - 1] = '\0';
+        pthread_mutex_unlock(&g_state_mutex);
 
         log_msg(LOG_INFO, "loop",
                 "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% persona=%s bw=%dkbit reason=%s",

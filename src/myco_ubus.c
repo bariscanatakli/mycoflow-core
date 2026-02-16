@@ -48,6 +48,7 @@ static const struct blobmsg_policy persona_policy[__PERSONA_MAX] = {
 /* ── Handlers ───────────────────────────────────────────────── */
 
 static void ubus_fill_status(struct blob_buf *buf) {
+    pthread_mutex_lock(&g_state_mutex);
     void *metrics = blobmsg_open_table(buf, "metrics");
     blobmsg_add_double(buf, "rtt_ms", g_last_metrics.rtt_ms);
     blobmsg_add_double(buf, "jitter_ms", g_last_metrics.jitter_ms);
@@ -73,6 +74,7 @@ static void ubus_fill_status(struct blob_buf *buf) {
     if (g_persona_override_active) {
         blobmsg_add_string(buf, "persona_override_value", persona_name(g_persona_override));
     }
+    pthread_mutex_unlock(&g_state_mutex);
 }
 
 static int ubus_status(struct ubus_context *ctx,
@@ -120,6 +122,7 @@ static int ubus_policy_set(struct ubus_context *ctx,
                            (double)g_ubus_cfg->min_bandwidth_kbit,
                            (double)g_ubus_cfg->max_bandwidth_kbit);
 
+    pthread_mutex_lock(&g_state_mutex);
     policy_t desired = g_ubus_control->current;
     desired.bandwidth_kbit = bw;
     desired.boosted = 0;
@@ -130,6 +133,7 @@ static int ubus_policy_set(struct ubus_context *ctx,
         g_last_policy = desired;
         snprintf(g_last_reason, sizeof(g_last_reason), "ubus-set");
     }
+    pthread_mutex_unlock(&g_state_mutex);
     return 0;
 }
 
@@ -148,6 +152,7 @@ static int ubus_policy_boost(struct ubus_context *ctx,
     if (tb[POLICY_STEP]) {
         step = blobmsg_get_u32(tb[POLICY_STEP]);
     }
+    pthread_mutex_lock(&g_state_mutex);
     int bw = g_ubus_control->current.bandwidth_kbit + step;
     bw = (int)clamp_double((double)bw,
                            (double)g_ubus_cfg->min_bandwidth_kbit,
@@ -162,6 +167,7 @@ static int ubus_policy_boost(struct ubus_context *ctx,
         g_last_policy = desired;
         snprintf(g_last_reason, sizeof(g_last_reason), "ubus-boost");
     }
+    pthread_mutex_unlock(&g_state_mutex);
     return 0;
 }
 
@@ -180,6 +186,7 @@ static int ubus_policy_throttle(struct ubus_context *ctx,
     if (tb[POLICY_STEP]) {
         step = blobmsg_get_u32(tb[POLICY_STEP]);
     }
+    pthread_mutex_lock(&g_state_mutex);
     int bw = g_ubus_control->current.bandwidth_kbit - step;
     bw = (int)clamp_double((double)bw,
                            (double)g_ubus_cfg->min_bandwidth_kbit,
@@ -194,6 +201,7 @@ static int ubus_policy_throttle(struct ubus_context *ctx,
         g_last_policy = desired;
         snprintf(g_last_reason, sizeof(g_last_reason), "ubus-throttle");
     }
+    pthread_mutex_unlock(&g_state_mutex);
     return 0;
 }
 
@@ -205,11 +213,13 @@ static int ubus_persona_list(struct ubus_context *ctx,
     (void)obj; (void)method; (void)msg;
     struct blob_buf buf;
     blob_buf_init(&buf, 0);
+    pthread_mutex_lock(&g_state_mutex);
     blobmsg_add_string(&buf, "current", persona_name(g_last_persona));
     blobmsg_add_u32(&buf, "override_active", g_persona_override_active);
     if (g_persona_override_active) {
         blobmsg_add_string(&buf, "override", persona_name(g_persona_override));
     }
+    pthread_mutex_unlock(&g_state_mutex);
     ubus_send_reply(ctx, req, buf.head);
     blob_buf_free(&buf);
     return 0;
@@ -237,7 +247,9 @@ static int ubus_persona_add(struct ubus_context *ctx,
     } else {
         g_persona_override = PERSONA_UNKNOWN;
     }
+    pthread_mutex_lock(&g_state_mutex);
     g_persona_override_active = 1;
+    pthread_mutex_unlock(&g_state_mutex);
     return 0;
 }
 
@@ -247,8 +259,10 @@ static int ubus_persona_delete(struct ubus_context *ctx,
                                const char *method,
                                struct blob_attr *msg) {
     (void)obj; (void)method; (void)msg;
+    pthread_mutex_lock(&g_state_mutex);
     g_persona_override_active = 0;
     g_persona_override = PERSONA_UNKNOWN;
+    pthread_mutex_unlock(&g_state_mutex);
     return 0;
 }
 

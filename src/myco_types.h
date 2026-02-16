@@ -6,6 +6,7 @@
 #define MYCO_TYPES_H
 
 #include <signal.h>
+#include <pthread.h>
 
 /* ── Log Levels ─────────────────────────────────────────────── */
 typedef enum {
@@ -87,6 +88,7 @@ extern metrics_t  g_last_baseline;
 extern policy_t   g_last_policy;
 extern persona_t  g_last_persona;
 extern char        g_last_reason[128];
+extern pthread_mutex_t g_state_mutex;
 
 /* ── Utility ────────────────────────────────────────────────── */
 double clamp_double(double value, double min_value, double max_value);
