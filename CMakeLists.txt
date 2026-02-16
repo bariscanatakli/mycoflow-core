@@ -8,5 +8,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 add_compile_options(-Wall -Wextra)
 
+enable_testing()
+
 # src klasörünü projeye dahil et
 add_subdirectory(src)

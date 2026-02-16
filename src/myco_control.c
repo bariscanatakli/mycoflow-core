@@ -100,5 +100,6 @@ void control_on_action_result(control_state_t *state, int success) {
         log_msg(LOG_WARN, "control", "actuation failed, entering safe mode");
         state->safe_mode = 1;
         state->current = state->last_stable;
+        state->stable_cycles = 0;
     }
 }

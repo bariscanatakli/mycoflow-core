@@ -39,6 +39,22 @@ add_executable(mycoflowd ${SOURCES})
 find_package(Threads REQUIRED)
 target_link_libraries(mycoflowd PRIVATE m Threads::Threads)
 
+# Tests
+# enable_testing() moved to root
+
+add_executable(test_ewma tests/test_ewma.c myco_ewma.c)
+add_test(NAME ewma COMMAND test_ewma)
+
+add_executable(test_control tests/test_control.c myco_control.c myco_log.c myco_config.c myco_act.c myco_persona.c)
+target_link_libraries(test_control PRIVATE m Threads::Threads)
+add_test(NAME control COMMAND test_control)
+
+add_executable(test_config tests/test_config.c myco_config.c myco_log.c)
+add_test(NAME config COMMAND test_config)
+
+add_executable(test_persona tests/test_persona.c myco_persona.c myco_log.c)
+add_test(NAME persona COMMAND test_persona)
+
 # Optional ubus support (OpenWrt)
 check_include_file(libubus.h HAVE_UBUS_H)
 if(HAVE_UBUS_H)
