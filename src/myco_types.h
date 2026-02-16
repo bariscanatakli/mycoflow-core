@@ -54,6 +54,8 @@ typedef struct {
     uint32_t qdisc_backlog;
     uint32_t qdisc_drops;
     uint32_t qdisc_overlimits;
+    /* Packet-size signal (from /proc/net/dev) */
+    double avg_pkt_size;
 } metrics_t;
 
 /* ── Persona ────────────────────────────────────────────────── */

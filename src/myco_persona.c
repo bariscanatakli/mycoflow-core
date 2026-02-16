@@ -11,10 +11,33 @@ static persona_t decide_persona(const metrics_t *metrics) {
     if (!metrics) {
         return PERSONA_UNKNOWN;
     }
+    
+    /* Signal 1: RTT/jitter — high values indicate interactive sensitivity */
+    int sig_interactive = 0;
+    int sig_bulk = 0;
+    
     if (metrics->rtt_ms > 40.0 || metrics->jitter_ms > 15.0) {
-        return PERSONA_INTERACTIVE;
+        sig_interactive++;
     }
+    
+    /* Signal 2: TX/RX ratio — heavy upload suggests bulk */
     if (metrics->tx_bps > metrics->rx_bps * 1.5) {
+        sig_bulk++;
+    }
+    
+    /* Signal 3: Average packet size — small packets = interactive */
+    if (metrics->avg_pkt_size > 0.0) {
+        if (metrics->avg_pkt_size < 200.0) {
+            sig_interactive++;  /* gaming, VoIP, DNS */
+        } else if (metrics->avg_pkt_size > 1000.0) {
+            sig_bulk++;         /* large transfers, streaming */
+        }
+    }
+    
+    /* Decision: majority vote across signals */
+    if (sig_interactive > sig_bulk) {
+        return PERSONA_INTERACTIVE;
+    } else if (sig_bulk > sig_interactive) {
         return PERSONA_BULK;
     }
     return PERSONA_UNKNOWN;

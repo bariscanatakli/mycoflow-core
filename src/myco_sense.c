@@ -16,12 +16,15 @@
 
 static unsigned long long g_prev_rx = 0;
 static unsigned long long g_prev_tx = 0;
+static unsigned long long g_prev_rx_pkts = 0;
+static unsigned long long g_prev_tx_pkts = 0;
 static double g_prev_rtt = 10.0;
 static unsigned long long g_prev_cpu_total = 0;
 static unsigned long long g_prev_cpu_idle = 0;
 static int g_seeded = 0;
 
-static int read_netdev(const char *iface, unsigned long long *rx_bytes, unsigned long long *tx_bytes) {
+static int read_netdev(const char *iface, unsigned long long *rx_bytes, unsigned long long *tx_bytes,
+                       unsigned long long *rx_pkts, unsigned long long *tx_pkts) {
     FILE *fp = fopen("/proc/net/dev", "r");
     if (!fp) {
         return -1;
@@ -35,13 +38,15 @@ static int read_netdev(const char *iface, unsigned long long *rx_bytes, unsigned
             continue;
         }
         char name[64];
-        unsigned long long rx = 0;
-        unsigned long long tx = 0;
-        if (sscanf(line, " %63[^:]: %llu %*u %*u %*u %*u %*u %*u %*u %llu",
-                   name, &rx, &tx) == 3) {
+        unsigned long long rb = 0, rp = 0, tb = 0, tp = 0;
+        /* /proc/net/dev format: iface: rx_bytes rx_packets ... tx_bytes tx_packets ... */
+        if (sscanf(line, " %63[^:]: %llu %llu %*u %*u %*u %*u %*u %*u %llu %llu",
+                   name, &rb, &rp, &tb, &tp) == 5) {
             if (strcmp(name, iface) == 0) {
-                *rx_bytes = rx;
-                *tx_bytes = tx;
+                *rx_bytes = rb;
+                *rx_pkts  = rp;
+                *tx_bytes = tb;
+                *tx_pkts  = tp;
                 fclose(fp);
                 return 0;
             }
@@ -153,17 +158,25 @@ int sense_sample(const char *iface, const char *probe_host, double interval_s, i
 
     memset(out, 0, sizeof(*out));
 
-    unsigned long long rx = 0;
-    unsigned long long tx = 0;
-    if (read_netdev(iface, &rx, &tx) != 0) {
+    unsigned long long rx = 0, tx = 0, rx_pkts = 0, tx_pkts = 0;
+    if (read_netdev(iface, &rx, &tx, &rx_pkts, &tx_pkts) != 0) {
         log_msg(LOG_WARN, "sense", "netdev read failed for %s: %s", iface, strerror(errno));
     } else {
         if (g_prev_rx != 0 || g_prev_tx != 0) {
             out->rx_bps = ((double)(rx - g_prev_rx) * 8.0) / interval_s;
             out->tx_bps = ((double)(tx - g_prev_tx) * 8.0) / interval_s;
+            
+            /* Compute average packet size */
+            unsigned long long delta_bytes = (rx - g_prev_rx) + (tx - g_prev_tx);
+            unsigned long long delta_pkts  = (rx_pkts - g_prev_rx_pkts) + (tx_pkts - g_prev_tx_pkts);
+            if (delta_pkts > 0) {
+                out->avg_pkt_size = (double)delta_bytes / (double)delta_pkts;
+            }
         }
         g_prev_rx = rx;
         g_prev_tx = tx;
+        g_prev_rx_pkts = rx_pkts;
+        g_prev_tx_pkts = tx_pkts;
     }
 
     if (dummy_metrics) {
