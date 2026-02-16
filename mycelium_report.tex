@@ -468,17 +468,59 @@ Each test lasts $\geq 10$ minutes with $\geq 5$ repetitions for statistical conf
 
 \vspace{1cm}
 
-% ==== HARDWARE ====
-\section{Hardware Target}
-Xiaomi AX3000T (MT7981B, 256 MB RAM).
+\subsection{Interim Results}
+
+\subsubsection{Source Module Structure}
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Module} & \textbf{File} & \textbf{Responsibility} \\
+\midrule
+Main loop          & \texttt{main.c}           & Init + reflexive cycle \\
+Configuration      & \texttt{myco\_config.c}    & UCI + env + defaults \\
+Sensing            & \texttt{myco\_sense.c}     & Metrics + baseline \\
+Persona            & \texttt{myco\_persona.c}   & 3-signal majority vote \\
+Control            & \texttt{myco\_control.c}   & Hysteresis + policy \\
+Actuation          & \texttt{myco\_act.c}       & CAKE tc commands \\
+EWMA               & \texttt{myco\_ewma.c}      & Exponential smoothing \\
+eBPF               & \texttt{myco\_ebpf.c}      & BPF map reading \\
+Netlink            & \texttt{myco\_netlink.c}   & Qdisc stats (RTM\_GETQDISC) \\
+Flow table         & \texttt{myco\_flow.c}      & LRU conntrack flows \\
+Logging            & \texttt{myco\_log.c}       & Structured logging \\
+ubus API           & \texttt{myco\_ubus.c}      & OpenWrt IPC surface \\
+\bottomrule
+\end{tabular}
+\caption{MycoFlow source modules and responsibilities.}
+\end{table}
+
+\subsubsection{Unit Test Verification}
+Four test suites (CTest) pass with 100\% success rate:
 \begin{itemize}
-    \item CPU usage $<$ 20\% avg (40\% peak)
-    \item RAM $<$ 64 MB total
-    \item Latency overhead $<$ 2 ms
-    \item Package size $<$ 8 MB
+  \item \texttt{test\_ewma}: EWMA convergence with various $\alpha$ values
+  \item \texttt{test\_control}: Congestion/clear/outlier scenarios
+  \item \texttt{test\_config}: Default values and environment overrides
+  \item \texttt{test\_persona}: k-of-m voting and hysteresis transitions
 \end{itemize}
 
-\vspace{1cm}
+\subsubsection{Integration Verification}
+Docker-based integration harness confirms:
+\begin{itemize}
+  \item Successful compilation (including eBPF object via \texttt{clang -target bpf})
+  \item Netlink socket initialization
+  \item Baseline calibration (5-sample average)
+  \item Main loop execution with all metric fields populated
+  \item Clean shutdown on SIGTERM
+\end{itemize}
+
+\subsubsection{Deployment Artifacts}
+\begin{itemize}
+  \item \textbf{luci-app-mycoflow:} JavaScript dashboard under Services $\rightarrow$ MycoFlow with live metric cards, persona badge, and manual override controls.
+  \item \textbf{mycoflowd.ipk:} OpenWrt package with procd init script, UCI configuration, and auto-enable on install.
+\end{itemize}
+
+
+
 
 % ==== SECURITY ====
 \section{Security and Ethics}
