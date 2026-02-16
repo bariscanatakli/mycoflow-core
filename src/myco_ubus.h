@@ -15,4 +15,7 @@ static inline void ubus_start(myco_config_t *cfg, control_state_t *control) { (v
 static inline void ubus_stop(void) {}
 #endif
 
+// Fallback mechanism when ubus is not available
+void myco_dump_json(void);
+
 #endif /* MYCO_UBUS_H */

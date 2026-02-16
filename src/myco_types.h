@@ -95,6 +95,7 @@ extern metrics_t  g_last_baseline;
 extern policy_t   g_last_policy;
 extern persona_t  g_last_persona;
 extern char        g_last_reason[128];
+extern int         g_last_safe_mode;
 extern pthread_mutex_t g_state_mutex;
 
 /* ── Utility ────────────────────────────────────────────────── */

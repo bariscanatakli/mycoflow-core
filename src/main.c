@@ -37,6 +37,7 @@ metrics_t g_last_metrics;
 metrics_t g_last_baseline;
 policy_t  g_last_policy;
 persona_t g_last_persona = PERSONA_UNKNOWN;
+int       g_last_safe_mode = 0;
 char      g_last_reason[128];
 pthread_mutex_t g_state_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -180,9 +181,13 @@ int main(void) {
         g_last_baseline = baseline;
         g_last_persona = persona;
         g_last_policy = control_state.current;
+        g_last_safe_mode = control_state.safe_mode;
         strncpy(g_last_reason, reason, sizeof(g_last_reason) - 1);
         g_last_reason[sizeof(g_last_reason) - 1] = '\0';
         pthread_mutex_unlock(&g_state_mutex);
+
+        /* Dump state to JSON for Lua bridge */
+        myco_dump_json();
 
         log_msg(LOG_INFO, "loop",
                 "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% qbl=%u qdr=%u flows=%d persona=%s bw=%dkbit reason=%s",

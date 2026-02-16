@@ -1,0 +1,47 @@
+services:
+  openwrt:
+    build:
+      context: .
+      dockerfile: docker/openwrt/Dockerfile
+    container_name: mycoflow-openwrt
+    privileged: true
+    ports:
+      - "8080:80"
+    networks:
+      myconet:
+        ipv4_address: 10.10.10.1
+    restart: unless-stopped
+
+  client1:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    container_name: mycoflow-client1
+    networks:
+      - myconet
+    depends_on:
+      - openwrt
+    volumes:
+      - ./docker/traffic:/traffic:ro
+    restart: unless-stopped
+
+  client2:
+    build:
+      context: .
+      dockerfile: docker/client/Dockerfile
+    container_name: mycoflow-client2
+    networks:
+      - myconet
+    depends_on:
+      - openwrt
+    volumes:
+      - ./docker/traffic:/traffic:ro
+    restart: unless-stopped
+
+networks:
+  myconet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.254
