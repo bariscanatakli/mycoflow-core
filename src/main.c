@@ -16,6 +16,7 @@
 #include "myco_act.h"
 #include "myco_ebpf.h"
 #include "myco_ewma.h"
+#include "myco_flow.h"
 #include "myco_ubus.h"
 
 #include <signal.h>
@@ -70,6 +71,7 @@ int main(void) {
     control_state_t control_state;
     ewma_filter_t ewma_rtt;
     ewma_filter_t ewma_jitter;
+    flow_table_t  flow_table;
 
     if (config_load(&cfg) != 0) {
         fprintf(stderr, "MycoFlow config load failed\n");
@@ -98,6 +100,7 @@ int main(void) {
 
     ewma_init(&ewma_rtt);
     ewma_init(&ewma_jitter);
+    flow_table_init(&flow_table);
 
     double interval_s = 1.0 / cfg.sample_hz;
     log_msg(LOG_INFO, "main", "baseline capture: %d samples", cfg.baseline_samples);
@@ -147,6 +150,10 @@ int main(void) {
 
         ebpf_tick(&cfg);
 
+        /* Flow table: populate from conntrack, evict stale (>60s) */
+        flow_table_populate_conntrack(&flow_table, now_monotonic_s());
+        flow_table_evict_stale(&flow_table, now_monotonic_s(), 60.0);
+
         /* EWMA smoothing */
         double raw_rtt = metrics.rtt_ms;
         double raw_jitter = metrics.jitter_ms;
@@ -178,9 +185,10 @@ int main(void) {
         pthread_mutex_unlock(&g_state_mutex);
 
         log_msg(LOG_INFO, "loop",
-                "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% qbl=%u qdr=%u persona=%s bw=%dkbit reason=%s",
+                "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% qbl=%u qdr=%u flows=%d persona=%s bw=%dkbit reason=%s",
                 metrics.rtt_ms, raw_rtt, metrics.jitter_ms, raw_jitter, metrics.tx_bps, metrics.rx_bps, metrics.cpu_pct,
                 metrics.qdisc_backlog, metrics.qdisc_drops,
+                flow_table_active_count(&flow_table),
                 persona_name(persona), control_state.current.bandwidth_kbit, reason);
 
         dump_metrics(&cfg, &metrics, persona, reason);

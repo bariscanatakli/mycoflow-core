@@ -11,6 +11,7 @@ set(SOURCES
     myco_ewma.c
     myco_ebpf.c
     myco_netlink.c
+    myco_flow.c
     myco_ubus.c
 )
 
