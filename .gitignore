@@ -1,0 +1,24 @@
+# C/C++ build files
+build/
+*.o
+*.out
+*.so
+*.a
+mycoflowd
+mycoflow_test
+
+# Editor/IDE files
+.vscode/
+.devcontainer/
+*.swp
+*.swo
+*~
+
+# Generated files
+mycelium_report.pdf
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile

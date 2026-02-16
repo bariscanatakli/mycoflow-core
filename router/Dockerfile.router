@@ -1,0 +1,27 @@
+# --- Sahne 1: Hazırlık (Builder) ---
+# ARM64 rootfs icin imaji arm64 olarak olustur.
+FROM --platform=linux/arm64 ubuntu:22.04 as builder
+
+# Gerekli araçları kur
+RUN apt-get update && apt-get install -y wget tar
+
+WORKDIR /rootfs
+
+# 1. OpenWrt 23.05.2 (Generic ARM64 / ARMv8) RootFS indir
+RUN wget https://downloads.openwrt.org/releases/23.05.2/targets/armsr/armv8/openwrt-23.05.2-armsr-armv8-rootfs.tar.gz -O rootfs.tar.gz
+
+# 2. Dosyayı çıkart ve temizle
+RUN tar -xvf rootfs.tar.gz && rm rootfs.tar.gz
+
+# --- Sahne 2: Final İmaj (Scratch) ---
+# Burası "scratch" olduğu için mimarisi yoktur, içine koyduğumuz dosya mimariyi belirler.
+FROM scratch
+
+# Dosya sistemini kopyala
+COPY --from=builder /rootfs /
+
+# Metadata (Burası hala ARM64 olarak etiketleniyor)
+LABEL org.openwrt.architecture="aarch64"
+LABEL org.openwrt.version="23.05.2"
+
+CMD ["/sbin/init"]

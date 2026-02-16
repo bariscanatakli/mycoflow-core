@@ -1,0 +1,43 @@
+services:
+  router-sim:
+    # BUILD AYARLARI:
+    build:
+      context: .
+      dockerfile: Dockerfile.router
+    # Imaj adi (Build edildikten sonra bu isimle saklanacak)
+    image: mycoflow/router:custom-arm64
+    
+    # KRITIK: Bu konteynerin ARM64 mimarisinde calisacagini soyluyoruz
+    # (QEMU burada devreye girecek)
+    platform: linux/arm64
+    
+    container_name: mycoflow-router-sim
+    entrypoint: ["/bin/sh", "-c"]
+
+    network_mode: host
+    
+    # Konteyner baslayinca calisacak komut
+    command: 
+      - |
+        echo ">>> Sanal Router Baslatildi (Custom Build ARM64)..."
+        echo ">>> Mimari Kontrolu:"
+        uname -m
+        echo ">>> LuCI ve uhttpd baslatiliyor..."
+        mkdir -p /var/lock /var/run
+        opkg update || true
+        opkg install luci uhttpd dropbear || true
+        /etc/init.d/uhttpd enable
+        /etc/init.d/uhttpd restart || true
+        /etc/init.d/dropbear enable
+        /etc/init.d/dropbear restart || true
+        echo ">>> Binary bekleniyor: /usr/bin/mycoflow_mnt/mycoflowd"
+        # OpenWrt init (procd) baslat
+        exec /sbin/init
+        
+    volumes:
+      # Build klasörünü router içine bağlıyoruz
+      - ../build/src:/usr/bin/mycoflow_mnt
+
+    # Host networking ile port map gerekmez
+      
+    # host network kullandigimiz icin sysctl uygulanmiyor
