@@ -204,12 +204,16 @@ where $g(\cdot)$ is bounded (e.g. $\tanh$) and $(k_u,k_d)$ are rate-limited step
 \end{figure}
 
 \subsection{Persona Inference Heuristics}
-Signals: DNS/SNI category, packet-size histogram, inter-arrival variance, flow symmetry, time-of-day prior.
-Confidence accumulator:
-\[
-c_p\leftarrow \beta c_p+(1-\beta)\phi_p(\text{signals}),\quad \beta\in[0,1)
-\]
-Persona $\arg\max_p c_p$ with sticky hysteresis prevents rapid class flips.
+The current implementation uses a pragmatic three-signal majority vote for persona classification:
+\begin{enumerate}
+  \item \textbf{RTT/Jitter signal:} $r_t > 40\text{ms} \lor j_t > 15\text{ms}$ suggests interactive traffic.
+  \item \textbf{TX/RX ratio:} $\text{tx\_bps} > 1.5 \cdot \text{rx\_bps}$ indicates bulk upload.
+  \item \textbf{Average packet size:} $\bar{s}_t < 200\text{B}$ favors interactive (gaming, VoIP); $\bar{s}_t > 1000\text{B}$ favors bulk.
+\end{enumerate}
+The final decision is $\arg\max_p \text{vote}_p$ across these signals.
+A $k$-of-$m$ sliding window (default $k=3, m=5$) with sticky hysteresis prevents rapid class flips.
+
+\textit{Note: The original design envisioned DNS/SNI categorization and confidence accumulators ($c_p \leftarrow \beta c_p + (1-\beta)\phi_p$). These were simplified to the three-signal heuristic above as a pragmatic compromise for the embedded target, where DNS inspection requires additional kernel hooks.}
 
 \newpage
 
@@ -429,8 +433,22 @@ Time complexity per cycle $O(F + \log A)$, where $F$ = active flows read from eB
 \subsection{Resource Budget}
 \begin{itemize}
 \item CPU: target $<20\%$ avg; eBPF sampling at 1–2 Hz; user space loop at 1 Hz.
-\item RAM: $<64$ MB including flow tables; cap maps by LRU evict.
+\item RAM: $<64$ MB including flow tables; cap maps by LRU evict (256-entry userspace flow table).
 \item Flash: package $<8$ MB; logs rotated (size/time).
+\end{itemize}
+
+\subsection{Implementation Status}
+The following modules have been implemented and verified:
+\begin{itemize}
+  \item \textbf{Modular architecture:} 11 source files (\texttt{main.c}, \texttt{myco\_sense.c}, \texttt{myco\_persona.c}, \texttt{myco\_control.c}, \texttt{myco\_act.c}, \texttt{myco\_ewma.c}, \texttt{myco\_ebpf.c}, \texttt{myco\_netlink.c}, \texttt{myco\_flow.c}, \texttt{myco\_config.c}, \texttt{myco\_log.c}).
+  \item \textbf{EWMA filter:} Configurable $\alpha$ applied to RTT and jitter metrics.
+  \item \textbf{Thread safety:} Mutex-protected shared state between main loop and ubus thread.
+  \item \textbf{eBPF telemetry:} BPF program (\texttt{mycoflow.bpf.c}) with TC hook counting packets/bytes via \texttt{BPF\_MAP\_TYPE\_ARRAY}.
+  \item \textbf{Netlink stats:} Raw \texttt{NETLINK\_ROUTE} socket reading Qdisc backlog, drops, and overlimits.
+  \item \textbf{Flow table:} Userspace LRU hash table (FNV-1a) populated from \texttt{/proc/net/nf\_conntrack}.
+  \item \textbf{Unit tests:} 4 test suites (EWMA, control, config, persona) via CTest.
+  \item \textbf{Integration harness:} Docker-based automated test script (\texttt{scripts/run\_integration.sh}).
+  \item \textbf{Benchmark suite:} \texttt{iperf3}/\texttt{flent} comparison scripts with JSON output.
 \end{itemize}
 
 \newpage
