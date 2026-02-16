@@ -10,6 +10,7 @@
 int  ebpf_init(const myco_config_t *cfg);
 int  ebpf_attach_tc(const myco_config_t *cfg);
 void ebpf_tick(const myco_config_t *cfg);
+int  ebpf_read_stats(uint64_t *packets, uint64_t *bytes);
 void ebpf_shutdown(void);
 
 #endif /* MYCO_EBPF_H */

@@ -12,7 +12,9 @@
 
 #ifdef HAVE_LIBBPF
 #include <bpf/libbpf.h>
+#include <bpf/bpf.h>
 static struct bpf_object *g_bpf_obj = NULL;
+static int g_map_fd = -1;
 #endif
 
 static int  g_ebpf_attached = 0;
@@ -29,8 +31,7 @@ int ebpf_init(const myco_config_t *cfg) {
         return -1;
     }
 
-    struct bpf_object_open_opts opts = {0};
-    g_bpf_obj = bpf_object__open_file(cfg->ebpf_obj, &opts);
+    g_bpf_obj = bpf_object__open_file(cfg->ebpf_obj, NULL);
     if (!g_bpf_obj) {
         log_msg(LOG_WARN, "ebpf", "failed to open bpf obj: %s", cfg->ebpf_obj);
         return -1;
@@ -44,6 +45,13 @@ int ebpf_init(const myco_config_t *cfg) {
     }
 
     log_msg(LOG_INFO, "ebpf", "bpf object loaded (no attach yet): %s", cfg->ebpf_obj);
+
+    g_map_fd = bpf_object__find_map_fd_by_name(g_bpf_obj, "myco_stats");
+    if (g_map_fd < 0) {
+        log_msg(LOG_WARN, "ebpf", "failed to find map: myco_stats");
+    } else {
+        log_msg(LOG_INFO, "ebpf", "found map myco_stats fd=%d", g_map_fd);
+    }
     return 0;
 #else
     if (cfg->ebpf_attach) {
@@ -96,6 +104,34 @@ void ebpf_tick(const myco_config_t *cfg) {
     if (!g_ebpf_attached) {
         ebpf_attach_tc(cfg);
     }
+    
+    uint64_t pkts = 0, bytes = 0;
+    if (ebpf_read_stats(&pkts, &bytes) == 0) {
+        // Log sparingly or update global metrics
+        // For verify step S3.1, let's log every tick (1s) if non-zero
+        if (pkts > 0) {
+            log_msg(LOG_INFO, "ebpf", "stats: pkts=%llu bytes=%llu", pkts, bytes);
+        }
+    }
+}
+
+int ebpf_read_stats(uint64_t *packets, uint64_t *bytes) {
+#ifdef HAVE_LIBBPF
+    if (g_map_fd < 0) {
+        return -1;
+    }
+    uint32_t key = 0;
+    struct { uint64_t packets; uint64_t bytes; } val;
+    
+    if (bpf_map_lookup_elem(g_map_fd, &key, &val) != 0) {
+        return -1;
+    }
+    if (packets) *packets = val.packets;
+    if (bytes) *bytes = val.bytes;
+    return 0;
+#else
+    return -1;
+#endif
 }
 
 void ebpf_shutdown(void) {

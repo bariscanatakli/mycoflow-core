@@ -13,24 +13,7 @@ set(SOURCES
     myco_ubus.c
 )
 
-# eBPF object build (requires clang/llvm)
-find_program(CLANG_BIN clang)
-find_program(LLC_BIN llc)
-if(CLANG_BIN AND LLC_BIN)
-    set(BPF_OBJ ${CMAKE_CURRENT_BINARY_DIR}/mycoflow.bpf.o)
-    add_custom_command(
-        OUTPUT ${BPF_OBJ}
-        COMMAND ${CLANG_BIN} -O2 -g -target bpf -c ${CMAKE_CURRENT_SOURCE_DIR}/mycoflow.bpf.c -o ${BPF_OBJ}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/mycoflow.bpf.c
-        COMMENT "Building eBPF object"
-    )
-    add_custom_target(mycoflow_bpf ALL DEPENDS ${BPF_OBJ})
-    add_custom_command(TARGET mycoflow_bpf POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/lib/mycoflow
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${BPF_OBJ} ${CMAKE_CURRENT_BINARY_DIR}/lib/mycoflow/mycoflow.bpf.o
-        COMMENT "Staging eBPF object"
-    )
-endif()
+
 
 # Executable oluştur (mycoflowd)
 add_executable(mycoflowd ${SOURCES})
@@ -58,14 +41,33 @@ add_test(NAME persona COMMAND test_persona)
 # Optional ubus support (OpenWrt)
 check_include_file(libubus.h HAVE_UBUS_H)
 if(HAVE_UBUS_H)
-    find_library(UBUS_LIB ubus)
-    find_library(UBOX_LIB ubox)
-    find_library(JSONC_LIB json-c)
-    if(UBUS_LIB AND UBOX_LIB)
-        find_package(Threads)
-        target_compile_definitions(mycoflowd PRIVATE HAVE_UBUS)
-        target_link_libraries(mycoflowd PRIVATE ${UBUS_LIB} ${UBOX_LIB} ${JSONC_LIB} Threads::Threads)
+    target_compile_definitions(mycoflowd PRIVATE HAVE_UBUS)
+    target_link_libraries(mycoflowd PRIVATE ubus ubox blobmsg_json)
+endif()
+
+# eBPF compilation (if clang is available)
+find_program(CLANG_EXE clang)
+if(CLANG_EXE)
+    message(STATUS "Found clang: ${CLANG_EXE}")
+    execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH_UNAME OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(ARCH_INCLUDE "/usr/include/${ARCH_UNAME}-linux-gnu")
+    
+    add_custom_command(OUTPUT mycoflow.bpf.o
+        COMMAND ${CLANG_EXE} -O2 -target bpf -I${ARCH_INCLUDE} -c ${CMAKE_CURRENT_SOURCE_DIR}/bpf/mycoflow.bpf.c -o mycoflow.bpf.o
+        DEPENDS bpf/mycoflow.bpf.c
+    )
+    add_custom_target(bpf_target ALL DEPENDS mycoflow.bpf.o)
+    add_dependencies(mycoflowd bpf_target)
+    
+    # Needs libelf and zlib for libbpf
+    find_package(ZLIB)
+    if(ZLIB_FOUND)
+        target_link_libraries(mycoflowd PRIVATE ZLIB::ZLIB)
     endif()
+    # LibElf check omitted for brevity in standard cmake, usually implicit or manual
+    # OpenWrt handles library linking via package definition
+else()
+    message(WARNING "clang not found, BPF program will not be compiled")
 endif()
 
 # Optional libbpf support (Phase 3 scaffold)

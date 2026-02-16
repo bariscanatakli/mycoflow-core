@@ -6,6 +6,7 @@
 #define MYCO_TYPES_H
 
 #include <signal.h>
+#include <stdint.h>
 #include <pthread.h>
 
 /* ── Log Levels ─────────────────────────────────────────────── */
