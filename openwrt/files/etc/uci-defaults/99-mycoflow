@@ -1,0 +1,14 @@
+#!/bin/sh
+# UCI defaults: run once on first install
+
+uci -q batch <<-EOF
+	set mycoflow.core=mycoflow
+	set mycoflow.core.enabled=1
+	set mycoflow.core.egress_iface=br-lan
+	set mycoflow.core.sample_hz=2
+	commit mycoflow
+EOF
+
+# Enable and start service
+/etc/init.d/mycoflowd enable
+exit 0

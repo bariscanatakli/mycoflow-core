@@ -1,0 +1,14 @@
+{
+  "admin/services/mycoflow": {
+    "title": "MycoFlow",
+    "order": 90,
+    "action": {
+      "type": "view",
+      "path": "mycoflow"
+    },
+    "depends": {
+      "acl": ["luci-app-mycoflow"],
+      "uci": { "mycoflow": true }
+    }
+  }
+}

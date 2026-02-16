@@ -1,0 +1,21 @@
+{
+  "luci-app-mycoflow": {
+    "description": "Grant access to MycoFlow ubus methods",
+    "read": {
+      "ubus": {
+        "myco": ["status", "policy_get", "persona_list"]
+      }
+    },
+    "write": {
+      "ubus": {
+        "myco": [
+          "policy_set",
+          "policy_boost",
+          "policy_throttle",
+          "persona_add",
+          "persona_delete"
+        ]
+      }
+    }
+  }
+}
