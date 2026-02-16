@@ -73,6 +73,7 @@ static void apply_defaults(myco_config_t *cfg) {
     cfg->ebpf_attach = 0;
     strncpy(cfg->ebpf_tc_dir, "ingress", sizeof(cfg->ebpf_tc_dir) - 1);
     cfg->ebpf_tc_dir[sizeof(cfg->ebpf_tc_dir) - 1] = '\0';
+    cfg->ewma_alpha = 0.3;
 }
 
 /* ── UCI helpers ────────────────────────────────────────────── */
@@ -198,6 +199,9 @@ static void apply_uci_overrides(myco_config_t *cfg) {
         strncpy(cfg->ebpf_tc_dir, val, sizeof(cfg->ebpf_tc_dir) - 1);
         cfg->ebpf_tc_dir[sizeof(cfg->ebpf_tc_dir) - 1] = '\0';
     }
+    if (uci_get_option("ewma_alpha", val, sizeof(val))) {
+        cfg->ewma_alpha = atof(val);
+    }
 }
 
 /* ── Environment overrides ──────────────────────────────────── */
@@ -239,6 +243,7 @@ static void apply_env_overrides(myco_config_t *cfg) {
         cfg->ebpf_obj[sizeof(cfg->ebpf_obj) - 1] = '\0';
     }
     cfg->ebpf_attach = parse_env_int("MYCOFLOW_EBPF_ATTACH", cfg->ebpf_attach);
+    cfg->ewma_alpha = parse_env_double("MYCOFLOW_EWMA_ALPHA", cfg->ewma_alpha);
     const char *ebpf_tc_dir = getenv("MYCOFLOW_EBPF_TC_DIR");
     if (ebpf_tc_dir && *ebpf_tc_dir) {
         strncpy(cfg->ebpf_tc_dir, ebpf_tc_dir, sizeof(cfg->ebpf_tc_dir) - 1);
@@ -275,6 +280,12 @@ int config_load(myco_config_t *cfg) {
     }
     if (cfg->bandwidth_kbit > cfg->max_bandwidth_kbit) {
         cfg->bandwidth_kbit = cfg->max_bandwidth_kbit;
+    }
+    if (cfg->ewma_alpha < 0.01) {
+        cfg->ewma_alpha = 0.01;
+    }
+    if (cfg->ewma_alpha > 1.0) {
+        cfg->ewma_alpha = 1.0;
     }
     if (strcmp(cfg->ebpf_tc_dir, "ingress") != 0 && strcmp(cfg->ebpf_tc_dir, "egress") != 0) {
         strncpy(cfg->ebpf_tc_dir, "ingress", sizeof(cfg->ebpf_tc_dir) - 1);

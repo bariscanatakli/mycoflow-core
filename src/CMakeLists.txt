@@ -8,6 +8,7 @@ set(SOURCES
     myco_persona.c
     myco_control.c
     myco_act.c
+    myco_ewma.c
     myco_ebpf.c
     myco_ubus.c
 )

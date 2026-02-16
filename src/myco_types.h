@@ -38,6 +38,7 @@ typedef struct {
     char   ebpf_obj[128];
     int    ebpf_attach;
     char   ebpf_tc_dir[16];
+    double ewma_alpha;
 } myco_config_t;
 
 /* ── Metrics ────────────────────────────────────────────────── */

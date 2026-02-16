@@ -15,6 +15,7 @@
 #include "myco_control.h"
 #include "myco_act.h"
 #include "myco_ebpf.h"
+#include "myco_ewma.h"
 #include "myco_ubus.h"
 
 #include <signal.h>
@@ -66,6 +67,8 @@ int main(void) {
     metrics_t metrics;
     persona_state_t persona_state;
     control_state_t control_state;
+    ewma_filter_t ewma_rtt;
+    ewma_filter_t ewma_jitter;
 
     if (config_load(&cfg) != 0) {
         fprintf(stderr, "MycoFlow config load failed\n");
@@ -91,6 +94,9 @@ int main(void) {
 
     ebpf_init(&cfg);
     ubus_start(&cfg, &control_state);
+
+    ewma_init(&ewma_rtt);
+    ewma_init(&ewma_jitter);
 
     double interval_s = 1.0 / cfg.sample_hz;
     log_msg(LOG_INFO, "main", "baseline capture: %d samples", cfg.baseline_samples);
@@ -140,6 +146,12 @@ int main(void) {
 
         ebpf_tick(&cfg);
 
+        /* EWMA smoothing */
+        double raw_rtt = metrics.rtt_ms;
+        double raw_jitter = metrics.jitter_ms;
+        metrics.rtt_ms = ewma_update(&ewma_rtt, metrics.rtt_ms, cfg.ewma_alpha);
+        metrics.jitter_ms = ewma_update(&ewma_jitter, metrics.jitter_ms, cfg.ewma_alpha);
+
         /* Infer */
         persona_t persona = persona_update(&persona_state, &metrics);
         if (g_persona_override_active) {
@@ -158,8 +170,8 @@ int main(void) {
         g_last_reason[sizeof(g_last_reason) - 1] = '\0';
 
         log_msg(LOG_INFO, "loop",
-                "rtt=%.2fms jitter=%.2fms tx=%.0fbps rx=%.0fbps cpu=%.1f%% persona=%s bw=%dkbit reason=%s",
-                metrics.rtt_ms, metrics.jitter_ms, metrics.tx_bps, metrics.rx_bps, metrics.cpu_pct,
+                "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% persona=%s bw=%dkbit reason=%s",
+                metrics.rtt_ms, raw_rtt, metrics.jitter_ms, raw_jitter, metrics.tx_bps, metrics.rx_bps, metrics.cpu_pct,
                 persona_name(persona), control_state.current.bandwidth_kbit, reason);
 
         dump_metrics(&cfg, &metrics, persona, reason);
