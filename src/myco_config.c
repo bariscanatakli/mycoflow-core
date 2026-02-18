@@ -74,6 +74,9 @@ static void apply_defaults(myco_config_t *cfg) {
     strncpy(cfg->ebpf_tc_dir, "ingress", sizeof(cfg->ebpf_tc_dir) - 1);
     cfg->ebpf_tc_dir[sizeof(cfg->ebpf_tc_dir) - 1] = '\0';
     cfg->ewma_alpha = 0.3;
+    cfg->baseline_decay = 0.01;
+    cfg->baseline_update_interval = 60;
+    cfg->rtt_margin_factor = 0.30;
 }
 
 /* ── UCI helpers ────────────────────────────────────────────── */
@@ -202,6 +205,15 @@ static void apply_uci_overrides(myco_config_t *cfg) {
     if (uci_get_option("ewma_alpha", val, sizeof(val))) {
         cfg->ewma_alpha = atof(val);
     }
+    if (uci_get_option("baseline_decay", val, sizeof(val))) {
+        cfg->baseline_decay = atof(val);
+    }
+    if (uci_get_option("baseline_update_interval", val, sizeof(val))) {
+        cfg->baseline_update_interval = atoi(val);
+    }
+    if (uci_get_option("rtt_margin_factor", val, sizeof(val))) {
+        cfg->rtt_margin_factor = atof(val);
+    }
 }
 
 /* ── Environment overrides ──────────────────────────────────── */
@@ -244,6 +256,9 @@ static void apply_env_overrides(myco_config_t *cfg) {
     }
     cfg->ebpf_attach = parse_env_int("MYCOFLOW_EBPF_ATTACH", cfg->ebpf_attach);
     cfg->ewma_alpha = parse_env_double("MYCOFLOW_EWMA_ALPHA", cfg->ewma_alpha);
+    cfg->baseline_decay = parse_env_double("MYCOFLOW_BASELINE_DECAY", cfg->baseline_decay);
+    cfg->baseline_update_interval = parse_env_int("MYCOFLOW_BASELINE_INTERVAL", cfg->baseline_update_interval);
+    cfg->rtt_margin_factor = parse_env_double("MYCOFLOW_RTT_MARGIN", cfg->rtt_margin_factor);
     const char *ebpf_tc_dir = getenv("MYCOFLOW_EBPF_TC_DIR");
     if (ebpf_tc_dir && *ebpf_tc_dir) {
         strncpy(cfg->ebpf_tc_dir, ebpf_tc_dir, sizeof(cfg->ebpf_tc_dir) - 1);

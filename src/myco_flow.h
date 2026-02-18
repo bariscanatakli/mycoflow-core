@@ -39,6 +39,7 @@ const flow_entry_t *flow_table_lookup(const flow_table_t *ft,
                                       const flow_key_t *key);
 int  flow_table_populate_conntrack(flow_table_t *ft, double now);
 int  flow_table_active_count(const flow_table_t *ft);
+int  flow_table_has_elephant(const flow_table_t *ft, double dominance_ratio);
 void flow_table_evict_stale(flow_table_t *ft, double now, double max_age_s);
 
 #endif /* MYCO_FLOW_H */

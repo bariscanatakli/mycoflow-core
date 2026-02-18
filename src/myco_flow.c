@@ -201,3 +201,26 @@ int flow_table_populate_conntrack(flow_table_t *ft, double now) {
     fclose(fp);
     return parsed;
 }
+
+/* ── Elephant flow detection ────────────────────────────────── */
+
+int flow_table_has_elephant(const flow_table_t *ft, double dominance_ratio) {
+    if (!ft || ft->count == 0) {
+        return 0;
+    }
+    uint64_t total_bytes = 0;
+    uint64_t max_bytes   = 0;
+    for (int i = 0; i < FLOW_TABLE_SIZE; i++) {
+        if (!ft->entries[i].active) {
+            continue;
+        }
+        total_bytes += ft->entries[i].bytes;
+        if (ft->entries[i].bytes > max_bytes) {
+            max_bytes = ft->entries[i].bytes;
+        }
+    }
+    if (total_bytes == 0) {
+        return 0;
+    }
+    return ((double)max_bytes / (double)total_bytes) >= dominance_ratio;
+}

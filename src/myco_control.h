@@ -9,10 +9,10 @@
 
 int  is_outlier(const metrics_t *metrics, const metrics_t *baseline, const myco_config_t *cfg);
 void control_init(control_state_t *state, int initial_bw);
-int  control_decide(control_state_t *state, const myco_config_t *cfg,
+int  control_decide(control_state_t *state, myco_config_t *cfg,
                     const metrics_t *metrics, const metrics_t *baseline,
-                    persona_t persona, policy_t *desired,
-                    char *reason, size_t reason_len);
+                    persona_t persona, double now,
+                    policy_t *desired, char *reason, size_t reason_len);
 void control_on_action_result(control_state_t *state, int success);
 
 #endif /* MYCO_CONTROL_H */

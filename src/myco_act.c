@@ -26,14 +26,89 @@ int act_apply_policy(const char *iface, const policy_t *policy, int no_tc, int f
     }
 
     char cmd[256];
-    snprintf(cmd, sizeof(cmd), "tc qdisc replace dev %s root cake bandwidth %dkbit", iface, policy->bandwidth_kbit);
+
+    /* Try 'change' first to update bandwidth without resetting CAKE's internal
+     * queue state, flow hash, and tin statistics. Fall back to 'replace' only
+     * on first install (when no CAKE qdisc exists yet). */
+    snprintf(cmd, sizeof(cmd), "tc qdisc change dev %s root cake bandwidth %dkbit", iface, policy->bandwidth_kbit);
     int rc = system(cmd);
     if (rc != 0) {
-        log_msg(LOG_WARN, "act", "tc call failed (rc=%d)", rc);
-        return 0;
+        log_msg(LOG_DEBUG, "act", "tc change failed (rc=%d), trying replace (first install?)", rc);
+        snprintf(cmd, sizeof(cmd), "tc qdisc replace dev %s root cake bandwidth %dkbit", iface, policy->bandwidth_kbit);
+        rc = system(cmd);
+        if (rc != 0) {
+            log_msg(LOG_WARN, "act", "tc replace also failed (rc=%d)", rc);
+            return 0;
+        }
     }
 
     log_msg(LOG_INFO, "act", "applied cake bandwidth %d kbit on %s", policy->bandwidth_kbit, iface);
+    return 1;
+}
+
+int act_apply_persona_tin(const char *iface, persona_t persona,
+                          int bandwidth_kbit, int no_tc, int force_fail) {
+    if (!iface) {
+        return 0;
+    }
+    if (force_fail) {
+        return 0;
+    }
+
+    /* Adapt CAKE AQM target latency to persona:
+     *   INTERACTIVE → tight target (5ms) keeps queue short for gaming/VoIP
+     *   BULK        → relaxed target (20ms) allows deeper queue for throughput
+     *   UNKNOWN     → CAKE default (5ms with diffserv4)
+     *
+     * diffserv4 enables 4 CAKE tins so DSCP-marked traffic still gets
+     * correct per-class treatment alongside the target adjustment. */
+    int target_ms;
+    int interval_ms;
+    const char *persona_label;
+
+    switch (persona) {
+        case PERSONA_INTERACTIVE:
+            target_ms    = 5;
+            interval_ms  = 50;
+            persona_label = "interactive";
+            break;
+        case PERSONA_BULK:
+            target_ms    = 20;
+            interval_ms  = 200;
+            persona_label = "bulk";
+            break;
+        default:
+            target_ms    = 5;
+            interval_ms  = 100;
+            persona_label = "unknown";
+            break;
+    }
+
+    if (no_tc) {
+        log_msg(LOG_INFO, "act", "tc disabled, would set diffserv4 target %dms persona=%s",
+                target_ms, persona_label);
+        return 1;
+    }
+
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd),
+             "tc qdisc change dev %s root cake bandwidth %dkbit diffserv4 target %dms interval %dms",
+             iface, bandwidth_kbit, target_ms, interval_ms);
+    int rc = system(cmd);
+    if (rc != 0) {
+        /* On first call or if diffserv4 wasn't set, fall back to replace */
+        snprintf(cmd, sizeof(cmd),
+                 "tc qdisc replace dev %s root cake bandwidth %dkbit diffserv4 target %dms interval %dms",
+                 iface, bandwidth_kbit, target_ms, interval_ms);
+        rc = system(cmd);
+        if (rc != 0) {
+            log_msg(LOG_WARN, "act", "cake tin setup failed (rc=%d) for persona=%s", rc, persona_label);
+            return 0;
+        }
+    }
+
+    log_msg(LOG_INFO, "act", "cake tin: persona=%s target=%dms interval=%dms bw=%dkbit on %s",
+            persona_label, target_ms, interval_ms, bandwidth_kbit, iface);
     return 1;
 }
 

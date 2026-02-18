@@ -33,7 +33,28 @@ static persona_t decide_persona(const metrics_t *metrics) {
             sig_bulk++;         /* large transfers, streaming */
         }
     }
-    
+
+    /* Signal 4: Active flow count — few connections → gaming/interactive */
+    if (metrics->active_flows > 0) {
+        if (metrics->active_flows < 5) {
+            sig_interactive++;  /* gaming: 1-2 UDP streams */
+        } else if (metrics->active_flows > 50) {
+            sig_bulk++;         /* torrent: hundreds of peers */
+        }
+    }
+
+    /* Signal 5: Elephant flow — one flow dominates all bytes → bulk transfer */
+    if (metrics->elephant_flow) {
+        sig_bulk += 2;  /* weighted: elephant flow is a strong BULK indicator */
+    }
+
+    /* Signal 6: eBPF packet rate — high packet/s = interactive (gaming/VoIP) */
+    if (metrics->ebpf_pkt_rate > 500.0) {
+        sig_interactive++;
+    } else if (metrics->ebpf_pkt_rate > 0.0 && metrics->ebpf_pkt_rate < 50.0) {
+        sig_bulk++;  /* low packet rate = large bulk transfers */
+    }
+
     /* Decision: majority vote across signals */
     if (sig_interactive > sig_bulk) {
         return PERSONA_INTERACTIVE;

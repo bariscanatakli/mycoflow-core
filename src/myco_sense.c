@@ -111,30 +111,76 @@ static double dummy_rtt(void) {
     return base + spike;
 }
 
-static double probe_rtt_ms(const char *iface, const char *host) {
-    if (!iface || !host) {
+/* Multi-ping probe: send N packets, compute median RTT, jitter (stddev),
+ * and loss%. Returns median RTT in ms, or -1.0 on failure.
+ * Writes jitter_out and loss_pct_out (may be NULL). */
+static double probe_multi_ping(const char *iface, const char *host,
+                               int count, double *jitter_out, double *loss_pct_out) {
+    if (!iface || !host || count < 1) {
         return -1.0;
     }
     char cmd[256];
-    snprintf(cmd, sizeof(cmd), "ping -c 1 -W 1 -I %s %s 2>/dev/null", iface, host);
+    snprintf(cmd, sizeof(cmd), "ping -c %d -W 1 -I %s %s 2>/dev/null", count, iface, host);
     FILE *fp = popen(cmd, "r");
     if (!fp) {
         return -1.0;
     }
-    char line[256];
-    double rtt = -1.0;
-    while (fgets(line, sizeof(line), fp)) {
+
+    double rtts[8];  /* support up to 8 pings */
+    int n = 0;
+    char line[512];
+    int transmitted = 0, received = 0;
+
+    while (fgets(line, sizeof(line), fp) && n < count) {
+        /* Parse individual RTT lines: "64 bytes from ... time=X.X ms" */
         char *pos = strstr(line, "time=");
         if (pos) {
             double value = 0.0;
-            if (sscanf(pos, "time=%lf", &value) == 1) {
-                rtt = value;
-                break;
+            if (sscanf(pos, "time=%lf", &value) == 1 && n < 8) {
+                rtts[n++] = value;
             }
+        }
+        /* Parse summary: "N packets transmitted, M received" */
+        if (strstr(line, "packets transmitted")) {
+            sscanf(line, "%d packets transmitted, %d received", &transmitted, &received);
         }
     }
     pclose(fp);
-    return rtt;
+
+    if (n == 0) {
+        if (loss_pct_out) {
+            *loss_pct_out = 100.0;
+        }
+        return -1.0;
+    }
+
+    /* Compute mean RTT */
+    double sum = 0.0;
+    for (int i = 0; i < n; i++) {
+        sum += rtts[i];
+    }
+    double mean = sum / (double)n;
+
+    /* Compute jitter as standard deviation */
+    if (jitter_out) {
+        double var = 0.0;
+        for (int i = 0; i < n; i++) {
+            double d = rtts[i] - mean;
+            var += d * d;
+        }
+        *jitter_out = (n > 1) ? sqrt(var / (double)(n - 1)) : 0.0;
+    }
+
+    /* Packet loss */
+    if (loss_pct_out) {
+        if (transmitted > 0) {
+            *loss_pct_out = (double)(transmitted - received) * 100.0 / (double)transmitted;
+        } else {
+            *loss_pct_out = (n < count) ? 100.0 * (count - n) / count : 0.0;
+        }
+    }
+
+    return mean;
 }
 
 /* ── Public API ─────────────────────────────────────────────── */
@@ -180,18 +226,25 @@ int sense_sample(const char *iface, const char *probe_host, double interval_s, i
     }
 
     if (dummy_metrics) {
-        out->rtt_ms = dummy_rtt();
+        out->rtt_ms       = dummy_rtt();
+        out->jitter_ms    = fabs(out->rtt_ms - g_prev_rtt);
+        out->probe_loss_pct = 0.0;
     } else {
-        double rtt = probe_rtt_ms(iface, probe_host ? probe_host : "1.1.1.1");
+        double jitter_probe = 0.0;
+        double loss_pct     = 0.0;
+        double rtt = probe_multi_ping(iface, probe_host ? probe_host : "1.1.1.1",
+                                      3, &jitter_probe, &loss_pct);
         if (rtt < 0.0) {
             log_msg(LOG_WARN, "sense", "icmp probe failed, using fallback");
-            out->rtt_ms = dummy_rtt();
+            out->rtt_ms       = dummy_rtt();
+            out->jitter_ms    = fabs(out->rtt_ms - g_prev_rtt);
+            out->probe_loss_pct = 100.0;
         } else {
-            out->rtt_ms = rtt;
+            out->rtt_ms         = rtt;
+            out->jitter_ms      = jitter_probe;
+            out->probe_loss_pct = loss_pct;
         }
     }
-
-    out->jitter_ms = fabs(out->rtt_ms - g_prev_rtt);
     g_prev_rtt = out->rtt_ms;
 
     out->cpu_pct = read_cpu_pct();
@@ -230,4 +283,18 @@ int sense_get_idle_baseline(const char *iface,
     baseline->rtt_ms /= (double)samples;
     baseline->jitter_ms /= (double)samples;
     return 0;
+}
+
+/* ── Sliding baseline update ────────────────────────────────── */
+
+void sense_update_baseline_sliding(metrics_t *baseline,
+                                   const metrics_t *current,
+                                   double decay) {
+    if (!baseline || !current || decay <= 0.0 || decay > 1.0) {
+        return;
+    }
+    /* Only probe-based fields drift with the environment; BPS/CPU are not
+     * meaningful long-term baseline references for congestion detection. */
+    baseline->rtt_ms    = (1.0 - decay) * baseline->rtt_ms    + decay * current->rtt_ms;
+    baseline->jitter_ms = (1.0 - decay) * baseline->jitter_ms + decay * current->jitter_ms;
 }

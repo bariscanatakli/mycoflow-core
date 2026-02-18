@@ -41,6 +41,9 @@ typedef struct {
     int    ebpf_attach;
     char   ebpf_tc_dir[16];
     double ewma_alpha;
+    double baseline_decay;           /* sliding baseline EWMA weight (default 0.01) */
+    int    baseline_update_interval; /* cycles between baseline updates (default 60) */
+    double rtt_margin_factor;        /* congestion threshold = baseline_rtt * factor (default 0.30) */
 } myco_config_t;
 
 /* ── Metrics ────────────────────────────────────────────────── */
@@ -59,6 +62,12 @@ typedef struct {
     /* ── eBPF map counters (raw cumulative; 0 when libbpf unavailable) ── */
     uint64_t ebpf_rx_pkts;
     uint64_t ebpf_rx_bytes;
+    /* ── Flow-derived signals (populated from flow table in main loop) ── */
+    int    active_flows;      /* number of active connections (from conntrack) */
+    int    elephant_flow;     /* 1 if one flow carries >60% of total bytes */
+    double ebpf_pkt_rate;     /* eBPF rx packets per second (delta, computed in main) */
+    /* ── Probe quality (multi-ping) ────────────────────────────── */
+    double probe_loss_pct;    /* packet loss % from multi-ping probe (0.0–100.0) */
 } metrics_t;
 
 /* ── Persona ────────────────────────────────────────────────── */
@@ -80,11 +89,26 @@ typedef struct {
     int boosted;
 } policy_t;
 
+/* One recorded actuation: bandwidth change + RTT before/after */
+#define ACTION_RING_SIZE 8
 typedef struct {
-    policy_t current;
-    policy_t last_stable;
-    int      safe_mode;
-    int      stable_cycles;
+    double ts;           /* monotonic timestamp of the action */
+    int    bw_before;
+    int    bw_after;
+    double rtt_before;
+    double rtt_after;    /* filled in ACTION_FEEDBACK_CYCLES later; -1 = pending */
+    int    filled;       /* 1 = rtt_after has been recorded */
+} action_record_t;
+
+typedef struct {
+    policy_t      current;
+    policy_t      last_stable;
+    int           safe_mode;
+    int           stable_cycles;
+    /* Action feedback ring */
+    action_record_t ring[ACTION_RING_SIZE];
+    int             ring_head;   /* next write index */
+    int             step_adapted; /* 1 if step was halved due to poor feedback */
 } control_state_t;
 
 /* ── Shared global state (defined in main.c) ────────────────── */

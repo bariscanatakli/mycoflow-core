@@ -109,6 +109,7 @@ int main(void) {
     log_msg(LOG_INFO, "main", "baseline rtt=%.2fms jitter=%.2fms", baseline.rtt_ms, baseline.jitter_ms);
 
     double last_action_ts = 0.0;
+    int    loop_cycle     = 0;
     double min_action_interval = cfg.action_cooldown_s;
     if (cfg.action_rate_limit > 0.0) {
         double rate_interval = 1.0 / cfg.action_rate_limit;
@@ -158,8 +159,22 @@ int main(void) {
         ebpf_tick(&cfg);
 
         /* Flow table: populate from conntrack, evict stale (>60s) */
-        flow_table_populate_conntrack(&flow_table, now_monotonic_s());
-        flow_table_evict_stale(&flow_table, now_monotonic_s(), 60.0);
+        double ft_now = now_monotonic_s();
+        flow_table_populate_conntrack(&flow_table, ft_now);
+        flow_table_evict_stale(&flow_table, ft_now, 60.0);
+
+        /* Flow-derived persona signals — populate into metrics */
+        metrics.active_flows  = flow_table_active_count(&flow_table);
+        metrics.elephant_flow = flow_table_has_elephant(&flow_table, 0.60);
+
+        /* eBPF packet rate: delta from previous cumulative counter (pkt/s) */
+        static uint64_t prev_ebpf_pkts = 0;
+        if (prev_ebpf_pkts > 0 && metrics.ebpf_rx_pkts >= prev_ebpf_pkts && interval_s > 0.0) {
+            metrics.ebpf_pkt_rate = (double)(metrics.ebpf_rx_pkts - prev_ebpf_pkts) / interval_s;
+        } else {
+            metrics.ebpf_pkt_rate = 0.0;
+        }
+        prev_ebpf_pkts = metrics.ebpf_rx_pkts;
 
         /* EWMA smoothing */
         double raw_rtt = metrics.rtt_ms;
@@ -173,13 +188,16 @@ int main(void) {
         persona_t override_val = g_persona_override;
         pthread_mutex_unlock(&g_state_mutex);
 
+        persona_t prev_persona = persona_state.current;
         persona_t persona = persona_update(&persona_state, &metrics);
         if (persona_override) {
             persona = override_val;
         }
+        int persona_changed = (persona != prev_persona);
         policy_t desired;
         char reason[128];
-        int change = control_decide(&control_state, &cfg, &metrics, &baseline, persona, &desired, reason, sizeof(reason));
+        double now_ts = now_monotonic_s();
+        int change = control_decide(&control_state, &cfg, &metrics, &baseline, persona, now_ts, &desired, reason, sizeof(reason));
 
         /* Update shared state */
         pthread_mutex_lock(&g_state_mutex);
@@ -209,21 +227,44 @@ int main(void) {
         /* Act */
         if (control_state.safe_mode) {
             log_msg(LOG_WARN, "loop", "safe-mode active, skipping actuation");
-        } else if (change) {
-            double now = now_monotonic_s();
-            if ((now - last_action_ts) >= min_action_interval) {
-                int ok = act_apply_policy(cfg.egress_iface, &desired, cfg.no_tc, cfg.force_act_fail);
-                control_on_action_result(&control_state, ok);
-                if (ok) {
-                    control_state.current = desired;
-                    last_action_ts = now;
+        } else {
+            /* Persona tin update: apply CAKE target latency when persona changes.
+             * Not rate-limited — persona changes are infrequent and tin
+             * reconfiguration does not disrupt existing flows. */
+            if (persona_changed) {
+                act_apply_persona_tin(cfg.egress_iface, persona,
+                                      control_state.current.bandwidth_kbit,
+                                      cfg.no_tc, cfg.force_act_fail);
+            }
+
+            if (change) {
+                double now = now_monotonic_s();
+                if ((now - last_action_ts) >= min_action_interval) {
+                    int ok = act_apply_policy(cfg.egress_iface, &desired, cfg.no_tc, cfg.force_act_fail);
+                    control_on_action_result(&control_state, ok);
+                    if (ok) {
+                        control_state.current = desired;
+                        last_action_ts = now;
+                    }
+                } else {
+                    log_msg(LOG_DEBUG, "loop", "action skipped (cooldown)");
                 }
-            } else {
-                log_msg(LOG_DEBUG, "loop", "action skipped (cooldown)");
             }
         }
 
         /* Stabilize */
+        loop_cycle++;
+
+        /* Sliding baseline: drift toward current conditions every N cycles.
+         * Keeps the reference point fresh without full recalibration.
+         * Only updates rtt_ms and jitter_ms (probe-based fields). */
+        if (cfg.baseline_update_interval > 0 &&
+            (loop_cycle % cfg.baseline_update_interval) == 0) {
+            sense_update_baseline_sliding(&baseline, &metrics, cfg.baseline_decay);
+            log_msg(LOG_DEBUG, "main", "baseline updated: rtt=%.2fms jitter=%.2fms",
+                    baseline.rtt_ms, baseline.jitter_ms);
+        }
+
         sleep_interval(interval_s);
     }
 
