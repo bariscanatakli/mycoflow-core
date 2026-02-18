@@ -150,7 +150,10 @@ int main(void) {
         }
 
         /* Populate eBPF counters into metrics (no-op if libbpf unavailable) */
-        ebpf_read_stats(&metrics.ebpf_rx_pkts, &metrics.ebpf_rx_bytes);
+        if (ebpf_read_stats(&metrics.ebpf_rx_pkts, &metrics.ebpf_rx_bytes) != 0) {
+            metrics.ebpf_rx_pkts  = 0;
+            metrics.ebpf_rx_bytes = 0;
+        }
 
         ebpf_tick(&cfg);
 

@@ -54,8 +54,17 @@ if(CLANG_EXE)
     execute_process(COMMAND uname -m OUTPUT_VARIABLE ARCH_UNAME OUTPUT_STRIP_TRAILING_WHITESPACE)
     set(ARCH_INCLUDE "/usr/include/${ARCH_UNAME}-linux-gnu")
     
+    # -g is required for BTF generation (libbpf needs BTF to verify/load programs, kernel >= 5.2)
+    # For non-Debug builds, strip DWARF debug info (--strip-debug) while preserving BTF sections
+    find_program(LLVM_STRIP_EXE llvm-strip)
+    set(BPF_STRIP_CMD "")
+    if(LLVM_STRIP_EXE AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(BPF_STRIP_CMD COMMAND ${LLVM_STRIP_EXE} --strip-debug mycoflow.bpf.o)
+        message(STATUS "BPF: DWARF will be stripped for ${CMAKE_BUILD_TYPE} build (BTF preserved)")
+    endif()
     add_custom_command(OUTPUT mycoflow.bpf.o
-        COMMAND ${CLANG_EXE} -O2 -target bpf -I${ARCH_INCLUDE} -c ${CMAKE_CURRENT_SOURCE_DIR}/bpf/mycoflow.bpf.c -o mycoflow.bpf.o
+        COMMAND ${CLANG_EXE} -O2 -g -target bpf -I${ARCH_INCLUDE} -c ${CMAKE_CURRENT_SOURCE_DIR}/bpf/mycoflow.bpf.c -o mycoflow.bpf.o
+        ${BPF_STRIP_CMD}
         DEPENDS bpf/mycoflow.bpf.c
     )
     add_custom_target(bpf_target ALL DEPENDS mycoflow.bpf.o)

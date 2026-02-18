@@ -13,8 +13,11 @@
 #ifdef HAVE_LIBBPF
 #include <bpf/libbpf.h>
 #include <bpf/bpf.h>
+#include <linux/bpf.h>
 static struct bpf_object *g_bpf_obj = NULL;
 static int g_map_fd = -1;
+static int g_prog_pinned = 0;  /* 1 if pin to MYCO_BPF_PIN_PATH succeeded */
+#define MYCO_BPF_PIN_PATH "/sys/fs/bpf/myco_tc_prog"
 #endif
 
 static int  g_ebpf_attached = 0;
@@ -37,6 +40,12 @@ int ebpf_init(const myco_config_t *cfg) {
         return -1;
     }
 
+    /* Set prog type explicitly so libbpf doesn't rely on section-name inference */
+    struct bpf_program *prog;
+    bpf_object__for_each_program(prog, g_bpf_obj) {
+        bpf_program__set_type(prog, BPF_PROG_TYPE_SCHED_CLS);
+    }
+
     if (bpf_object__load(g_bpf_obj) != 0) {
         log_msg(LOG_WARN, "ebpf", "failed to load bpf obj: %s", cfg->ebpf_obj);
         bpf_object__close(g_bpf_obj);
@@ -45,6 +54,23 @@ int ebpf_init(const myco_config_t *cfg) {
     }
 
     log_msg(LOG_INFO, "ebpf", "bpf object loaded (no attach yet): %s", cfg->ebpf_obj);
+
+    /* Pin the prog so ebpf_attach_tc reuses the same map instance.
+     * Requires bpffs mounted at /sys/fs/bpf (e.g. "mount -t bpf none /sys/fs/bpf").
+     * On failure TC falls back to obj-based load (separate map — counters read 0). */
+    /* bpf_program__next(NULL, obj) returns the first program; available since libbpf 0.1 */
+    struct bpf_program *first_prog = bpf_program__next(NULL, g_bpf_obj);
+    if (first_prog) {
+        unlink(MYCO_BPF_PIN_PATH);
+        if (bpf_program__pin(first_prog, MYCO_BPF_PIN_PATH) == 0) {
+            g_prog_pinned = 1;
+            log_msg(LOG_INFO, "ebpf", "prog pinned: %s", MYCO_BPF_PIN_PATH);
+        } else {
+            log_msg(LOG_WARN, "ebpf",
+                    "prog pin failed (bpffs not mounted?): %s — TC will use separate map instance, counters will read 0",
+                    MYCO_BPF_PIN_PATH);
+        }
+    }
 
     g_map_fd = bpf_object__find_map_fd_by_name(g_bpf_obj, "myco_stats");
     if (g_map_fd < 0) {
@@ -82,11 +108,31 @@ int ebpf_attach_tc(const myco_config_t *cfg) {
     strncpy(g_ebpf_dir, dir, sizeof(g_ebpf_dir) - 1);
     g_ebpf_dir[sizeof(g_ebpf_dir) - 1] = '\0';
     char cmd[512];
-    snprintf(cmd, sizeof(cmd), "tc qdisc add dev %s clsact 2>/dev/null", cfg->egress_iface);
+    int n;
+    n = snprintf(cmd, sizeof(cmd), "tc qdisc add dev %s clsact 2>/dev/null", cfg->egress_iface);
+    if (n < 0 || (size_t)n >= sizeof(cmd)) {
+        log_msg(LOG_WARN, "ebpf", "tc qdisc cmd truncated");
+        return -1;
+    }
     system(cmd);
 
-    snprintf(cmd, sizeof(cmd), "tc filter replace dev %s %s bpf da obj %s sec tc",
-             cfg->egress_iface, dir, cfg->ebpf_obj);
+#ifdef HAVE_LIBBPF
+    /* Use the libbpf-pinned prog so TC and the map reader share the same instance */
+    if (access(MYCO_BPF_PIN_PATH, F_OK) == 0) {
+        n = snprintf(cmd, sizeof(cmd), "tc filter replace dev %s %s bpf da pinned %s",
+                     cfg->egress_iface, dir, MYCO_BPF_PIN_PATH);
+    } else {
+        n = snprintf(cmd, sizeof(cmd), "tc filter replace dev %s %s bpf da obj %s sec tc",
+                     cfg->egress_iface, dir, cfg->ebpf_obj);
+    }
+#else
+    n = snprintf(cmd, sizeof(cmd), "tc filter replace dev %s %s bpf da obj %s sec tc",
+                 cfg->egress_iface, dir, cfg->ebpf_obj);
+#endif
+    if (n < 0 || (size_t)n >= sizeof(cmd)) {
+        log_msg(LOG_WARN, "ebpf", "tc filter cmd truncated");
+        return -1;
+    }
     int rc = system(cmd);
     if (rc != 0) {
         log_msg(LOG_WARN, "ebpf", "tc attach failed (rc=%d)", rc);
@@ -103,15 +149,6 @@ void ebpf_tick(const myco_config_t *cfg) {
     }
     if (!g_ebpf_attached) {
         ebpf_attach_tc(cfg);
-    }
-    
-    uint64_t pkts = 0, bytes = 0;
-    if (ebpf_read_stats(&pkts, &bytes) == 0) {
-        // Log sparingly or update global metrics
-        // For verify step S3.1, let's log every tick (1s) if non-zero
-        if (pkts > 0) {
-            log_msg(LOG_INFO, "ebpf", "stats: pkts=%llu bytes=%llu", pkts, bytes);
-        }
     }
 }
 
@@ -130,6 +167,8 @@ int ebpf_read_stats(uint64_t *packets, uint64_t *bytes) {
     if (bytes) *bytes = val.bytes;
     return 0;
 #else
+    (void)packets;
+    (void)bytes;
     return -1;
 #endif
 }
@@ -144,6 +183,10 @@ void ebpf_shutdown(void) {
         system(cmd);
     }
 #ifdef HAVE_LIBBPF
+    if (g_prog_pinned) {
+        unlink(MYCO_BPF_PIN_PATH);
+        g_prog_pinned = 0;
+    }
     if (g_bpf_obj) {
         bpf_object__close(g_bpf_obj);
         g_bpf_obj = NULL;

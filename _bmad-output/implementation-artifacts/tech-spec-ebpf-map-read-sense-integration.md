@@ -2,8 +2,8 @@
 title: 'eBPF Map Reading — Sense Module Integration'
 slug: 'ebpf-map-read-sense-integration'
 created: '2026-02-18'
-status: 'implementation-complete'
-stepsCompleted: [1, 2, 3, 4]
+status: 'completed'
+stepsCompleted: [1, 2, 3, 4, 5, 6]
 tech_stack: ['C (C11)', 'GCC / clang-bpf', 'libbpf', 'eBPF/TC', 'CMake 3.10+', 'minunit.h']
 files_to_modify: ['src/myco_types.h', 'src/main.c']
 code_patterns: ['bpf_map_lookup_elem', 'metrics_t struct extension', 'HAVE_LIBBPF guard', 'em-dash section divider', 'unsigned long long cast for %llu']
@@ -163,11 +163,13 @@ logic needed. Update the main-loop log line to include the new counters.
   the build produces zero warnings and the struct contains `ebpf_rx_pkts`
   and `ebpf_rx_bytes` as `uint64_t` fields.
 
-- [ ] AC-2: Given the daemon starts with `ebpf_enabled=1`, a valid `ebpf_obj`
+- [x] AC-2: Given the daemon starts with `ebpf_enabled=1`, a valid `ebpf_obj`
   path, `HAVE_LIBBPF` defined, the TC hook attached to the interface, and the
   traffic-gen script has produced ingress packets, when one full iteration of
   the main loop completes, then `metrics.ebpf_rx_pkts > 0` and the loop log
   line contains non-zero `ebpf_pkts=` and `ebpf_bytes=` values.
+  **VERIFIED** (Docker/ubuntu:22.04, privileged, bpffs mounted):
+  `ebpf_pkts=2 → 5 → 8 → 12 → 14 → 15 → 16 → 17` during 8× ping traffic.
 
 - [x] AC-3: Given the daemon starts with `HAVE_LIBBPF` not defined (or
   `ebpf_enabled=0`), when one full iteration of the main loop completes, then
@@ -204,15 +206,61 @@ Integration-only — no BPF map mock harness exists in the project.
 - **Unit tests**: not applicable — no BPF map fd mock exists; do not create
   one for this change
 
+### Pre-existing Bugs Fixed During Verification
+
+Three pre-existing bugs in the Phase 3 scaffold were discovered and fixed as
+part of AC-2 integration testing:
+
+1. **Missing BTF in BPF object** (`src/CMakeLists.txt`): `clang` command lacked
+   `-g`, so no BTF section was emitted; libbpf refused to load the object.
+   Fix: added `-g` to the clang BPF compile command.
+
+2. **libbpf prog-type inference failure** (`src/myco_ebpf.c`): `SEC("tc")` was
+   not recognized by libbpf 0.5 on ubuntu:22.04. Fix: added
+   `bpf_program__set_type(prog, BPF_PROG_TYPE_SCHED_CLS)` loop before
+   `bpf_object__load()`.
+
+3. **Dual-load map mismatch** (`src/myco_ebpf.c`): `ebpf_init()` loaded the
+   BPF object via libbpf (creating map instance A), while `ebpf_attach_tc()`
+   called `tc filter ... obj FILE` which reloaded the same file (map instance B).
+   Traffic updated B; `ebpf_read_stats()` read from A — always 0. Fix: after
+   `bpf_object__load()`, pin the first program to `/sys/fs/bpf/myco_tc_prog`;
+   `ebpf_attach_tc()` uses `bpf da pinned <path>` when the pin exists, so TC
+   and the map reader share the same program and map instance.
+   Requires bpffs mounted at `/sys/fs/bpf`.
+
 ### Notes
 
-- **Double-read**: after Task 2, `ebpf_read_stats()` is called twice per loop
-  tick — once from `main.c` (to populate `metrics`) and once from inside
-  `ebpf_tick()` (for its own log). This is accepted for now. Removing the
-  internal call from `ebpf_tick()` is out of scope for this spec.
+- **Double-read (resolved)**: the internal `ebpf_read_stats()` call was removed
+  from `ebpf_tick()` during the adversarial review fix phase. Only `main.c`
+  reads the map per tick now.
 - **TC ingress only**: the BPF program (`mycoflow.bpf.c`) counts TC ingress
   packets only. `ebpf_rx_pkts` reflects ingress packets, not egress — field
   naming uses `rx_` prefix intentionally.
 - **Future work**: delta computation (pps/bps from eBPF) or per-CPU map
   reading can be layered on top of this integration without breaking anything
   established here.
+
+---
+
+## Review Notes
+
+- Adversarial review completed (step 5)
+- Findings: 13 total, 9 fixed, 4 deferred
+- Resolution approach: auto-fix [F]
+
+### Fixed
+- F1: Removed redundant `ebpf_read_stats` from `ebpf_tick()` — single read per tick now in `main.c`
+- F3: Added `LOG_WARN` when `bpf_program__pin()` fails with clear message about bpffs
+- F4/F9: Added `g_prog_pinned` flag; `unlink` on shutdown only if pin succeeded
+- F6: BPF compile now strips DWARF for Release builds (`llvm-strip --strip-debug`) while preserving BTF; `-g` kept always as BTF is required by libbpf
+- F10: `snprintf` return values checked in all `tc` command builds
+- F11: Replaced `bpf_object__for_each_program` + `break` with `bpf_program__next(NULL, obj)`
+- F12: `ebpf_read_stats()` failure in `main.c` now zeros both fields instead of leaving stale values
+- F13: Pin failure log message includes "bpffs not mounted?" hint
+
+### Deferred
+- F2: Pre-existing `system()` command injection via unsanitised `egress_iface`/`ebpf_obj` — pre-dates this spec, hardcoded pin path in new branch is safe
+- F5: `BPF_MAP_TYPE_ARRAY` vs `BPF_MAP_TYPE_PERCPU_ARRAY` — requires BPF kernel program changes
+- F7: Cumulative vs per-interval logging — cosmetic; documented in field naming (`rx_pkts` not `pps`)
+- F8: `bpf_program__set_type()` deprecated in libbpf ≥0.8 — required for libbpf 0.5 compat (ubuntu 22.04 / older OpenWrt)
