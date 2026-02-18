@@ -149,6 +149,9 @@ int main(void) {
             log_msg(LOG_WARN, "main", "sense sample failed");
         }
 
+        /* Populate eBPF counters into metrics (no-op if libbpf unavailable) */
+        ebpf_read_stats(&metrics.ebpf_rx_pkts, &metrics.ebpf_rx_bytes);
+
         ebpf_tick(&cfg);
 
         /* Flow table: populate from conntrack, evict stale (>60s) */
@@ -190,11 +193,13 @@ int main(void) {
         myco_dump_json();
 
         log_msg(LOG_INFO, "loop",
-                "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% qbl=%u qdr=%u flows=%d persona=%s bw=%dkbit reason=%s",
+                "rtt=%.2f(raw=%.2f)ms jitter=%.2f(raw=%.2f)ms tx=%.0fbps rx=%.0fbps cpu=%.1f%% qbl=%u qdr=%u flows=%d persona=%s bw=%dkbit reason=%s ebpf_pkts=%llu ebpf_bytes=%llu",
                 metrics.rtt_ms, raw_rtt, metrics.jitter_ms, raw_jitter, metrics.tx_bps, metrics.rx_bps, metrics.cpu_pct,
                 metrics.qdisc_backlog, metrics.qdisc_drops,
                 flow_table_active_count(&flow_table),
-                persona_name(persona), control_state.current.bandwidth_kbit, reason);
+                persona_name(persona), control_state.current.bandwidth_kbit, reason,
+                (unsigned long long)metrics.ebpf_rx_pkts,
+                (unsigned long long)metrics.ebpf_rx_bytes);
 
         dump_metrics(&cfg, &metrics, persona, reason);
 

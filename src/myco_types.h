@@ -56,6 +56,9 @@ typedef struct {
     uint32_t qdisc_overlimits;
     /* Packet-size signal (from /proc/net/dev) */
     double avg_pkt_size;
+    /* ── eBPF map counters (raw cumulative; 0 when libbpf unavailable) ── */
+    uint64_t ebpf_rx_pkts;
+    uint64_t ebpf_rx_bytes;
 } metrics_t;
 
 /* ── Persona ────────────────────────────────────────────────── */
