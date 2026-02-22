@@ -1,0 +1,26 @@
+# MycoFlow Bufferbloat Benchmark Compose
+# Mimari: TEK privileged container içinde ip netns topolojisi
+#
+#  [netns:server 10.0.1.2] <─veth─> [netns:router 10.0.1.1/10.0.2.1] <─veth─> [netns:client 10.0.2.2]
+#
+# Traffic gerçekten router netns'inden geçer → tc qdisc etkisi ölçülür.
+# Multi-container Docker bridge routing WSL2'de çalışmadığından bu yaklaşım kullanılıyor.
+#
+# Kullanım:
+#   docker compose -f docker-compose.bench.yml up --build -d
+#   ./scripts/docker-bench.sh
+
+services:
+  lab:
+    build:
+      context: .
+      dockerfile: docker/lab/Dockerfile
+    container_name: mycoflow-lab
+    privileged: true          # ip netns + iptables + tc için gerekli
+    environment:
+      - WAN_BW_KBIT=20000     # 20 Mbit — bufferbloat'ı Docker'da görünür yapar
+                              # Gerçek OpenWrt testi: 100Mbit+ CAKE ile
+    volumes:
+      - ./scripts:/bench:ro   # benchmark script
+      - ./results:/results    # sonuç dosyaları
+    restart: unless-stopped

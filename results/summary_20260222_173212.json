@@ -1,0 +1,32 @@
+{
+  "benchmark": "mycoflow-bufferbloat",
+  "timestamp": "20260222_173212",
+  "wan_bw_kbit": 100000,
+  "duration_s": 20,
+  "results": {
+    "FIFO": {
+      "upload_mbps": "300.0",
+      "download_mbps": "100M(cap)",
+      "idle_ms": "0.041",
+      "loaded_ms": "1191.298",
+      "increase_ms": "1191.3",
+      "grade": "F"
+    },
+    "Static AQM": {
+      "upload_mbps": "300.0",
+      "download_mbps": "100M(cap)",
+      "idle_ms": "0.038",
+      "loaded_ms": "1191.567",
+      "increase_ms": "1191.5",
+      "grade": "F"
+    },
+    "MycoFlow": {
+      "upload_mbps": "300.0",
+      "download_mbps": "100M(cap)",
+      "idle_ms": "0.033",
+      "loaded_ms": "1202.248",
+      "increase_ms": "1202.2",
+      "grade": "F"
+    }
+  }
+}

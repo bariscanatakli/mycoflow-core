@@ -6,7 +6,9 @@ RUN apk add --no-cache \
     bind-tools \
     iputils \
     bash \
-    wget
+    wget \
+    python3 \
+    iproute2
 
 # Keep container running
 CMD ["sleep", "infinity"]
