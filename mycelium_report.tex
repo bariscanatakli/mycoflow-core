@@ -204,16 +204,23 @@ where $g(\cdot)$ is bounded (e.g. $\tanh$) and $(k_u,k_d)$ are rate-limited step
 \end{figure}
 
 \subsection{Persona Inference Heuristics}
-The current implementation uses a pragmatic three-signal majority vote for persona classification:
-\begin{enumerate}
-  \item \textbf{RTT/Jitter signal:} $r_t > 40\text{ms} \lor j_t > 15\text{ms}$ suggests interactive traffic.
-  \item \textbf{TX/RX ratio:} $\text{tx\_bps} > 1.5 \cdot \text{rx\_bps}$ indicates bulk upload.
-  \item \textbf{Average packet size:} $\bar{s}_t < 200\text{B}$ favors interactive (gaming, VoIP); $\bar{s}_t > 1000\text{B}$ favors bulk.
-\end{enumerate}
-The final decision is $\arg\max_p \text{vote}_p$ across these signals.
+The implementation uses a seven-signal majority vote for persona classification.
+Each signal independently votes INTERACTIVE or BULK; the majority class wins.
 A $k$-of-$m$ sliding window (default $k=3, m=5$) with sticky hysteresis prevents rapid class flips.
 
-\textit{Note: The original design envisioned DNS/SNI categorization and confidence accumulators ($c_p \leftarrow \beta c_p + (1-\beta)\phi_p$). These were simplified to the three-signal heuristic above as a pragmatic compromise for the embedded target, where DNS inspection requires additional kernel hooks.}
+\begin{enumerate}
+  \item \textbf{RTT/Jitter:} $r_t > 40\text{ms} \lor j_t > 15\text{ms}$ → INTERACTIVE.
+  \item \textbf{TX/RX ratio:} $\text{tx\_bps} > 1.5 \cdot \text{rx\_bps}$ → BULK (upload-dominant).
+  \item \textbf{Average packet size:} $\bar{s}_t < 200\text{B}$ → INTERACTIVE; $\bar{s}_t > 1000\text{B}$ → BULK.
+  \item \textbf{Qdisc backlog:} backlog $> 50$ packets → INTERACTIVE (deep queue pressure).
+  \item \textbf{Active flow count:} fewer than 5 active connections → INTERACTIVE (focused session); 5 or more → BULK.
+  \item \textbf{Elephant flow:} one flow carrying $>60\%$ of total bytes → BULK.
+  \item \textbf{eBPF packet rate:} rate $< 500$~pps → INTERACTIVE (low-rate interactive); $\geq 500$~pps → BULK.
+\end{enumerate}
+
+Signals 4–7 were added in Sprint~B to exploit flow-table and eBPF counters already collected
+by the daemon, at negligible CPU cost ($< 1\,\mu$s per cycle).
+\textit{Note: The original design also envisioned DNS/SNI categorization and probabilistic confidence accumulators. These remain future work; the seven-signal heuristic delivers sufficient discrimination on the embedded target without additional kernel hooks.}
 
 \newpage
 
@@ -438,18 +445,43 @@ Time complexity per cycle $O(F + \log A)$, where $F$ = active flows read from eB
 \end{itemize}
 
 \subsection{Implementation Status}
-The following modules have been implemented and verified:
+The following modules have been implemented and verified (Sprint A + Sprint B, Feb 2026):
 \begin{itemize}
-  \item \textbf{Modular architecture:} 11 source files (\texttt{main.c}, \texttt{myco\_sense.c}, \texttt{myco\_persona.c}, \texttt{myco\_control.c}, \texttt{myco\_act.c}, \texttt{myco\_ewma.c}, \texttt{myco\_ebpf.c}, \texttt{myco\_netlink.c}, \texttt{myco\_flow.c}, \texttt{myco\_config.c}, \texttt{myco\_log.c}).
-  \item \textbf{EWMA filter:} Configurable $\alpha$ applied to RTT and jitter metrics.
+  \item \textbf{Modular architecture:} 12 source files (\texttt{main.c}, \texttt{myco\_sense.c}, \texttt{myco\_persona.c}, \texttt{myco\_control.c}, \texttt{myco\_act.c}, \texttt{myco\_ewma.c}, \texttt{myco\_ebpf.c}, \texttt{myco\_netlink.c}, \texttt{myco\_flow.c}, \texttt{myco\_config.c}, \texttt{myco\_log.c}, \texttt{myco\_ubus.c}).
+  \item \textbf{EWMA filter:} Configurable $\alpha$ applied to RTT and jitter metrics; sliding baseline adaptation with configurable EWMA decay (default $\beta = 0.01$) updated every 60 cycles.
+  \item \textbf{Adaptive congestion threshold:} Threshold set dynamically as $\text{baseline\_rtt} \times (1 + \gamma)$ with default $\gamma = 0.30$; eliminates hardcoded margins.
+  \item \textbf{Action feedback ring:} 8-slot circular buffer recording bandwidth changes and RTT before/after; bandwidth step halved automatically when actions consistently worsen RTT.
   \item \textbf{Thread safety:} Mutex-protected shared state between main loop and ubus thread.
-  \item \textbf{eBPF telemetry:} BPF program (\texttt{mycoflow.bpf.c}) with TC hook counting packets/bytes via \texttt{BPF\_MAP\_TYPE\_ARRAY}.
+  \item \textbf{eBPF telemetry:} BPF program (\texttt{mycoflow.bpf.c}) with TC hook counting packets/bytes via \texttt{BPF\_MAP\_TYPE\_ARRAY}; BTF generation with \texttt{clang -g -target bpf}; program pinning support.
   \item \textbf{Netlink stats:} Raw \texttt{NETLINK\_ROUTE} socket reading Qdisc backlog, drops, and overlimits.
-  \item \textbf{Flow table:} Userspace LRU hash table (FNV-1a) populated from \texttt{/proc/net/nf\_conntrack}.
-  \item \textbf{Unit tests:} 4 test suites (EWMA, control, config, persona) via CTest.
+  \item \textbf{Flow table:} Userspace LRU hash table (FNV-1a) populated from \texttt{/proc/net/nf\_conntrack}; elephant flow detection (single flow $>60\%$ of bytes); stale-entry eviction at 60~s.
+  \item \textbf{Multi-signal persona engine:} 7-signal majority vote with 3-of-5 hysteresis (Table~\ref{tab:persona-signals}). Signals include RTT/jitter, TX/RX ratio, average packet size, qdisc backlog, active flow count, elephant flow flag, and eBPF packet rate.
+  \item \textbf{CAKE diffserv4 + persona latency targeting:} CAKE configured with \texttt{diffserv4} for 4-tin DSCP classification; AQM target set to 5~ms (INTERACTIVE) or 20~ms (BULK) on persona change.
+  \item \textbf{Ingress shaping via IFB:} Download bufferbloat addressed through an IFB (Intermediate Functional Block) device; WAN ingress traffic is mirrored via \texttt{tc mirred} and shaped by a CAKE qdisc on \texttt{ifb0}; persona-driven target latency applied symmetrically to egress and ingress paths; interface names validated to prevent shell injection.
+  \item \textbf{Unit tests:} 5 test suites (ewma, act, control, config, persona) via CTest; 100\% pass rate.
   \item \textbf{Integration harness:} Docker-based automated test script (\texttt{scripts/run\_integration.sh}).
-  \item \textbf{Benchmark suite:} \texttt{iperf3}/\texttt{flent} comparison scripts with JSON output.
+  \item \textbf{Benchmark suite:} \texttt{iperf3}/\texttt{flent} comparison scripts covering egress (upload) and ingress (download) paths with JSON summary output (\texttt{scripts/benchmark.sh}).
 \end{itemize}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\begin{tabular}{p{0.4cm}p{3.5cm}p{4.2cm}p{4.2cm}}
+\toprule
+\textbf{\#} & \textbf{Signal} & \textbf{INTERACTIVE} & \textbf{BULK} \\
+\midrule
+1 & RTT / Jitter & $r_t > 40$~ms $\lor$ $j_t > 15$~ms & $r_t \leq 40$~ms $\land$ $j_t \leq 15$~ms \\
+2 & TX/RX ratio & — & tx\_bps $> 1.5 \times$ rx\_bps \\
+3 & Avg packet size & $\bar{s} < 200$~B & $\bar{s} > 1000$~B \\
+4 & Qdisc backlog & backlog $> 50$~pkts & — \\
+5 & Active flows & flow count $< 5$ & flow count $\geq 5$ \\
+6 & Elephant flow & — & single flow $> 60\%$ bytes \\
+7 & eBPF pkt rate & pkt\_rate $< 500$~pps & pkt\_rate $\geq 500$~pps \\
+\bottomrule
+\end{tabular}
+\caption{Persona inference signals and majority-vote thresholds.}
+\label{tab:persona-signals}
+\end{table}
 
 \newpage
 
@@ -495,12 +527,13 @@ ubus API           & \texttt{myco\_ubus.c}      & OpenWrt IPC surface \\
 \end{table}
 
 \subsubsection{Unit Test Verification}
-Four test suites (CTest) pass with 100\% success rate:
+Five test suites (CTest) pass with 100\% success rate (Sprint~B adds \texttt{test\_act}):
 \begin{itemize}
   \item \texttt{test\_ewma}: EWMA convergence with various $\alpha$ values
-  \item \texttt{test\_control}: Congestion/clear/outlier scenarios
-  \item \texttt{test\_config}: Default values and environment overrides
-  \item \texttt{test\_persona}: k-of-m voting and hysteresis transitions
+  \item \texttt{test\_act}: IFB setup/teardown, interface name validation, persona paths (14 cases)
+  \item \texttt{test\_control}: Congestion/clear/outlier scenarios, action feedback ring
+  \item \texttt{test\_config}: Default values, environment overrides, ingress config fields
+  \item \texttt{test\_persona}: 7-signal majority vote, k-of-m sliding window, hysteresis transitions
 \end{itemize}
 
 \subsubsection{Integration Verification}

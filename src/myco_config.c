@@ -77,6 +77,10 @@ static void apply_defaults(myco_config_t *cfg) {
     cfg->baseline_decay = 0.01;
     cfg->baseline_update_interval = 60;
     cfg->rtt_margin_factor = 0.30;
+    cfg->ingress_enabled = 0;
+    strncpy(cfg->ingress_iface, "ifb0", sizeof(cfg->ingress_iface) - 1);
+    cfg->ingress_iface[sizeof(cfg->ingress_iface) - 1] = '\0';
+    cfg->ingress_bandwidth_kbit = 0;
 }
 
 /* ── UCI helpers ────────────────────────────────────────────── */
@@ -214,6 +218,16 @@ static void apply_uci_overrides(myco_config_t *cfg) {
     if (uci_get_option("rtt_margin_factor", val, sizeof(val))) {
         cfg->rtt_margin_factor = atof(val);
     }
+    if (uci_get_option("ingress_enabled", val, sizeof(val))) {
+        cfg->ingress_enabled = atoi(val);
+    }
+    if (uci_get_option("ingress_iface", val, sizeof(val))) {
+        strncpy(cfg->ingress_iface, val, sizeof(cfg->ingress_iface) - 1);
+        cfg->ingress_iface[sizeof(cfg->ingress_iface) - 1] = '\0';
+    }
+    if (uci_get_option("ingress_bandwidth_kbit", val, sizeof(val))) {
+        cfg->ingress_bandwidth_kbit = atoi(val);
+    }
 }
 
 /* ── Environment overrides ──────────────────────────────────── */
@@ -259,6 +273,13 @@ static void apply_env_overrides(myco_config_t *cfg) {
     cfg->baseline_decay = parse_env_double("MYCOFLOW_BASELINE_DECAY", cfg->baseline_decay);
     cfg->baseline_update_interval = parse_env_int("MYCOFLOW_BASELINE_INTERVAL", cfg->baseline_update_interval);
     cfg->rtt_margin_factor = parse_env_double("MYCOFLOW_RTT_MARGIN", cfg->rtt_margin_factor);
+    cfg->ingress_enabled = parse_env_int("MYCOFLOW_INGRESS", cfg->ingress_enabled);
+    const char *ingress_iface = getenv("MYCOFLOW_INGRESS_IFACE");
+    if (ingress_iface && *ingress_iface) {
+        strncpy(cfg->ingress_iface, ingress_iface, sizeof(cfg->ingress_iface) - 1);
+        cfg->ingress_iface[sizeof(cfg->ingress_iface) - 1] = '\0';
+    }
+    cfg->ingress_bandwidth_kbit = parse_env_int("MYCOFLOW_INGRESS_BW", cfg->ingress_bandwidth_kbit);
     const char *ebpf_tc_dir = getenv("MYCOFLOW_EBPF_TC_DIR");
     if (ebpf_tc_dir && *ebpf_tc_dir) {
         strncpy(cfg->ebpf_tc_dir, ebpf_tc_dir, sizeof(cfg->ebpf_tc_dir) - 1);

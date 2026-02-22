@@ -93,6 +93,7 @@ int main(void) {
     sense_init(cfg.egress_iface, cfg.dummy_metrics);
     persona_init(&persona_state);
     control_init(&control_state, cfg.bandwidth_kbit);
+    control_state.current.ingress_bw_kbit = cfg.ingress_bandwidth_kbit;
     g_last_policy = control_state.current;
     snprintf(g_last_reason, sizeof(g_last_reason), "startup");
 
@@ -107,6 +108,20 @@ int main(void) {
     log_msg(LOG_INFO, "main", "baseline capture: %d samples", cfg.baseline_samples);
     sense_get_idle_baseline(cfg.egress_iface, cfg.probe_host, cfg.baseline_samples, interval_s, cfg.dummy_metrics, &baseline);
     log_msg(LOG_INFO, "main", "baseline rtt=%.2fms jitter=%.2fms", baseline.rtt_ms, baseline.jitter_ms);
+
+    /* ── Ingress IFB: one-time plumbing at startup ───────────── */
+    if (cfg.ingress_enabled) {
+        int ibw = cfg.ingress_bandwidth_kbit > 0
+                  ? cfg.ingress_bandwidth_kbit
+                  : cfg.bandwidth_kbit;
+        if (act_setup_ingress_ifb(cfg.egress_iface, cfg.ingress_iface, ibw,
+                                  cfg.no_tc, cfg.force_act_fail)) {
+            control_state.current.ingress_bw_kbit = ibw;
+        } else {
+            log_msg(LOG_WARN, "main", "ingress IFB setup failed, disabling ingress shaping");
+            cfg.ingress_enabled = 0;
+        }
+    }
 
     double last_action_ts = 0.0;
     int    loop_cycle     = 0;
@@ -135,6 +150,20 @@ int main(void) {
                 }
                 log_msg(LOG_INFO, "main", "baseline capture: %d samples", cfg.baseline_samples);
                 sense_get_idle_baseline(cfg.egress_iface, cfg.probe_host, cfg.baseline_samples, interval_s, cfg.dummy_metrics, &baseline);
+                /* Re-apply ingress IFB plumbing after reload: operator may have
+                 * changed ingress_enabled, ingress_iface, or ingress_bandwidth_kbit. */
+                if (cfg.ingress_enabled) {
+                    int ibw = cfg.ingress_bandwidth_kbit > 0
+                              ? cfg.ingress_bandwidth_kbit
+                              : cfg.bandwidth_kbit;
+                    if (act_setup_ingress_ifb(cfg.egress_iface, cfg.ingress_iface, ibw,
+                                              cfg.no_tc, cfg.force_act_fail)) {
+                        control_state.current.ingress_bw_kbit = ibw;
+                    } else {
+                        log_msg(LOG_WARN, "main", "ingress IFB re-setup failed on reload, disabling");
+                        cfg.ingress_enabled = 0;
+                    }
+                }
                 log_msg(LOG_INFO, "main", "config reloaded");
             }
         }
@@ -235,6 +264,14 @@ int main(void) {
                 act_apply_persona_tin(cfg.egress_iface, persona,
                                       control_state.current.bandwidth_kbit,
                                       cfg.no_tc, cfg.force_act_fail);
+                /* Mirror persona latency target to ingress IFB as well */
+                if (cfg.ingress_enabled) {
+                    int ibw = control_state.current.ingress_bw_kbit > 0
+                              ? control_state.current.ingress_bw_kbit
+                              : cfg.bandwidth_kbit;
+                    act_apply_ingress_policy(cfg.ingress_iface, persona, ibw,
+                                            cfg.no_tc, cfg.force_act_fail);
+                }
             }
 
             if (change) {
@@ -245,6 +282,12 @@ int main(void) {
                     if (ok) {
                         control_state.current = desired;
                         last_action_ts = now;
+                        /* Sync ingress CAKE bandwidth cap with the adapted egress value */
+                        if (cfg.ingress_enabled && control_state.current.ingress_bw_kbit > 0) {
+                            act_apply_ingress_policy(cfg.ingress_iface, persona,
+                                                     control_state.current.ingress_bw_kbit,
+                                                     cfg.no_tc, cfg.force_act_fail);
+                        }
                     }
                 } else {
                     log_msg(LOG_DEBUG, "loop", "action skipped (cooldown)");
@@ -268,6 +311,9 @@ int main(void) {
         sleep_interval(interval_s);
     }
 
+    if (cfg.ingress_enabled) {
+        act_teardown_ingress_ifb(cfg.egress_iface, cfg.ingress_iface, cfg.no_tc);
+    }
     log_msg(LOG_INFO, "main", "shutdown complete");
     ubus_stop();
     ebpf_shutdown();

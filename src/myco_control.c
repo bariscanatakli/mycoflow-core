@@ -165,6 +165,16 @@ int control_decide(control_state_t *state,
                                                 (double)cfg->min_bandwidth_kbit,
                                                 (double)cfg->max_bandwidth_kbit);
 
+    /* Propagate the same bandwidth delta to the ingress policy so the IFB
+     * CAKE cap tracks egress adaptation rather than staying frozen at startup. */
+    if (desired->ingress_bw_kbit > 0) {
+        int delta = desired->bandwidth_kbit - state->current.bandwidth_kbit;
+        desired->ingress_bw_kbit = (int)clamp_double(
+            (double)(desired->ingress_bw_kbit + delta),
+            (double)cfg->min_bandwidth_kbit,
+            (double)cfg->max_bandwidth_kbit);
+    }
+
     if (desired->bandwidth_kbit == state->current.bandwidth_kbit) {
         state->stable_cycles++;
         if (state->stable_cycles >= 3) {

@@ -44,6 +44,10 @@ typedef struct {
     double baseline_decay;           /* sliding baseline EWMA weight (default 0.01) */
     int    baseline_update_interval; /* cycles between baseline updates (default 60) */
     double rtt_margin_factor;        /* congestion threshold = baseline_rtt * factor (default 0.30) */
+    /* ── Ingress shaping (IFB) ──────────────────────────────────── */
+    int    ingress_enabled;          /* 0 = skip ingress shaping (default) */
+    char   ingress_iface[32];        /* IFB device name (default "ifb0") */
+    int    ingress_bandwidth_kbit;   /* ingress CAKE bandwidth kbit (default 0 = use egress bw) */
 } myco_config_t;
 
 /* ── Metrics ────────────────────────────────────────────────── */
@@ -86,6 +90,7 @@ typedef struct {
 /* ── Policy / Control ───────────────────────────────────────── */
 typedef struct {
     int bandwidth_kbit;
+    int ingress_bw_kbit;  /* ingress CAKE bandwidth; 0 = use cfg default */
     int boosted;
 } policy_t;
 

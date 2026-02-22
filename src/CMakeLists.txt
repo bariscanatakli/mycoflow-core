@@ -30,6 +30,10 @@ target_link_libraries(mycoflowd PRIVATE m Threads::Threads)
 add_executable(test_ewma tests/test_ewma.c myco_ewma.c)
 add_test(NAME ewma COMMAND test_ewma)
 
+add_executable(test_act tests/test_act.c myco_act.c myco_log.c myco_config.c myco_persona.c)
+target_link_libraries(test_act PRIVATE m Threads::Threads)
+add_test(NAME act COMMAND test_act)
+
 add_executable(test_control tests/test_control.c myco_control.c myco_log.c myco_config.c myco_act.c myco_persona.c)
 target_link_libraries(test_control PRIVATE m Threads::Threads)
 add_test(NAME control COMMAND test_control)

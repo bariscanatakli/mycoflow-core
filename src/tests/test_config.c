@@ -52,9 +52,42 @@ static char *test_config_validation() {
     return 0;
 }
 
+static char *test_config_ingress_defaults() {
+    myco_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    config_load(&cfg);
+
+    mu_assert("error, ingress_enabled should default to 0", cfg.ingress_enabled == 0);
+    mu_assert("error, ingress_iface should default to ifb0",
+              strcmp(cfg.ingress_iface, "ifb0") == 0);
+    mu_assert("error, ingress_bandwidth_kbit should default to 0",
+              cfg.ingress_bandwidth_kbit == 0);
+    return 0;
+}
+
+static char *test_config_ingress_env() {
+    myco_config_t cfg;
+    memset(&cfg, 0, sizeof(cfg));
+
+    setenv("MYCOFLOW_INGRESS", "1", 1);
+    setenv("MYCOFLOW_INGRESS_IFACE", "ifb1", 1);
+    setenv("MYCOFLOW_INGRESS_BW", "50000", 1);
+    config_load(&cfg);
+    mu_assert("error, ingress_enabled env override", cfg.ingress_enabled == 1);
+    mu_assert("error, ingress_iface env override", strcmp(cfg.ingress_iface, "ifb1") == 0);
+    mu_assert("error, ingress_bandwidth_kbit env override", cfg.ingress_bandwidth_kbit == 50000);
+    unsetenv("MYCOFLOW_INGRESS");
+    unsetenv("MYCOFLOW_INGRESS_IFACE");
+    unsetenv("MYCOFLOW_INGRESS_BW");
+
+    return 0;
+}
+
 static char *all_tests() {
     mu_run_test(test_config_defaults);
     mu_run_test(test_config_validation);
+    mu_run_test(test_config_ingress_defaults);
+    mu_run_test(test_config_ingress_env);
     return 0;
 }
 
