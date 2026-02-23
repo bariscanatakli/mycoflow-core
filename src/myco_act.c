@@ -55,51 +55,47 @@ int act_apply_persona_tin(const char *iface, persona_t persona,
         return 0;
     }
 
-    /* Adapt CAKE AQM target latency to persona:
-     *   INTERACTIVE → tight target (5ms) keeps queue short for gaming/VoIP
-     *   BULK        → relaxed target (20ms) allows deeper queue for throughput
-     *   UNKNOWN     → CAKE default (5ms with diffserv4)
+    /* Adapt CAKE AQM latency to persona using RTT hint:
+     *   INTERACTIVE → tight RTT (50ms / "metro") keeps queue short for gaming
+     *   BULK        → relaxed RTT (200ms / "regional") allows deeper queue
+     *   UNKNOWN     → default RTT (100ms / "internet")
      *
-     * diffserv4 enables 4 CAKE tins so DSCP-marked traffic still gets
-     * correct per-class treatment alongside the target adjustment. */
-    int target_ms;
-    int interval_ms;
+     * CAKE's `rtt` parameter sets internal target and interval:
+     *   target ≈ rtt/20, interval ≈ rtt
+     * diffserv4 enables 4 CAKE tins for DSCP-based classification. */
+    int rtt_ms;
     const char *persona_label;
 
     switch (persona) {
         case PERSONA_INTERACTIVE:
-            target_ms    = 5;
-            interval_ms  = 50;
+            rtt_ms        = 50;
             persona_label = "interactive";
             break;
         case PERSONA_BULK:
-            target_ms    = 20;
-            interval_ms  = 200;
+            rtt_ms        = 200;
             persona_label = "bulk";
             break;
         default:
-            target_ms    = 5;
-            interval_ms  = 100;
+            rtt_ms        = 100;
             persona_label = "unknown";
             break;
     }
 
     if (no_tc) {
-        log_msg(LOG_INFO, "act", "tc disabled, would set diffserv4 target %dms persona=%s",
-                target_ms, persona_label);
+        log_msg(LOG_INFO, "act", "tc disabled, would set diffserv4 rtt %dms persona=%s",
+                rtt_ms, persona_label);
         return 1;
     }
 
     char cmd[512];
     snprintf(cmd, sizeof(cmd),
-             "tc qdisc change dev %s root cake bandwidth %dkbit diffserv4 target %dms interval %dms",
-             iface, bandwidth_kbit, target_ms, interval_ms);
+             "tc qdisc change dev %s root cake bandwidth %dkbit diffserv4 rtt %dms",
+             iface, bandwidth_kbit, rtt_ms);
     int rc = system(cmd);
     if (rc != 0) {
-        /* On first call or if diffserv4 wasn't set, fall back to replace */
         snprintf(cmd, sizeof(cmd),
-                 "tc qdisc replace dev %s root cake bandwidth %dkbit diffserv4 target %dms interval %dms",
-                 iface, bandwidth_kbit, target_ms, interval_ms);
+                 "tc qdisc replace dev %s root cake bandwidth %dkbit diffserv4 rtt %dms",
+                 iface, bandwidth_kbit, rtt_ms);
         rc = system(cmd);
         if (rc != 0) {
             log_msg(LOG_WARN, "act", "cake tin setup failed (rc=%d) for persona=%s", rc, persona_label);
@@ -107,8 +103,8 @@ int act_apply_persona_tin(const char *iface, persona_t persona,
         }
     }
 
-    log_msg(LOG_INFO, "act", "cake tin: persona=%s target=%dms interval=%dms bw=%dkbit on %s",
-            persona_label, target_ms, interval_ms, bandwidth_kbit, iface);
+    log_msg(LOG_INFO, "act", "cake tin: persona=%s rtt=%dms bw=%dkbit on %s",
+            persona_label, rtt_ms, bandwidth_kbit, iface);
     return 1;
 }
 
@@ -215,43 +211,39 @@ int act_apply_ingress_policy(const char *ifb_iface, persona_t persona,
         return 0;
     }
 
-    int target_ms;
-    int interval_ms;
+    int rtt_ms;
     const char *persona_label;
 
     switch (persona) {
         case PERSONA_INTERACTIVE:
-            target_ms    = 5;
-            interval_ms  = 50;
+            rtt_ms        = 50;
             persona_label = "interactive";
             break;
         case PERSONA_BULK:
-            target_ms    = 20;
-            interval_ms  = 200;
+            rtt_ms        = 200;
             persona_label = "bulk";
             break;
         default:
-            target_ms    = 5;
-            interval_ms  = 100;
+            rtt_ms        = 100;
             persona_label = "unknown";
             break;
     }
 
     if (no_tc) {
-        log_msg(LOG_INFO, "act", "tc disabled, would set ingress target %dms persona=%s",
-                target_ms, persona_label);
+        log_msg(LOG_INFO, "act", "tc disabled, would set ingress rtt %dms persona=%s",
+                rtt_ms, persona_label);
         return 1;
     }
 
     char cmd[512];
     snprintf(cmd, sizeof(cmd),
-             "tc qdisc change dev %s root cake bandwidth %dkbit diffserv4 target %dms interval %dms",
-             ifb_iface, bandwidth_kbit, target_ms, interval_ms);
+             "tc qdisc change dev %s root cake bandwidth %dkbit diffserv4 rtt %dms",
+             ifb_iface, bandwidth_kbit, rtt_ms);
     int rc = system(cmd);
     if (rc != 0) {
         snprintf(cmd, sizeof(cmd),
-                 "tc qdisc replace dev %s root cake bandwidth %dkbit diffserv4 target %dms interval %dms",
-                 ifb_iface, bandwidth_kbit, target_ms, interval_ms);
+                 "tc qdisc replace dev %s root cake bandwidth %dkbit diffserv4 rtt %dms",
+                 ifb_iface, bandwidth_kbit, rtt_ms);
         rc = system(cmd);
         if (rc != 0) {
             log_msg(LOG_WARN, "act", "ingress CAKE tin failed on %s (rc=%d)", ifb_iface, rc);
@@ -259,8 +251,8 @@ int act_apply_ingress_policy(const char *ifb_iface, persona_t persona,
         }
     }
 
-    log_msg(LOG_INFO, "act", "ingress cake tin: persona=%s target=%dms interval=%dms bw=%dkbit on %s",
-            persona_label, target_ms, interval_ms, bandwidth_kbit, ifb_iface);
+    log_msg(LOG_INFO, "act", "ingress cake tin: persona=%s rtt=%dms bw=%dkbit on %s",
+            persona_label, rtt_ms, bandwidth_kbit, ifb_iface);
     return 1;
 }
 
@@ -295,6 +287,45 @@ void act_teardown_ingress_ifb(const char *wan_iface, const char *ifb_iface, int 
     (void)system(cmd);
 
     log_msg(LOG_INFO, "act", "ingress IFB torn down: %s <- %s", ifb_iface, wan_iface);
+}
+
+/* ── Per-device DSCP mangle chain ─────────────────────────── */
+
+int act_setup_dscp_chain(int no_tc) {
+    if (no_tc) {
+        log_msg(LOG_INFO, "act", "tc disabled, would create mycoflow_dscp chain");
+        return 1;
+    }
+
+    /* Create chain (ignore EEXIST) and insert jump from FORWARD */
+    (void)system("iptables -t mangle -N mycoflow_dscp 2>/dev/null");
+
+    /* Check if jump rule already exists to avoid duplicates */
+    int rc = system("iptables -t mangle -C FORWARD -j mycoflow_dscp 2>/dev/null");
+    if (rc != 0) {
+        rc = system("iptables -t mangle -A FORWARD -j mycoflow_dscp");
+        if (rc != 0) {
+            log_msg(LOG_WARN, "act", "failed to add FORWARD -> mycoflow_dscp jump (rc=%d)", rc);
+            return 0;
+        }
+    }
+
+    log_msg(LOG_INFO, "act", "mycoflow_dscp mangle chain ready");
+    return 1;
+}
+
+void act_teardown_dscp_chain(int no_tc) {
+    if (no_tc) {
+        log_msg(LOG_INFO, "act", "tc disabled, would remove mycoflow_dscp chain");
+        return;
+    }
+
+    /* Remove jump from FORWARD, flush chain, delete chain */
+    (void)system("iptables -t mangle -D FORWARD -j mycoflow_dscp 2>/dev/null");
+    (void)system("iptables -t mangle -F mycoflow_dscp 2>/dev/null");
+    (void)system("iptables -t mangle -X mycoflow_dscp 2>/dev/null");
+
+    log_msg(LOG_INFO, "act", "mycoflow_dscp chain removed");
 }
 
 void dump_metrics(const myco_config_t *cfg,

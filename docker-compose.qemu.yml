@@ -1,0 +1,25 @@
+# MycoFlow QEMU OpenWrt Benchmark Compose
+# QEMU VM içinde gerçek OpenWrt çalıştırır — CAKE diffserv4 + per-device DSCP testi
+#
+# Mimari:
+#   Docker container → QEMU VM (OpenWrt x86-64) → CAKE qdisc + mycoflowd
+#   + netns:server (iperf3), netns:gamer (gaming), netns:bulk (download)
+#
+# Kullanım:
+#   docker compose -f docker-compose.qemu.yml up --build -d
+#   docker logs -f mycoflow-qemu          # "Lab ready!" bekle
+#   ./scripts/qemu-bench.sh               # benchmark çalıştır
+
+services:
+  qemu-lab:
+    build:
+      context: .
+      dockerfile: docker/qemu-lab/Dockerfile
+    container_name: mycoflow-qemu
+    privileged: true
+    environment:
+      - WAN_BW_KBIT=20000     # 20 Mbit — bufferbloat farkını belirgin kılar
+    volumes:
+      - ./scripts:/bench:ro   # benchmark script
+      - ./results:/results    # sonuç dosyaları
+    restart: unless-stopped

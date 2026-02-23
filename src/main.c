@@ -17,6 +17,7 @@
 #include "myco_ebpf.h"
 #include "myco_ewma.h"
 #include "myco_flow.h"
+#include "myco_device.h"
 #include "myco_ubus.h"
 
 #include <signal.h>
@@ -104,6 +105,10 @@ int main(void) {
     ewma_init(&ewma_jitter);
     flow_table_init(&flow_table);
 
+    device_table_t device_table;
+    device_table_init(&device_table);
+    myco_set_device_table(&device_table, cfg.per_device_enabled);
+
     double interval_s = 1.0 / cfg.sample_hz;
     log_msg(LOG_INFO, "main", "baseline capture: %d samples", cfg.baseline_samples);
     sense_get_idle_baseline(cfg.egress_iface, cfg.probe_host, cfg.baseline_samples, interval_s, cfg.dummy_metrics, &baseline);
@@ -120,6 +125,16 @@ int main(void) {
         } else {
             log_msg(LOG_WARN, "main", "ingress IFB setup failed, disabling ingress shaping");
             cfg.ingress_enabled = 0;
+        }
+    }
+
+    /* ── Per-device DSCP: create mangle chain at startup ──────── */
+    if (cfg.per_device_enabled) {
+        if (act_setup_dscp_chain(cfg.no_tc)) {
+            log_msg(LOG_INFO, "main", "per-device DSCP marking enabled");
+        } else {
+            log_msg(LOG_WARN, "main", "DSCP chain setup failed, disabling per-device");
+            cfg.per_device_enabled = 0;
         }
     }
 
@@ -195,6 +210,17 @@ int main(void) {
         /* Flow-derived persona signals — populate into metrics */
         metrics.active_flows  = flow_table_active_count(&flow_table);
         metrics.elephant_flow = flow_table_has_elephant(&flow_table, 0.60);
+
+        /* Per-device persona: aggregate flows by src_ip, infer per-device,
+         * apply DSCP mangle rules when any device persona changes. */
+        if (cfg.per_device_enabled) {
+            device_table_aggregate(&device_table, &flow_table, ft_now);
+            device_table_evict_stale(&device_table, ft_now, 120.0);
+            int dev_changes = device_table_update_personas(&device_table);
+            if (dev_changes > 0) {
+                device_apply_all_dscp(&device_table, cfg.no_tc);
+            }
+        }
 
         /* eBPF packet rate: delta from previous cumulative counter (pkt/s) */
         static uint64_t prev_ebpf_pkts = 0;
@@ -311,6 +337,9 @@ int main(void) {
         sleep_interval(interval_s);
     }
 
+    if (cfg.per_device_enabled) {
+        act_teardown_dscp_chain(cfg.no_tc);
+    }
     if (cfg.ingress_enabled) {
         act_teardown_ingress_ifb(cfg.egress_iface, cfg.ingress_iface, cfg.no_tc);
     }

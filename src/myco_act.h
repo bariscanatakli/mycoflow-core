@@ -21,4 +21,9 @@ void act_teardown_ingress_ifb(const char *wan_iface, const char *ifb_iface, int 
 void dump_metrics(const myco_config_t *cfg, const metrics_t *metrics,
                   persona_t persona, const char *reason);
 
+/* Per-device DSCP mangle chain: create chain + jump rule from FORWARD */
+int  act_setup_dscp_chain(int no_tc);
+/* Remove mycoflow_dscp chain and FORWARD jump on shutdown */
+void act_teardown_dscp_chain(int no_tc);
+
 #endif /* MYCO_ACT_H */

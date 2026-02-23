@@ -12,6 +12,7 @@ set(SOURCES
     myco_ebpf.c
     myco_netlink.c
     myco_flow.c
+    myco_device.c
     myco_ubus.c
 )
 
@@ -23,6 +24,14 @@ add_executable(mycoflowd ${SOURCES})
 # Math library (needed for fabs in sense module)
 find_package(Threads REQUIRED)
 target_link_libraries(mycoflowd PRIVATE m Threads::Threads)
+
+# Static build option — produces a self-contained binary that runs on OpenWrt
+# (musl) without glibc dependency. Enable with: cmake -DSTATIC_BUILD=ON ...
+option(STATIC_BUILD "Link mycoflowd statically (for OpenWrt VM deployment)" OFF)
+if(STATIC_BUILD)
+    message(STATUS "Static build enabled — mycoflowd will link statically")
+    target_link_options(mycoflowd PRIVATE -static)
+endif()
 
 # Tests
 # enable_testing() moved to root
@@ -43,6 +52,9 @@ add_test(NAME config COMMAND test_config)
 
 add_executable(test_persona tests/test_persona.c myco_persona.c myco_log.c)
 add_test(NAME persona COMMAND test_persona)
+
+add_executable(test_device tests/test_device.c myco_device.c myco_persona.c myco_flow.c myco_log.c)
+add_test(NAME device COMMAND test_device)
 
 # Optional ubus support (OpenWrt)
 check_include_file(libubus.h HAVE_UBUS_H)

@@ -1,0 +1,8 @@
+Chain mycoflow_dscp (1 references)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 DSCP       all  --  *      *       192.168.1.254        0.0.0.0/0            DSCP set 0x08
+ 119K  204M DSCP       all  --  *      *       192.168.1.20         0.0.0.0/0            DSCP set 0x08
+    0     0 DSCP       all  --  *      *       127.0.0.1            0.0.0.0/0            DSCP set 0x20
+    0     0 DSCP       all  --  *      *       10.0.99.10           0.0.0.0/0            DSCP set 0x20
+ 6072  558K DSCP       all  --  *      *       192.168.1.10         0.0.0.0/0            DSCP set 0x20
+    0     0 DSCP       all  --  *      *       0.0.0.0              0.0.0.0/0            DSCP set 0x20

@@ -44,6 +44,8 @@ typedef struct {
     double baseline_decay;           /* sliding baseline EWMA weight (default 0.01) */
     int    baseline_update_interval; /* cycles between baseline updates (default 60) */
     double rtt_margin_factor;        /* congestion threshold = baseline_rtt * factor (default 0.30) */
+    /* ── Per-device DSCP marking ────────────────────────────────── */
+    int    per_device_enabled;       /* 0 = global persona only (default) */
     /* ── Ingress shaping (IFB) ──────────────────────────────────── */
     int    ingress_enabled;          /* 0 = skip ingress shaping (default) */
     char   ingress_iface[32];        /* IFB device name (default "ifb0") */

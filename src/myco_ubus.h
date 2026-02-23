@@ -18,4 +18,8 @@ static inline void ubus_stop(void) {}
 // Fallback mechanism when ubus is not available
 void myco_dump_json(void);
 
+// Per-device table registration for JSON dump
+struct device_table_t;  /* forward declare to avoid circular include */
+void myco_set_device_table(const void *dt, int enabled);
+
 #endif /* MYCO_UBUS_H */

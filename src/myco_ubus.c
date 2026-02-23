@@ -7,6 +7,8 @@
 #include "myco_ubus.h"
 #include "myco_types.h"
 #include "myco_persona.h"
+#include "myco_device.h"
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
@@ -21,6 +23,10 @@ extern char g_last_reason[128];
 extern int g_persona_override_active;
 extern persona_t g_persona_override;
 extern int g_last_safe_mode;
+
+/* Per-device table pointer — set by ubus_start() when per_device is enabled */
+static const device_table_t *g_device_table = NULL;
+static int g_per_device_enabled = 0;
 
 #ifdef HAVE_UBUS
 #include <libubox/blobmsg_json.h>
@@ -108,6 +114,11 @@ void ubus_cleanup(void) {}
 
 #endif
 
+void myco_set_device_table(const void *dt, int enabled) {
+    g_device_table = (const device_table_t *)dt;
+    g_per_device_enabled = enabled;
+}
+
 // Fallback: Dump state to JSON file for Lua Bridge
 void myco_dump_json(void) {
     if (pthread_mutex_trylock(&g_state_mutex) != 0) {
@@ -146,7 +157,29 @@ void myco_dump_json(void) {
     
     fprintf(f, "\t\"persona_override\": %s,\n", g_persona_override_active ? "true" : "false");
     fprintf(f, "\t\"persona_override_value\": \"%s\",\n", persona_name(g_persona_override));
-    fprintf(f, "\t\"safe_mode\": %s\n", g_last_safe_mode ? "true" : "false");
+    fprintf(f, "\t\"safe_mode\": %s,\n", g_last_safe_mode ? "true" : "false");
+
+    /* Per-device persona table */
+    fprintf(f, "\t\"devices\": [");
+    if (g_per_device_enabled && g_device_table) {
+        int first = 1;
+        for (int i = 0; i < MAX_DEVICES; i++) {
+            const device_entry_t *dev = &g_device_table->devices[i];
+            if (!dev->active) {
+                continue;
+            }
+            char ip_str[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, &dev->ip, ip_str, sizeof(ip_str));
+            fprintf(f, "%s\n\t\t{\"ip\":\"%s\",\"persona\":\"%s\",\"flows\":%d,\"bytes\":%llu,\"avg_pkt\":%d}",
+                    first ? "" : ",",
+                    ip_str, persona_name(dev->persona),
+                    dev->flow_count,
+                    (unsigned long long)dev->total_bytes,
+                    (int)dev->avg_pkt_size);
+            first = 0;
+        }
+    }
+    fprintf(f, "]\n");
 
     fprintf(f, "}\n");
     
