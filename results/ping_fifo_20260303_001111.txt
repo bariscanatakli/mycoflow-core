@@ -1,0 +1,15 @@
+PING 10.0.1.2 (10.0.1.2) 56(84) bytes of data.
+64 bytes from 10.0.1.2: icmp_seq=1 ttl=63 time=569 ms
+64 bytes from 10.0.1.2: icmp_seq=5 ttl=63 time=562 ms
+64 bytes from 10.0.1.2: icmp_seq=6 ttl=63 time=561 ms
+64 bytes from 10.0.1.2: icmp_seq=7 ttl=63 time=561 ms
+64 bytes from 10.0.1.2: icmp_seq=12 ttl=63 time=2383 ms
+64 bytes from 10.0.1.2: icmp_seq=13 ttl=63 time=562 ms
+64 bytes from 10.0.1.2: icmp_seq=15 ttl=63 time=563 ms
+64 bytes from 10.0.1.2: icmp_seq=17 ttl=63 time=563 ms
+64 bytes from 10.0.1.2: icmp_seq=20 ttl=63 time=563 ms
+64 bytes from 10.0.1.2: icmp_seq=24 ttl=63 time=855 ms
+
+--- 10.0.1.2 ping statistics ---
+24 packets transmitted, 10 received, 58.3333% packet loss, time 12423ms
+rtt min/avg/max/mdev = 561.257/774.287/2383.272/543.359 ms, pipe 2

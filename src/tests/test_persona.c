@@ -1,5 +1,5 @@
 /*
- * test_persona.c - Unit tests for persona heuristics
+ * test_persona.c - Unit tests for 6-class persona heuristics
  */
 #include <stdio.h>
 #include <string.h>
@@ -9,43 +9,164 @@
 
 int tests_run = 0;
 
-static char *test_persona_voting() {
+/* Feed the same metrics twice into a fresh state — should reach 2/3 majority */
+#define FEED2(state, m) do { persona_update(&(state), &(m)); persona_update(&(state), &(m)); } while(0)
+
+/* ── VOIP ──────────────────────────────────────────────────── */
+static char *test_voip() {
     persona_state_t state;
     persona_init(&state);
 
-    metrics_t m_interactive = { .rtt_ms = 50.0, .jitter_ms = 1.0, .cpu_pct = 5.0, .tx_bps = 50000.0, .rx_bps = 50000.0 };
-    metrics_t m_bulk = { .rtt_ms = 30.0, .jitter_ms = 5.0, .cpu_pct = 10.0, .tx_bps = 5000000.0, .rx_bps = 1000000.0 };
+    /* G.711: 64-byte packets, 64 kbps total, 1 flow */
+    metrics_t m = {
+        .avg_pkt_size = 64.0,
+        .tx_bps       = 32000.0,   /* 32 kbps TX */
+        .rx_bps       = 32000.0,   /* 32 kbps RX */
+        .active_flows = 1,
+        .elephant_flow = 0,
+    };
+    /* bw = 64kbps < 200kbps, avg_pkt < 120 → VOIP */
+    FEED2(state, m);
+    mu_assert("VOIP: should detect after 2/3 votes", state.current == PERSONA_VOIP);
+    return 0;
+}
 
-    // Initially unknown/default
-    mu_assert("error, initial persona should be unknown", state.current == PERSONA_UNKNOWN);
+/* ── GAMING ────────────────────────────────────────────────── */
+static char *test_gaming() {
+    persona_state_t state;
+    persona_init(&state);
 
-    // Feed 1 interactive sample -> not enough
-    persona_update(&state, &m_interactive);
-    // (We can't easily check internal vote count without exposing it, but we can check result)
-    // Assuming k=3 of m=5
-    
-    // Feed 3 consecutive interactive samples
-    persona_update(&state, &m_interactive);
-    persona_update(&state, &m_interactive);
-    
-    // Should switch to interactive
-    mu_assert("error, should switch to interactive after votes", state.current == PERSONA_INTERACTIVE);
+    /* FPS game: 150-byte packets, 300 kbps, 3 concurrent flows */
+    metrics_t m = {
+        .avg_pkt_size = 150.0,
+        .tx_bps       = 150000.0,
+        .rx_bps       = 150000.0,
+        .active_flows = 3,
+        .elephant_flow = 0,
+    };
+    /* avg_pkt=150 < 350, flows=3 < 8 → GAMING (VOIP ruled out: pkt ≥ 120) */
+    FEED2(state, m);
+    mu_assert("GAMING: should detect after 2/3 votes", state.current == PERSONA_GAMING);
+    return 0;
+}
 
-    // Feed mixed signals
-    persona_update(&state, &m_bulk); // 1 bulk
-    mu_assert("error, should stay interactive (hysteresis)", state.current == PERSONA_INTERACTIVE);
-    
-    persona_update(&state, &m_bulk); // 2 bulk
-    persona_update(&state, &m_bulk); // 3 bulk
-    
-    // Should switch to bulk
-    mu_assert("error, should switch to bulk after votes", state.current == PERSONA_BULK);
+/* ── VIDEO ─────────────────────────────────────────────────── */
+static char *test_video() {
+    persona_state_t state;
+    persona_init(&state);
+
+    /* Zoom call: 800-byte packets, 3 Mbps bidirectional, 3 flows */
+    metrics_t m = {
+        .avg_pkt_size = 800.0,
+        .tx_bps       = 1500000.0,
+        .rx_bps       = 1500000.0,
+        .active_flows = 3,
+        .elephant_flow = 0,
+    };
+    /* avg_pkt=800 ≥ 350 → not GAMING; bw=3Mbps ∈ [200kbps, 8Mbps] → VIDEO */
+    FEED2(state, m);
+    mu_assert("VIDEO: should detect after 2/3 votes", state.current == PERSONA_VIDEO);
+    return 0;
+}
+
+/* ── STREAMING ─────────────────────────────────────────────── */
+static char *test_streaming() {
+    persona_state_t state;
+    persona_init(&state);
+
+    /* Netflix 4K: elephant flow, server→client heavy (RX >> TX) */
+    metrics_t m = {
+        .avg_pkt_size = 1400.0,
+        .tx_bps       = 50000.0,       /* ACKs only — tiny TX */
+        .rx_bps       = 15000000.0,    /* 15 Mbps download */
+        .active_flows = 1,
+        .elephant_flow = 1,
+    };
+    /* tx_rx_ratio = 50000/15000001 ≈ 0.003 < 0.25 → STREAMING */
+    FEED2(state, m);
+    mu_assert("STREAMING: should detect after 2/3 votes", state.current == PERSONA_STREAMING);
+    return 0;
+}
+
+/* ── BULK ──────────────────────────────────────────────────── */
+static char *test_bulk() {
+    persona_state_t state;
+    persona_init(&state);
+
+    /* Large file upload: elephant flow, client→server heavy (TX >> RX) */
+    metrics_t m = {
+        .avg_pkt_size = 1400.0,
+        .tx_bps       = 15000000.0,    /* 15 Mbps upload */
+        .rx_bps       = 500000.0,      /* ACKs */
+        .active_flows = 1,
+        .elephant_flow = 1,
+    };
+    /* tx_rx_ratio = 15M/500001 ≈ 30 ≥ 0.25 → BULK */
+    FEED2(state, m);
+    mu_assert("BULK: should detect after 2/3 votes", state.current == PERSONA_BULK);
+    return 0;
+}
+
+/* ── TORRENT ───────────────────────────────────────────────── */
+static char *test_torrent() {
+    persona_state_t state;
+    persona_init(&state);
+
+    /* BitTorrent: 35 simultaneous peer connections */
+    metrics_t m = {
+        .avg_pkt_size = 900.0,
+        .tx_bps       = 1000000.0,
+        .rx_bps       = 1000000.0,
+        .active_flows = 35,
+        .elephant_flow = 0,
+    };
+    /* flows=35 > 30 → TORRENT (first rule, checked before all others) */
+    FEED2(state, m);
+    mu_assert("TORRENT: should detect after 2/3 votes", state.current == PERSONA_TORRENT);
+    return 0;
+}
+
+/* ── 2/3 WINDOW BEHAVIOUR ──────────────────────────────────── */
+static char *test_history_window() {
+    persona_state_t state;
+    persona_init(&state);
+
+    metrics_t m_gaming = {
+        .avg_pkt_size = 150.0, .tx_bps = 150000.0, .rx_bps = 150000.0,
+        .active_flows = 3, .elephant_flow = 0,
+    };
+    metrics_t m_bulk = {
+        .avg_pkt_size = 1400.0, .tx_bps = 15000000.0, .rx_bps = 500000.0,
+        .active_flows = 1, .elephant_flow = 1,
+    };
+
+    /* 1 gaming sample — not enough */
+    persona_update(&state, &m_gaming);
+    mu_assert("history: 1 sample should stay UNKNOWN", state.current == PERSONA_UNKNOWN);
+
+    /* 2nd gaming sample — 2/3 window filled, persona switches */
+    persona_update(&state, &m_gaming);
+    mu_assert("history: 2/3 gaming should switch to GAMING", state.current == PERSONA_GAMING);
+
+    /* 1 bulk sample — window = [gaming, gaming, bulk], gaming still 2/3 */
+    persona_update(&state, &m_bulk);
+    mu_assert("history: 1 bulk interloper should not displace GAMING", state.current == PERSONA_GAMING);
+
+    /* 2 bulk samples — window = [gaming, bulk, bulk], bulk gets 2/3 */
+    persona_update(&state, &m_bulk);
+    mu_assert("history: 2/3 bulk should switch to BULK", state.current == PERSONA_BULK);
 
     return 0;
 }
 
 static char *all_tests() {
-    mu_run_test(test_persona_voting);
+    mu_run_test(test_voip);
+    mu_run_test(test_gaming);
+    mu_run_test(test_video);
+    mu_run_test(test_streaming);
+    mu_run_test(test_bulk);
+    mu_run_test(test_torrent);
+    mu_run_test(test_history_window);
     return 0;
 }
 

@@ -78,14 +78,23 @@ typedef struct {
 
 /* ── Persona ────────────────────────────────────────────────── */
 typedef enum {
-    PERSONA_UNKNOWN     = 0,
-    PERSONA_INTERACTIVE = 1,
-    PERSONA_BULK        = 2
+    PERSONA_UNKNOWN   = 0,
+    PERSONA_VOIP      = 1,  /* G.711/G.729 voice — EF → CAKE Voice tin  */
+    PERSONA_GAMING    = 2,  /* FPS/online game  — CS4 → CAKE Voice tin  */
+    PERSONA_VIDEO     = 3,  /* Zoom/Teams call  — CS3 → CAKE Video tin  */
+    PERSONA_STREAMING = 4,  /* Netflix/YouTube  — CS2 → CAKE Video tin  */
+    PERSONA_BULK      = 5,  /* File upload/DL   — CS1 → CAKE Bulk tin   */
+    PERSONA_TORRENT   = 6,  /* BitTorrent P2P   — CS1 → CAKE Bulk tin   */
 } persona_t;
+
+/* Backward-compat alias: old INTERACTIVE code paths map to GAMING */
+#define PERSONA_INTERACTIVE PERSONA_GAMING
+
+#define PERSONA_COUNT 7
 
 typedef struct {
     persona_t current;
-    persona_t history[5];
+    persona_t history[3];  /* 2-of-3 majority window (≈1s at 2Hz) */
     int       history_len;
 } persona_state_t;
 

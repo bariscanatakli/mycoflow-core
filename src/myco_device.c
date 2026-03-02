@@ -82,10 +82,16 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
     /* Reset per-device counters (but keep persona state) */
     for (int i = 0; i < MAX_DEVICES; i++) {
         if (dt->devices[i].active) {
-            dt->devices[i].flow_count = 0;
-            dt->devices[i].total_bytes = 0;
+            dt->devices[i].flow_count    = 0;
+            dt->devices[i].total_bytes   = 0;
             dt->devices[i].total_packets = 0;
-            dt->devices[i].avg_pkt_size = 0.0;
+            dt->devices[i].tx_bytes      = 0;
+            dt->devices[i].rx_bytes      = 0;
+            dt->devices[i].udp_flows     = 0;
+            dt->devices[i].tcp_flows     = 0;
+            dt->devices[i].avg_pkt_size  = 0.0;
+            dt->devices[i].bandwidth_bps = 0.0;
+            dt->devices[i].tx_rx_ratio   = 1.0;
             dt->devices[i].elephant_flow = 0;
         }
     }
@@ -104,9 +110,14 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
         }
 
         dev->flow_count++;
-        dev->total_bytes += fe->bytes;
+        dev->total_bytes   += fe->bytes;
         dev->total_packets += fe->packets;
-        dev->last_seen = now;
+        dev->tx_bytes      += fe->bytes;
+        dev->rx_bytes      += fe->rx_bytes;
+        dev->last_seen      = now;
+
+        if (fe->key.protocol == 17) dev->udp_flows++;
+        else if (fe->key.protocol == 6) dev->tcp_flows++;
     }
 
     /* Second pass: compute derived metrics per device */
@@ -120,6 +131,12 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
         if (dev->total_packets > 0) {
             dev->avg_pkt_size = (double)dev->total_bytes / (double)dev->total_packets;
         }
+
+        /* Bandwidth estimate: (TX + RX bytes) / 0.5s interval * 8 bits */
+        dev->bandwidth_bps = (double)(dev->tx_bytes + dev->rx_bytes) * 8.0 / 0.5;
+
+        /* TX/RX ratio: >4 = heavy uploader (BULK), <0.25 = heavy downloader (STREAMING) */
+        dev->tx_rx_ratio = (double)dev->tx_bytes / (double)(dev->rx_bytes + 1);
 
         /* Per-device elephant flow detection: does one flow dominate >60%? */
         uint64_t max_bytes = 0;
@@ -155,15 +172,16 @@ int device_table_update_personas(device_table_t *dt) {
         }
 
         /* Build a per-device metrics_t from aggregated data.
-         * We only populate the fields that persona_update() actually uses:
-         *   - avg_pkt_size, active_flows, elephant_flow
-         * RTT/jitter/ebpf_pkt_rate are system-wide — set to 0 so they
-         * don't contribute to per-device persona votes. */
+         * Per-device fields: avg_pkt_size, active_flows, elephant_flow,
+         *   tx_bps, rx_bps (derived from tx/rx bytes at 2Hz = 0.5s).
+         * RTT/jitter/ebpf_pkt_rate are system-wide — omitted here. */
         metrics_t dev_metrics;
         memset(&dev_metrics, 0, sizeof(dev_metrics));
         dev_metrics.avg_pkt_size = dev->avg_pkt_size;
         dev_metrics.active_flows = dev->flow_count;
         dev_metrics.elephant_flow = dev->elephant_flow;
+        dev_metrics.tx_bps = (double)dev->tx_bytes * 8.0 / 0.5;
+        dev_metrics.rx_bps = (double)dev->rx_bytes * 8.0 / 0.5;
 
         persona_t prev = dev->persona;
         dev->persona = persona_update(&dev->persona_state, &dev_metrics);
@@ -199,15 +217,22 @@ void device_table_evict_stale(device_table_t *dt, double now, double max_age_s) 
 /* ── DSCP application ──────────────────────────────────────── */
 
 /* Map persona to DSCP class string for iptables --set-dscp-class.
- * CAKE diffserv4 tin mapping:
- *   CS4 (32) → Video tin  — low latency, good for gaming/interactive
- *   CS1 (8)  → Bulk tin   — high throughput, deprioritized
- *   CS0 (0)  → Best Effort — default treatment */
+ * CAKE diffserv4 tin mapping (precedence-based):
+ *   EF  (46) → Voice tin  — VoIP strict priority
+ *   CS4 (32) → Voice tin  — gaming low-latency
+ *   CS3 (24) → Video tin  — video call
+ *   CS2 (16) → Video tin  — streaming
+ *   CS1 (8)  → Bulk tin   — bulk upload / torrent
+ *   CS0 (0)  → Best Effort — default (no rule needed) */
 static const char *persona_dscp_class(persona_t p) {
     switch (p) {
-        case PERSONA_INTERACTIVE: return "cs4";
-        case PERSONA_BULK:        return "cs1";
-        default:                  return NULL;  /* CS0 = no rule needed */
+        case PERSONA_VOIP:      return "ef";
+        case PERSONA_GAMING:    return "cs4";
+        case PERSONA_VIDEO:     return "cs3";
+        case PERSONA_STREAMING: return "cs2";
+        case PERSONA_BULK:      return "cs1";
+        case PERSONA_TORRENT:   return "cs1";
+        default:                return NULL;    /* CS0 = no rule needed */
     }
 }
 

@@ -96,7 +96,67 @@ ip netns exec bulk ip link set veth-cli2 up
 ip netns exec bulk ip addr add 192.168.1.20/24 dev veth-cli2
 ip netns exec bulk ip route add default via 192.168.1.1
 
-# ── 6. QEMU başlat ────────────────────────────────────────────────────────
+# ── 6. VoIP netns (LAN tarafı, 192.168.1.11) ─────────────────────────────
+log "Creating voip netns (192.168.1.11)..."
+ip netns del voip 2>/dev/null || true
+ip netns add voip
+
+ip link add veth-cli3 type veth peer name veth-cli3-br 2>/dev/null || true
+ip link set veth-cli3 netns voip
+ip link set veth-cli3-br master br-lan
+ip link set veth-cli3-br up
+
+ip netns exec voip ip link set lo up
+ip netns exec voip ip link set veth-cli3 up
+ip netns exec voip ip addr add 192.168.1.11/24 dev veth-cli3
+ip netns exec voip ip route add default via 192.168.1.1
+
+# ── 7. Video netns (LAN tarafı, 192.168.1.12) ────────────────────────────
+log "Creating video netns (192.168.1.12)..."
+ip netns del video 2>/dev/null || true
+ip netns add video
+
+ip link add veth-cli4 type veth peer name veth-cli4-br 2>/dev/null || true
+ip link set veth-cli4 netns video
+ip link set veth-cli4-br master br-lan
+ip link set veth-cli4-br up
+
+ip netns exec video ip link set lo up
+ip netns exec video ip link set veth-cli4 up
+ip netns exec video ip addr add 192.168.1.12/24 dev veth-cli4
+ip netns exec video ip route add default via 192.168.1.1
+
+# ── 8. Stream netns (LAN tarafı, 192.168.1.13) ───────────────────────────
+log "Creating stream netns (192.168.1.13)..."
+ip netns del stream 2>/dev/null || true
+ip netns add stream
+
+ip link add veth-cli5 type veth peer name veth-cli5-br 2>/dev/null || true
+ip link set veth-cli5 netns stream
+ip link set veth-cli5-br master br-lan
+ip link set veth-cli5-br up
+
+ip netns exec stream ip link set lo up
+ip netns exec stream ip link set veth-cli5 up
+ip netns exec stream ip addr add 192.168.1.13/24 dev veth-cli5
+ip netns exec stream ip route add default via 192.168.1.1
+
+# ── 9. Torrent netns (LAN tarafı, 192.168.1.14) ──────────────────────────
+log "Creating torrent netns (192.168.1.14)..."
+ip netns del torrent 2>/dev/null || true
+ip netns add torrent
+
+ip link add veth-cli6 type veth peer name veth-cli6-br 2>/dev/null || true
+ip link set veth-cli6 netns torrent
+ip link set veth-cli6-br master br-lan
+ip link set veth-cli6-br up
+
+ip netns exec torrent ip link set lo up
+ip netns exec torrent ip link set veth-cli6 up
+ip netns exec torrent ip addr add 192.168.1.14/24 dev veth-cli6
+ip netns exec torrent ip route add default via 192.168.1.1
+
+# ── 10. QEMU başlat ───────────────────────────────────────────────────────
 KVM_FLAG=""
 if [ -e /dev/kvm ]; then
     KVM_FLAG="-enable-kvm"
@@ -127,7 +187,7 @@ qemu-system-x86_64 \
 
 log "QEMU started (PID: $(cat /tmp/qemu.pid 2>/dev/null || echo '?'))"
 
-# ── 7. OpenWrt boot'unu bekle ─────────────────────────────────────────────
+# ── 11. OpenWrt boot'unu bekle ────────────────────────────────────────────
 # OpenWrt varsayılan: br-lan = 192.168.1.1, dropbear SSH aktif
 log "Waiting for OpenWrt to boot (SSH on 192.168.1.1)..."
 
@@ -155,21 +215,29 @@ if [ $WAITED -ge $MAX_WAIT ]; then
     exit 1
 fi
 
-# ── 8. OpenWrt yapılandır ─────────────────────────────────────────────────
+# ── 12. OpenWrt yapılandır ────────────────────────────────────────────────
 log "Configuring OpenWrt..."
 export OPENWRT_LAN_IP="192.168.1.1"
 export WAN_BW_KBIT
 /configure-openwrt.sh
 
-# ── 9. iperf3 server başlat (multiple ports for multi-flow benchmark) ────
-log "Starting iperf3 servers in server netns (ports 5201-5204)..."
-ip netns exec server iperf3 -s --forceflush --daemon --logfile /tmp/iperf3-server.log
-ip netns exec server iperf3 -s -p 5202 --forceflush --daemon --logfile /tmp/iperf3-server-5202.log
-ip netns exec server iperf3 -s -p 5203 --forceflush --daemon --logfile /tmp/iperf3-server-5203.log
-ip netns exec server iperf3 -s -p 5204 --forceflush --daemon --logfile /tmp/iperf3-server-5204.log
+# ── 13. iperf3 server başlat (multiple ports for multi-flow benchmark) ───
+log "Starting iperf3 servers in server netns (ports 5201-5210)..."
+# Port mapping:
+#   5201: gamer (gaming traffic)
+#   5202: voip (VoIP traffic — UDP)
+#   5203: video (video call — bidirectional UDP)
+#   5204: warm-up bulk (avoids port conflict during warm-up)
+#   5205: stream (streaming — reverse TCP download)
+#   5206: torrent (BitTorrent simulation — parallel TCP)
+#   5207-5210: extra torrent parallel sessions
+for PORT in 5201 5202 5203 5204 5205 5206 5207 5208 5209 5210; do
+    ip netns exec server iperf3 -s -p ${PORT} --forceflush --daemon \
+        --logfile /tmp/iperf3-server-${PORT}.log
+done
 sleep 1
 
-# ── 10. Bağlantı testi ───────────────────────────────────────────────────
+# ── 14. Bağlantı testi ───────────────────────────────────────────────────
 log "Connectivity tests..."
 
 log "  gamer (192.168.1.10) → OpenWrt LAN (192.168.1.1)..."
@@ -191,18 +259,38 @@ log "  bulk (192.168.1.20) → server (10.0.1.2)..."
 ip netns exec bulk ping -c 2 -W 3 10.0.1.2 > /dev/null 2>&1 \
     && log "  OK" || log "  FAIL"
 
+log "  voip (192.168.1.11) → server..."
+ip netns exec voip ping -c 2 -W 3 10.0.1.2 > /dev/null 2>&1 \
+    && log "  OK" || log "  FAIL"
+
+log "  video (192.168.1.12) → server..."
+ip netns exec video ping -c 2 -W 3 10.0.1.2 > /dev/null 2>&1 \
+    && log "  OK" || log "  FAIL"
+
+log "  stream (192.168.1.13) → server..."
+ip netns exec stream ping -c 2 -W 3 10.0.1.2 > /dev/null 2>&1 \
+    && log "  OK" || log "  FAIL"
+
+log "  torrent (192.168.1.14) → server..."
+ip netns exec torrent ping -c 2 -W 3 10.0.1.2 > /dev/null 2>&1 \
+    && log "  OK" || log "  FAIL"
+
 # ── Done ──────────────────────────────────────────────────────────────────
 log ""
 log "============================================"
 log "  QEMU OpenWrt Lab Ready!"
 log "============================================"
-log "  OpenWrt VM:  ssh root@192.168.1.1 (LAN)"
-log "  WAN IP:      10.0.1.1"
-log "  Server:      netns:server  10.0.1.2"
-log "  Gamer:       netns:gamer   192.168.1.10"
-log "  Bulk:        netns:bulk    192.168.1.20"
-log "  WAN BW:      ${WAN_BW_KBIT} kbit/s"
-log "  Benchmark:   /bench/qemu-bench.sh"
+log "  OpenWrt VM:   ssh root@192.168.1.1 (LAN)"
+log "  WAN IP:       10.0.1.1"
+log "  Server:       netns:server  10.0.1.2   (iperf3 :5201-5210)"
+log "  Gamer:        netns:gamer   192.168.1.10"
+log "  Bulk:         netns:bulk    192.168.1.20"
+log "  VoIP:         netns:voip    192.168.1.11"
+log "  Video:        netns:video   192.168.1.12"
+log "  Stream:       netns:stream  192.168.1.13"
+log "  Torrent:      netns:torrent 192.168.1.14"
+log "  WAN BW:       ${WAN_BW_KBIT} kbit/s"
+log "  Benchmark:    /bench/qemu-bench.sh"
 log "============================================"
 
 exec sleep infinity

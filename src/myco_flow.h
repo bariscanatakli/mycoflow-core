@@ -22,7 +22,8 @@ typedef struct {
 typedef struct {
     flow_key_t key;
     uint64_t   packets;
-    uint64_t   bytes;
+    uint64_t   bytes;       /* forward direction bytes (client→server / TX) */
+    uint64_t   rx_bytes;    /* reverse direction bytes (server→client / RX) */
     double     last_seen;   /* monotonic seconds */
     int        active;      /* 1 = occupied slot */
 } flow_entry_t;
@@ -34,7 +35,8 @@ typedef struct {
 
 void flow_table_init(flow_table_t *ft);
 int  flow_table_update(flow_table_t *ft, const flow_key_t *key,
-                       uint64_t packets, uint64_t bytes, double now);
+                       uint64_t packets, uint64_t bytes, uint64_t rx_bytes,
+                       double now);
 const flow_entry_t *flow_table_lookup(const flow_table_t *ft,
                                       const flow_key_t *key);
 int  flow_table_populate_conntrack(flow_table_t *ft, double now);

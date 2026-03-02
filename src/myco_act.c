@@ -67,13 +67,29 @@ int act_apply_persona_tin(const char *iface, persona_t persona,
     const char *persona_label;
 
     switch (persona) {
-        case PERSONA_INTERACTIVE:
+        case PERSONA_VOIP:
+            rtt_ms        = 20;
+            persona_label = "voip";
+            break;
+        case PERSONA_GAMING:
             rtt_ms        = 50;
-            persona_label = "interactive";
+            persona_label = "gaming";
+            break;
+        case PERSONA_VIDEO:
+            rtt_ms        = 75;
+            persona_label = "video";
+            break;
+        case PERSONA_STREAMING:
+            rtt_ms        = 150;
+            persona_label = "streaming";
             break;
         case PERSONA_BULK:
             rtt_ms        = 200;
             persona_label = "bulk";
+            break;
+        case PERSONA_TORRENT:
+            rtt_ms        = 200;
+            persona_label = "torrent";
             break;
         default:
             rtt_ms        = 100;
@@ -215,13 +231,29 @@ int act_apply_ingress_policy(const char *ifb_iface, persona_t persona,
     const char *persona_label;
 
     switch (persona) {
-        case PERSONA_INTERACTIVE:
+        case PERSONA_VOIP:
+            rtt_ms        = 20;
+            persona_label = "voip";
+            break;
+        case PERSONA_GAMING:
             rtt_ms        = 50;
-            persona_label = "interactive";
+            persona_label = "gaming";
+            break;
+        case PERSONA_VIDEO:
+            rtt_ms        = 75;
+            persona_label = "video";
+            break;
+        case PERSONA_STREAMING:
+            rtt_ms        = 150;
+            persona_label = "streaming";
             break;
         case PERSONA_BULK:
             rtt_ms        = 200;
             persona_label = "bulk";
+            break;
+        case PERSONA_TORRENT:
+            rtt_ms        = 200;
+            persona_label = "torrent";
             break;
         default:
             rtt_ms        = 100;

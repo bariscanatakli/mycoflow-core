@@ -24,13 +24,19 @@ typedef struct {
 
     /* Aggregated metrics (recomputed each cycle from flow table) */
     int             flow_count;       /* active flows for this device */
-    uint64_t        total_bytes;      /* total bytes across all device flows */
+    uint64_t        total_bytes;      /* total bytes across all device flows (TX) */
     uint64_t        total_packets;    /* total packets across all device flows */
+    uint64_t        tx_bytes;         /* forward direction bytes this cycle */
+    uint64_t        rx_bytes;         /* reverse direction bytes this cycle */
     double          avg_pkt_size;     /* total_bytes / total_packets */
+    double          bandwidth_bps;    /* estimated TX+RX bandwidth in bps */
+    double          tx_rx_ratio;      /* tx_bytes / (rx_bytes + 1): >4=upload, <0.25=download */
+    int             udp_flows;        /* number of UDP flows */
+    int             tcp_flows;        /* number of TCP flows */
     int             elephant_flow;    /* 1 if one flow carries >60% of device bytes */
 
     /* Per-device persona inference */
-    persona_state_t persona_state;    /* reuses existing history[5] + majority vote */
+    persona_state_t persona_state;    /* 2-of-3 history window */
     persona_t       persona;          /* current inferred persona */
     persona_t       applied_dscp;     /* last DSCP persona applied via iptables */
 } device_entry_t;

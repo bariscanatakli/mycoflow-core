@@ -4,6 +4,7 @@
  */
 #include "myco_control.h"
 #include "myco_log.h"
+#include "myco_persona.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -147,18 +148,40 @@ int control_decide(control_state_t *state,
             thresh_rtt, thresh_jitter, rtt_delta, jitter_delta,
             metrics->qdisc_backlog, metrics->probe_loss_pct, congested);
 
-    if (congested && persona == PERSONA_BULK) {
-        desired->bandwidth_kbit -= cfg->bandwidth_step_kbit;
-        desired->boosted = 0;
-        snprintf(reason, reason_len, "bulk-congested: throttle");
-    } else if (!congested && persona == PERSONA_INTERACTIVE) {
-        desired->bandwidth_kbit += cfg->bandwidth_step_kbit;
-        desired->boosted = 1;
-        snprintf(reason, reason_len, "interactive-clear: boost");
-    } else if (congested && persona == PERSONA_INTERACTIVE) {
+    /* Priority tiers for system-wide bandwidth adaptation.
+     * Per-device DSCP (CAKE tins) handles micro-level fairness;
+     * this loop adjusts the overall WAN cap to reduce bufferbloat.
+     *
+     * Tier 1 — Latency-critical (VOIP, GAMING):
+     *   Congested → soften (-step/2): create CAKE queue headroom
+     *   Clear     → boost  (+step):   more room, CAKE tins handle priority
+     * Tier 2 — Mid-priority (VIDEO):
+     *   Congested → soften (-step/2): video needs bandwidth but dislikes drops
+     *   Clear     → no-change:        hold current cap
+     * Tier 3 — Bulk-tolerant (STREAMING, BULK, TORRENT):
+     *   Congested → throttle (-step): aggressive reduction; these survive
+     *   Clear     → no-change:        hold, don't reward bulk with extra BW
+     */
+    int latency_critical = (persona == PERSONA_VOIP   || persona == PERSONA_GAMING);
+    int bulk_tolerant    = (persona == PERSONA_STREAMING || persona == PERSONA_BULK ||
+                            persona == PERSONA_TORRENT);
+
+    if (congested && latency_critical) {
         desired->bandwidth_kbit -= cfg->bandwidth_step_kbit / 2;
         desired->boosted = 0;
-        snprintf(reason, reason_len, "interactive-congested: soften");
+        snprintf(reason, reason_len, "%s-congested: soften", persona_name(persona));
+    } else if (!congested && latency_critical) {
+        desired->bandwidth_kbit += cfg->bandwidth_step_kbit;
+        desired->boosted = 1;
+        snprintf(reason, reason_len, "%s-clear: boost", persona_name(persona));
+    } else if (congested && persona == PERSONA_VIDEO) {
+        desired->bandwidth_kbit -= cfg->bandwidth_step_kbit / 2;
+        desired->boosted = 0;
+        snprintf(reason, reason_len, "video-congested: soften");
+    } else if (congested && bulk_tolerant) {
+        desired->bandwidth_kbit -= cfg->bandwidth_step_kbit;
+        desired->boosted = 0;
+        snprintf(reason, reason_len, "%s-congested: throttle", persona_name(persona));
     }
 
     desired->bandwidth_kbit = (int)clamp_double((double)desired->bandwidth_kbit,
