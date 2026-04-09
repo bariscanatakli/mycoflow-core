@@ -74,15 +74,16 @@ static char *test_streaming() {
     persona_state_t state;
     persona_init(&state);
 
-    /* Netflix 4K: elephant flow, server→client heavy (RX >> TX) */
+    /* Streaming: many flows (QUIC), high download, no elephant flow
+     * YouTube/Netflix distribute across 15+ parallel UDP connections */
     metrics_t m = {
-        .avg_pkt_size = 1400.0,
-        .tx_bps       = 50000.0,       /* ACKs only — tiny TX */
-        .rx_bps       = 15000000.0,    /* 15 Mbps download */
-        .active_flows = 1,
-        .elephant_flow = 1,
+        .avg_pkt_size = 800.0,
+        .tx_bps       = 200000.0,      /* small TX (ACKs + requests) */
+        .rx_bps       = 10000000.0,    /* 10 Mbps download */
+        .active_flows = 25,
+        .elephant_flow = 0,            /* no single dominant flow */
     };
-    /* tx_rx_ratio = 50000/15000001 ≈ 0.003 < 0.25 → STREAMING */
+    /* flows>15 + rx>2Mbps + ratio<0.25 → STREAMING (Rule 2b) */
     FEED2(state, m);
     mu_assert("STREAMING: should detect after 2/3 votes", state.current == PERSONA_STREAMING);
     return 0;
@@ -112,15 +113,15 @@ static char *test_torrent() {
     persona_state_t state;
     persona_init(&state);
 
-    /* BitTorrent: 35 simultaneous peer connections */
+    /* BitTorrent: 150 simultaneous peer connections + significant bandwidth */
     metrics_t m = {
         .avg_pkt_size = 900.0,
         .tx_bps       = 1000000.0,
         .rx_bps       = 1000000.0,
-        .active_flows = 35,
+        .active_flows = 150,
         .elephant_flow = 0,
     };
-    /* flows=35 > 30 → TORRENT (first rule, checked before all others) */
+    /* flows=150 > 100 AND bw=2Mbps > 500kbps → TORRENT */
     FEED2(state, m);
     mu_assert("TORRENT: should detect after 2/3 votes", state.current == PERSONA_TORRENT);
     return 0;

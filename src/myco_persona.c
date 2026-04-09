@@ -17,9 +17,9 @@
  *   avg_pkt_size   — average packet size across all device flows
  *
  * Key discriminators:
- *   TORRENT    : many simultaneous flows (>30)
- *   STREAMING  : elephant flow, heavy download (tx_rx_ratio < 0.25)
- *   BULK       : elephant flow, heavy upload or generic large transfer
+ *   TORRENT    : many simultaneous flows (>100) AND significant bandwidth (>500 kbps)
+ *   STREAMING  : elephant flow OR (many flows + high rx + asymmetric)
+ *   BULK       : elephant flow (symmetric) OR high rx with few flows
  *   VOIP       : tiny packets (<120 B) + very low bandwidth (<200 kbps)
  *   GAMING     : small packets (<350 B) + few flows (<8)
  *   VIDEO      : mid-range bandwidth (200 kbps – 8 Mbps)
@@ -38,17 +38,34 @@ static persona_t decide_persona(const metrics_t *metrics) {
     double tx_rx_ratio = tx_bps / (rx_bps + 1.0);
     int flows = metrics->active_flows;
 
-    /* Rule 1 — TORRENT: swarm of connections */
-    if (flows > 30) {
+    /* Rule 1 — TORRENT: swarm of connections + significant bandwidth
+     * Old threshold (30) was too low — modern browsers maintain 30-50+
+     * concurrent connections (QUIC, prefetch, extensions, keep-alive).
+     * Now requires both high flow count AND meaningful bandwidth to avoid
+     * misclassifying idle browser sessions as torrent. */
+    if (flows > 100 && bw_bps > 500000.0) {
         return PERSONA_TORRENT;
     }
 
-    /* Rules 2 & 3 — Elephant-flow branch */
+    /* Rules 2 & 3 — Elephant-flow branch
+     * Elephant = one flow dominates >60% of device bytes.
+     * This indicates a single large transfer (download/upload), not distributed
+     * streaming. Always classify as BULK regardless of direction.
+     * Streaming (YouTube/Netflix) distributes across many QUIC flows. */
     if (metrics->elephant_flow) {
-        if (tx_rx_ratio < 0.25) {
-            return PERSONA_STREAMING;   /* heavy download: Netflix, YouTube */
-        }
-        return PERSONA_BULK;            /* heavy upload or symmetric large transfer */
+        return PERSONA_BULK;
+    }
+
+    /* Rule 2b — STREAMING: high download bandwidth + many flows but no elephant
+     * Catches QUIC/HTTP3 video streaming (YouTube, Netflix) which distributes
+     * traffic across many parallel UDP flows instead of one elephant flow. */
+    if (flows > 15 && rx_bps > 2000000.0 && tx_rx_ratio < 0.25) {
+        return PERSONA_STREAMING;
+    }
+
+    /* Rule 2c — BULK: high bandwidth download, fewer flows */
+    if (rx_bps > 5000000.0 && tx_rx_ratio < 0.15 && flows <= 15) {
+        return PERSONA_BULK;
     }
 
     /* Rule 4 — VOIP: tiny codec packets, very low rate */
