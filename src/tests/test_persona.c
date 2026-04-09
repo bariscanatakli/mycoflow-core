@@ -36,15 +36,18 @@ static char *test_gaming() {
     persona_state_t state;
     persona_init(&state);
 
-    /* FPS game: 150-byte packets, 300 kbps, 3 concurrent flows */
+    /* CS2/Valorant: high UDP ratio + moderate bandwidth.
+     * Real-world: 72 flows (Steam+browser), 32 UDP, rx ~8 Mbps.
+     * Games rarely exceed 30 Mbps download. */
     metrics_t m = {
-        .avg_pkt_size = 150.0,
-        .tx_bps       = 150000.0,
-        .rx_bps       = 150000.0,
-        .active_flows = 3,
+        .avg_pkt_size = 470.0,        /* mixed TCP+UDP average */
+        .tx_bps       = 350000.0,
+        .rx_bps       = 8000000.0,    /* 8 Mbps <= 30 Mbps threshold */
+        .active_flows = 72,
         .elephant_flow = 0,
+        .udp_flows    = 32,            /* 32/72 = 44% → high UDP ratio */
     };
-    /* avg_pkt=150 < 350, flows=3 < 8 → GAMING (VOIP ruled out: pkt ≥ 120) */
+    /* udp_ratio=44% >=25% + rx<=30Mbps → GAMING */
     FEED2(state, m);
     mu_assert("GAMING: should detect after 2/3 votes", state.current == PERSONA_GAMING);
     return 0;
@@ -74,16 +77,18 @@ static char *test_streaming() {
     persona_state_t state;
     persona_init(&state);
 
-    /* Streaming: many flows (QUIC), high download, no elephant flow
-     * YouTube/Netflix distribute across 15+ parallel UDP connections */
+    /* Streaming: high UDP ratio + heavy download bandwidth.
+     * YouTube 4K pushes 40-150+ Mbps over QUIC.
+     * UDP ratio = 20/60 = 33% >= 25%, rx = 80 Mbps > 30 Mbps. */
     metrics_t m = {
         .avg_pkt_size = 800.0,
-        .tx_bps       = 200000.0,      /* small TX (ACKs + requests) */
-        .rx_bps       = 10000000.0,    /* 10 Mbps download */
-        .active_flows = 25,
+        .tx_bps       = 2000000.0,     /* small TX (QUIC ACKs) */
+        .rx_bps       = 80000000.0,    /* 80 Mbps download (4K video) */
+        .active_flows = 60,
         .elephant_flow = 0,            /* no single dominant flow */
+        .udp_flows    = 20,            /* QUIC streams: 20/60 = 33% */
     };
-    /* flows>15 + rx>2Mbps + ratio<0.25 → STREAMING (Rule 2b) */
+    /* udp_ratio>=0.25 + rx>30Mbps + ratio<0.30 → STREAMING */
     FEED2(state, m);
     mu_assert("STREAMING: should detect after 2/3 votes", state.current == PERSONA_STREAMING);
     return 0;
@@ -127,6 +132,27 @@ static char *test_torrent() {
     return 0;
 }
 
+/* ── BULK DOWNLOAD (curl/TCP) ─────────────────────────────── */
+static char *test_bulk_download() {
+    persona_state_t state;
+    persona_init(&state);
+
+    /* curl downloading a large file: high rx, low UDP ratio (TCP-based),
+     * many total flows (browser background), elephant flow from curl. */
+    metrics_t m = {
+        .avg_pkt_size = 1200.0,
+        .tx_bps       = 1500000.0,     /* TCP ACKs */
+        .rx_bps       = 80000000.0,    /* 80 Mbps download */
+        .active_flows = 80,
+        .elephant_flow = 1,            /* curl dominates this cycle */
+        .udp_flows    = 14,            /* stale QUIC + DNS: 14/80 = 17.5% < 25% */
+    };
+    /* elephant=1 → BULK (udp_ratio 17.5% < 25% so streaming rule skipped) */
+    FEED2(state, m);
+    mu_assert("BULK_DL: curl TCP download should be BULK", state.current == PERSONA_BULK);
+    return 0;
+}
+
 /* ── 2/3 WINDOW BEHAVIOUR ──────────────────────────────────── */
 static char *test_history_window() {
     persona_state_t state;
@@ -167,6 +193,7 @@ static char *all_tests() {
     mu_run_test(test_streaming);
     mu_run_test(test_bulk);
     mu_run_test(test_torrent);
+    mu_run_test(test_bulk_download);
     mu_run_test(test_history_window);
     return 0;
 }

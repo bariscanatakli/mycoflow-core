@@ -88,6 +88,8 @@ int flow_table_update(flow_table_t *ft, const flow_key_t *key,
             ft->entries[slot].packets   = packets;
             ft->entries[slot].bytes     = bytes;
             ft->entries[slot].rx_bytes  = rx_bytes;
+            ft->entries[slot].tx_delta  = bytes;
+            ft->entries[slot].rx_delta  = rx_bytes;
             ft->entries[slot].last_seen = now;
             ft->entries[slot].active    = 1;
             ft->count++;
@@ -95,6 +97,8 @@ int flow_table_update(flow_table_t *ft, const flow_key_t *key,
         }
         if (key_equal(&ft->entries[slot].key, key)) {
             /* Update existing */
+            ft->entries[slot].tx_delta  = bytes >= ft->entries[slot].bytes ? bytes - ft->entries[slot].bytes : 0;
+            ft->entries[slot].rx_delta  = rx_bytes >= ft->entries[slot].rx_bytes ? rx_bytes - ft->entries[slot].rx_bytes : 0;
             ft->entries[slot].packets   = packets;
             ft->entries[slot].bytes     = bytes;
             ft->entries[slot].rx_bytes  = rx_bytes;

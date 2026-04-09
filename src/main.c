@@ -244,7 +244,16 @@ int main(void) {
         pthread_mutex_unlock(&g_state_mutex);
 
         persona_t prev_persona = persona_state.current;
-        persona_t persona = persona_update(&persona_state, &metrics);
+        persona_t persona;
+        if (cfg.per_device_enabled) {
+            /* Per-device mode: use the most latency-sensitive device persona
+             * to drive global bandwidth adaptation. The aggregate global
+             * metrics (all devices summed) produce misleading flow counts
+             * (e.g. 11 devices × 25 flows = 275 → false TORRENT). */
+            persona = device_table_dominant_persona(&device_table);
+        } else {
+            persona = persona_update(&persona_state, &metrics);
+        }
         if (persona_override) {
             persona = override_val;
         }

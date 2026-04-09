@@ -170,10 +170,13 @@ void myco_dump_json(void) {
             }
             char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &dev->ip, ip_str, sizeof(ip_str));
-            fprintf(f, "%s\n\t\t{\"ip\":\"%s\",\"persona\":\"%s\",\"flows\":%d,\"bytes\":%llu,\"avg_pkt\":%d,\"elephant\":%d,\"rx_bps\":%.0f,\"tx_bps\":%.0f}",
+            fprintf(f, "%s\n\t\t{\"ip\":\"%s\",\"persona\":\"%s\",\"flows\":%d,\"udp\":%d,\"tcp\":%d,\"udp_avg_pkt\":%d,\"bytes\":%llu,\"avg_pkt\":%d,\"elephant\":%d,\"rx_bps\":%.0f,\"tx_bps\":%.0f}",
                     first ? "" : ",",
                     ip_str, persona_name(dev->persona),
                     dev->flow_count,
+                    dev->udp_flows,
+                    dev->tcp_flows,
+                    (int)dev->udp_avg_pkt,
                     (unsigned long long)dev->total_bytes,
                     (int)dev->avg_pkt_size,
                     dev->elephant_flow,

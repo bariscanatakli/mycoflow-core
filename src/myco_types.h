@@ -71,6 +71,8 @@ typedef struct {
     /* ── Flow-derived signals (populated from flow table in main loop) ── */
     int    active_flows;      /* number of active connections (from conntrack) */
     int    elephant_flow;     /* 1 if one flow carries >60% of total bytes */
+    int    udp_flows;         /* number of UDP flows (protocol 17) */
+    double udp_avg_pkt;      /* average packet size across UDP flows only */
     double ebpf_pkt_rate;     /* eBPF rx packets per second (delta, computed in main) */
     /* ── Probe quality (multi-ping) ────────────────────────────── */
     double probe_loss_pct;    /* packet loss % from multi-ping probe (0.0–100.0) */

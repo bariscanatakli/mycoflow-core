@@ -33,6 +33,9 @@ typedef struct {
     double          tx_rx_ratio;      /* tx_bytes / (rx_bytes + 1): >4=upload, <0.25=download */
     int             udp_flows;        /* number of UDP flows */
     int             tcp_flows;        /* number of TCP flows */
+    uint64_t        udp_bytes;        /* total bytes across UDP flows */
+    uint64_t        udp_packets;      /* total packets across UDP flows */
+    double          udp_avg_pkt;      /* udp_bytes / udp_packets */
     int             elephant_flow;    /* 1 if one flow carries >60% of device bytes */
 
     /* Per-device persona inference */
@@ -59,6 +62,12 @@ int device_table_update_personas(device_table_t *dt);
 
 /* Evict devices not seen for max_age_s seconds */
 void device_table_evict_stale(device_table_t *dt, double now, double max_age_s);
+
+/* Return the most latency-sensitive persona across all active devices.
+ * Priority: VOIP > GAMING > VIDEO > STREAMING > BULK > TORRENT > UNKNOWN.
+ * Used in per-device mode to drive global bandwidth adaptation instead of
+ * the aggregate (misleading) global persona. */
+persona_t device_table_dominant_persona(const device_table_t *dt);
 
 /* Apply iptables DSCP rules for all devices whose persona differs from
  * applied_dscp. Uses the mycoflow_dscp mangle chain. */

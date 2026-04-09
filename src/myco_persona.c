@@ -18,8 +18,9 @@
  *
  * Key discriminators:
  *   TORRENT    : many simultaneous flows (>100) AND significant bandwidth (>500 kbps)
- *   STREAMING  : elephant flow OR (many flows + high rx + asymmetric)
- *   BULK       : elephant flow (symmetric) OR high rx with few flows
+ *   GAMING     : high UDP ratio (>=25%) + moderate rx (<=30 Mbps)
+ *   STREAMING  : high UDP ratio (>=25%) + heavy rx (>30 Mbps, QUIC video)
+ *   BULK       : elephant flow (one flow >60% of cycle delta) OR high rx TCP download
  *   VOIP       : tiny packets (<120 B) + very low bandwidth (<200 kbps)
  *   GAMING     : small packets (<350 B) + few flows (<8)
  *   VIDEO      : mid-range bandwidth (200 kbps – 8 Mbps)
@@ -47,24 +48,34 @@ static persona_t decide_persona(const metrics_t *metrics) {
         return PERSONA_TORRENT;
     }
 
-    /* Rules 2 & 3 — Elephant-flow branch
-     * Elephant = one flow dominates >60% of device bytes.
-     * This indicates a single large transfer (download/upload), not distributed
-     * streaming. Always classify as BULK regardless of direction.
-     * Streaming (YouTube/Netflix) distributes across many QUIC flows. */
+    int udp_flows = metrics->udp_flows;
+    double udp_ratio = (flows > 0) ? (double)udp_flows / (double)flows : 0.0;
+
+    /* Rule 2 — High UDP ratio: STREAMING vs GAMING split by rx bandwidth.
+     *
+     * Both gaming (CS2, Valorant) and video streaming (YouTube, Netflix)
+     * produce high UDP flow ratios (>25%). The discriminator is download
+     * bandwidth: 4K video pushes 40-150+ Mbps over QUIC, while games
+     * rarely exceed 30 Mbps (game state + voice).
+     *
+     * Minimum bandwidth gate (500 kbps) prevents idle devices with only
+     * DNS/NTP UDP flows from being classified as GAMING.
+     *
+     * 2a: STREAMING — heavy UDP download (QUIC video, rx > 30 Mbps)
+     * 2b: GAMING   — moderate UDP traffic (game server, rx <= 30 Mbps) */
+    if (udp_ratio >= 0.25 && rx_bps > 30000000.0 && tx_rx_ratio < 0.30) {
+        return PERSONA_STREAMING;
+    }
+    if (udp_ratio >= 0.25 && bw_bps > 500000.0) {
+        return PERSONA_GAMING;
+    }
+
+    /* Rule 3 — BULK: elephant flow (one flow dominates >60% of cycle bytes)
+     * OR high-bandwidth download with low UDP ratio (TCP-dominated). */
     if (metrics->elephant_flow) {
         return PERSONA_BULK;
     }
-
-    /* Rule 2b — STREAMING: high download bandwidth + many flows but no elephant
-     * Catches QUIC/HTTP3 video streaming (YouTube, Netflix) which distributes
-     * traffic across many parallel UDP flows instead of one elephant flow. */
-    if (flows > 15 && rx_bps > 2000000.0 && tx_rx_ratio < 0.25) {
-        return PERSONA_STREAMING;
-    }
-
-    /* Rule 2c — BULK: high bandwidth download, fewer flows */
-    if (rx_bps > 5000000.0 && tx_rx_ratio < 0.15 && flows <= 15) {
+    if (rx_bps > 5000000.0 && tx_rx_ratio < 0.30 && udp_ratio < 0.25) {
         return PERSONA_BULK;
     }
 
@@ -75,10 +86,11 @@ static persona_t decide_persona(const metrics_t *metrics) {
         return PERSONA_VOIP;
     }
 
-    /* Rule 5 — GAMING: small packets, few concurrent flows */
+    /* Rule 5 — GAMING: small packets, few concurrent flows, active traffic */
     if (metrics->avg_pkt_size > 0.0 &&
         metrics->avg_pkt_size < 350.0 &&
-        flows > 0 && flows < 8) {
+        flows > 0 && flows < 8 &&
+        bw_bps > 100000.0) {
         return PERSONA_GAMING;
     }
 

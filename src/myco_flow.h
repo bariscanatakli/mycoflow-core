@@ -24,6 +24,8 @@ typedef struct {
     uint64_t   packets;
     uint64_t   bytes;       /* forward direction bytes (client→server / TX) */
     uint64_t   rx_bytes;    /* reverse direction bytes (server→client / RX) */
+    uint64_t   tx_delta;    /* bytes transferred in the last cycle */
+    uint64_t   rx_delta;    /* rx_bytes transferred in the last cycle */
     double     last_seen;   /* monotonic seconds */
     int        active;      /* 1 = occupied slot */
 } flow_entry_t;

@@ -89,6 +89,9 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
             dt->devices[i].rx_bytes      = 0;
             dt->devices[i].udp_flows     = 0;
             dt->devices[i].tcp_flows     = 0;
+            dt->devices[i].udp_bytes     = 0;
+            dt->devices[i].udp_packets   = 0;
+            dt->devices[i].udp_avg_pkt   = 0.0;
             dt->devices[i].avg_pkt_size  = 0.0;
             dt->devices[i].bandwidth_bps = 0.0;
             dt->devices[i].tx_rx_ratio   = 1.0;
@@ -112,12 +115,20 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
         dev->flow_count++;
         dev->total_bytes   += fe->bytes;
         dev->total_packets += fe->packets;
-        dev->tx_bytes      += fe->bytes;
-        dev->rx_bytes      += fe->rx_bytes;
+        dev->tx_bytes      += fe->tx_delta;
+        dev->rx_bytes      += fe->rx_delta;
         dev->last_seen      = now;
 
-        if (fe->key.protocol == 17) dev->udp_flows++;
-        else if (fe->key.protocol == 6) dev->tcp_flows++;
+        if (fe->key.protocol == 17) {
+            dev->udp_flows++;
+            /* Use delta bytes for UDP avg_pkt calculation.
+             * Cumulative bytes/packets are polluted by handshake/ack packets
+             * from early in the flow's lifetime. Delta bytes reflect the
+             * current traffic pattern (video segments vs game state). */
+            dev->udp_bytes += fe->tx_delta + fe->rx_delta;
+        } else if (fe->key.protocol == 6) {
+            dev->tcp_flows++;
+        }
     }
 
     /* Second pass: compute derived metrics per device */
@@ -132,14 +143,24 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
             dev->avg_pkt_size = (double)dev->total_bytes / (double)dev->total_packets;
         }
 
+        /* UDP bytes-per-flow: delta bytes / active UDP flows.
+         * High value (~10KB+) = large QUIC video segments → STREAMING
+         * Low value (~1KB) = small game state updates → GAMING */
+        if (dev->udp_flows > 0) {
+            dev->udp_avg_pkt = (double)dev->udp_bytes / (double)dev->udp_flows;
+        }
+
         /* Bandwidth estimate: (TX + RX bytes) / 0.5s interval * 8 bits */
         dev->bandwidth_bps = (double)(dev->tx_bytes + dev->rx_bytes) * 8.0 / 0.5;
 
         /* TX/RX ratio: >4 = heavy uploader (BULK), <0.25 = heavy downloader (STREAMING) */
         dev->tx_rx_ratio = (double)dev->tx_bytes / (double)(dev->rx_bytes + 1);
 
-        /* Per-device elephant flow detection: does one flow dominate >60%? */
-        uint64_t max_bytes = 0;
+        /* Per-device elephant flow detection using delta bytes (this cycle).
+         * Delta-based avoids stale cumulative bytes diluting the ratio when
+         * many old flows exist but only one is actively transferring. */
+        uint64_t max_delta = 0;
+        uint64_t total_delta = dev->tx_bytes + dev->rx_bytes; /* already delta-based */
         for (int j = 0; j < FLOW_TABLE_SIZE; j++) {
             if (!ft->entries[j].active) {
                 continue;
@@ -147,12 +168,13 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
             if (ft->entries[j].key.src_ip != dev->ip) {
                 continue;
             }
-            if (ft->entries[j].bytes > max_bytes) {
-                max_bytes = ft->entries[j].bytes;
+            uint64_t flow_delta = ft->entries[j].tx_delta + ft->entries[j].rx_delta;
+            if (flow_delta > max_delta) {
+                max_delta = flow_delta;
             }
         }
-        if (dev->total_bytes > 0 &&
-            (double)max_bytes / (double)dev->total_bytes >= 0.60) {
+        if (total_delta > 0 &&
+            (double)max_delta / (double)total_delta >= 0.60) {
             dev->elephant_flow = 1;
         }
     }
@@ -180,6 +202,8 @@ int device_table_update_personas(device_table_t *dt) {
         dev_metrics.avg_pkt_size = dev->avg_pkt_size;
         dev_metrics.active_flows = dev->flow_count;
         dev_metrics.elephant_flow = dev->elephant_flow;
+        dev_metrics.udp_flows = dev->udp_flows;
+        dev_metrics.udp_avg_pkt = dev->udp_avg_pkt;
         dev_metrics.tx_bps = (double)dev->tx_bytes * 8.0 / 0.5;
         dev_metrics.rx_bps = (double)dev->rx_bytes * 8.0 / 0.5;
 
@@ -196,6 +220,30 @@ int device_table_update_personas(device_table_t *dt) {
     }
 
     return changes;
+}
+
+persona_t device_table_dominant_persona(const device_table_t *dt) {
+    if (!dt) {
+        return PERSONA_UNKNOWN;
+    }
+
+    /* Lower enum = higher latency priority (VOIP=1, GAMING=2, ...).
+     * Find the lowest non-zero persona among active devices with traffic. */
+    persona_t best = PERSONA_UNKNOWN;
+    for (int i = 0; i < MAX_DEVICES; i++) {
+        const device_entry_t *dev = &dt->devices[i];
+        if (!dev->active || dev->flow_count == 0) {
+            continue;
+        }
+        persona_t p = dev->persona;
+        if (p == PERSONA_UNKNOWN) {
+            continue;
+        }
+        if (best == PERSONA_UNKNOWN || p < best) {
+            best = p;
+        }
+    }
+    return best;
 }
 
 void device_table_evict_stale(device_table_t *dt, double now, double max_age_s) {

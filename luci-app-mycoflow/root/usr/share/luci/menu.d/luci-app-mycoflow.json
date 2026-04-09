@@ -3,12 +3,28 @@
     "title": "MycoFlow",
     "order": 90,
     "action": {
-      "type": "view",
-      "path": "mycoflow"
+      "type": "alias",
+      "path": "admin/services/mycoflow/status"
     },
     "depends": {
       "acl": ["luci-app-mycoflow"],
       "uci": { "mycoflow": true }
+    }
+  },
+  "admin/services/mycoflow/status": {
+    "title": "Status",
+    "order": 10,
+    "action": {
+      "type": "view",
+      "path": "mycoflow"
+    }
+  },
+  "admin/services/mycoflow/settings": {
+    "title": "Settings",
+    "order": 20,
+    "action": {
+      "type": "view",
+      "path": "mycoflow_settings"
     }
   }
 }

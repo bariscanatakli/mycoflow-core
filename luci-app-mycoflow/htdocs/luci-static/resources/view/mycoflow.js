@@ -3,18 +3,7 @@
 "require rpc";
 "require poll";
 "require ui";
-
-var callMycoStatus = rpc.declare({
-  object: "myco",
-  method: "status",
-  expect: {},
-});
-
-var callMycoPersonaList = rpc.declare({
-  object: "myco",
-  method: "persona_list",
-  expect: {},
-});
+"require fs";
 
 var callMycoPolicySet = rpc.declare({
   object: "myco",
@@ -144,7 +133,13 @@ return view.extend({
   },
 
   load: function () {
-    return Promise.all([callMycoStatus(), callMycoPersonaList()]);
+    return fs.read_direct("/tmp/myco_state.json").then(function(res) {
+      try { return [JSON.parse(res), {}]; } catch(e) { return [{}, {}]; }
+    }).catch(function() {
+      return fs.read("/tmp/myco_state.json").then(function(res) {
+         try { return [JSON.parse(res), {}]; } catch(e) { return [{}, {}]; }
+      }).catch(function() { return [{}, {}]; });
+    });
   },
 
   render: function (data) {
@@ -155,10 +150,29 @@ return view.extend({
     var policy = status.policy || {};
 
     var statusNode = E("div", { id: "mycoflow-status" });
+    var logNode = E("pre", {
+        id: "mycoflow-logs",
+        style: "background:#333;color:#eee;padding:12px;border-radius:4px;overflow-y:auto;max-height:300px;font-family:monospace;font-size:12px;margin-bottom:16px"
+    });
     var self = this;
 
     var updateStatus = function () {
-      return callMycoStatus().then(function (s) {
+      return Promise.all([
+        fs.read_direct("/tmp/myco_state.json").catch(function() {
+          return fs.read("/tmp/myco_state.json");
+        }),
+        fs.exec("/sbin/logread", ["-e", "myco", "-l", "30"]).then(function(res) {
+          return res.stdout || res;
+        }).catch(function() { return ""; })
+      ]).then(function(results) {
+        var res = results[0];
+        var logData = results[1] || "No logs available.";
+        logNode.textContent = logData;
+        logNode.scrollTop = logNode.scrollHeight;
+
+        var s = {};
+        try { s = JSON.parse(res); } catch(e) {}
+        
         var m = s.metrics || {};
         var b = s.baseline || {};
         var p = s.policy || {};
@@ -235,6 +249,25 @@ return view.extend({
                 "#607D8B",
               ),
             ]),
+
+            E("h3", { style: "margin-top:24px" }, "📱 Connected Devices"),
+            (s.devices && s.devices.length > 0) ? E("table", { class: "table cbi-section-table" }, [
+              E("tr", { class: "tr table-titles" }, [
+                E("th", { class: "th" }, "IP Address"),
+                E("th", { class: "th" }, "Persona"),
+                E("th", { class: "th", style: "text-align:right" }, "Flows"),
+                E("th", { class: "th", style: "text-align:right" }, "Download"),
+                E("th", { class: "th", style: "text-align:right" }, "Upload")
+              ])
+            ].concat(s.devices.map(function(d) {
+              return E("tr", { class: "tr cbi-rowstyle-1" }, [
+                E("td", { class: "td" }, d.ip),
+                E("td", { class: "td" }, personaBadge(d.persona)),
+                E("td", { class: "td", style: "text-align:right" }, d.flows),
+                E("td", { class: "td", style: "text-align:right" }, formatBps(d.rx_bps || 0)),
+                E("td", { class: "td", style: "text-align:right" }, formatBps(d.tx_bps || 0))
+              ]);
+            }))) : E("em", {}, "No active devices tracked."),
           ]),
         );
       });
@@ -246,6 +279,8 @@ return view.extend({
     return E("div", { class: "cbi-map" }, [
       E("h2", {}, "🍄 MycoFlow — Bio-Inspired QoS"),
       statusNode,
+      E("h3", { style: "margin-top:24px" }, "📝 System Logs"),
+      logNode,
       E("hr"),
       E("h3", {}, "🎛️ Manual Controls"),
       E("div", { style: "display:flex;gap:8px;flex-wrap:wrap;margin:12px 0" }, [
