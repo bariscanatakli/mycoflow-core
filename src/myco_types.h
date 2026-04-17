@@ -18,6 +18,31 @@ typedef enum {
 } log_level_t;
 
 /* ── Configuration ──────────────────────────────────────────── */
+
+/* ── Persona ────────────────────────────────────────────────── */
+typedef enum {
+    PERSONA_UNKNOWN   = 0,
+    PERSONA_VOIP      = 1,  /* G.711/G.729 voice — EF → CAKE Voice tin  */
+    PERSONA_GAMING    = 2,  /* FPS/online game  — CS4 → CAKE Voice tin  */
+    PERSONA_VIDEO     = 3,  /* Zoom/Teams call  — CS3 → CAKE Video tin  */
+    PERSONA_STREAMING = 4,  /* Netflix/YouTube  — CS2 → CAKE Video tin  */
+    PERSONA_BULK      = 5,  /* File upload/DL   — CS1 → CAKE Bulk tin   */
+    PERSONA_TORRENT   = 6,  /* BitTorrent P2P   — CS1 → CAKE Bulk tin   */
+} persona_t;
+
+/* Backward-compat alias: old INTERACTIVE code paths map to GAMING */
+#define PERSONA_INTERACTIVE PERSONA_GAMING
+
+#define PERSONA_COUNT 7
+
+#define MAX_DEVICE_OVERRIDES 16
+
+typedef struct {
+    char      ip[16];           /* IPv4 address string, e.g. "192.168.1.5" */
+    char      mac[18];          /* MAC address string, currently unused but reserved for future */
+    persona_t persona;          /* The fixed persona for this IP */
+} device_override_t;
+
 typedef struct {
     int    enabled;
     char   egress_iface[32];
@@ -50,7 +75,11 @@ typedef struct {
     int    ingress_enabled;          /* 0 = skip ingress shaping (default) */
     char   ingress_iface[32];        /* IFB device name (default "ifb0") */
     int    ingress_bandwidth_kbit;   /* ingress CAKE bandwidth kbit (default 0 = use egress bw) */
+    /* ── Per-device Fixed Personas ──────────────────────────────── */
+    device_override_t device_overrides[MAX_DEVICE_OVERRIDES];
+    int               num_device_overrides;
 } myco_config_t;
+
 
 /* ── Metrics ────────────────────────────────────────────────── */
 typedef struct {
@@ -77,22 +106,6 @@ typedef struct {
     /* ── Probe quality (multi-ping) ────────────────────────────── */
     double probe_loss_pct;    /* packet loss % from multi-ping probe (0.0–100.0) */
 } metrics_t;
-
-/* ── Persona ────────────────────────────────────────────────── */
-typedef enum {
-    PERSONA_UNKNOWN   = 0,
-    PERSONA_VOIP      = 1,  /* G.711/G.729 voice — EF → CAKE Voice tin  */
-    PERSONA_GAMING    = 2,  /* FPS/online game  — CS4 → CAKE Voice tin  */
-    PERSONA_VIDEO     = 3,  /* Zoom/Teams call  — CS3 → CAKE Video tin  */
-    PERSONA_STREAMING = 4,  /* Netflix/YouTube  — CS2 → CAKE Video tin  */
-    PERSONA_BULK      = 5,  /* File upload/DL   — CS1 → CAKE Bulk tin   */
-    PERSONA_TORRENT   = 6,  /* BitTorrent P2P   — CS1 → CAKE Bulk tin   */
-} persona_t;
-
-/* Backward-compat alias: old INTERACTIVE code paths map to GAMING */
-#define PERSONA_INTERACTIVE PERSONA_GAMING
-
-#define PERSONA_COUNT 7
 
 typedef struct {
     persona_t current;

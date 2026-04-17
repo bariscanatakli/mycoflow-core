@@ -73,6 +73,30 @@ return view.extend({
     o = s.option(form.Value, "ebpf_obj", _("eBPF Object Path"));
     o.depends("ebpf_enabled", "1");
 
+    // Device Overrides
+    s = m.section(form.TypedSection, "device", _("Device Overrides"), _("Assign fixed personas to specific devices by IP address."));
+    s.addremove = true;
+    s.anonymous = true;
+
+    o = s.option(form.Value, "ip", _("IP Address"));
+    o.datatype = "ip4addr";
+    o.placeholder = "192.168.1.x";
+    o.rmempty = false;
+
+    o = s.option(form.Value, "mac", _("MAC Address (Optional)"));
+    o.datatype = "macaddr";
+    o.placeholder = "00:11:22:33:44:55";
+
+    o = s.option(form.ListValue, "persona", _("Persona"));
+    o.value("unknown", _("Unknown (Auto)"));
+    o.value("gaming", _("Gaming / Interactive"));
+    o.value("video", _("Video Call"));
+    o.value("streaming", _("Streaming"));
+    o.value("bulk", _("Bulk / Download"));
+    o.value("torrent", _("Torrent / P2P"));
+    o.value("voip", _("VoIP"));
+    o.rmempty = false;
+
     return m.render();
   }
 });

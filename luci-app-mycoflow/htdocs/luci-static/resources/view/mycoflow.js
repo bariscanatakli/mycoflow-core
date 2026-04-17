@@ -262,7 +262,7 @@ return view.extend({
             ].concat(s.devices.map(function(d) {
               return E("tr", { class: "tr cbi-rowstyle-1" }, [
                 E("td", { class: "td" }, d.ip),
-                E("td", { class: "td" }, personaBadge(d.persona)),
+                E("td", { class: "td" }, d.override ? [personaBadge(d.persona), " 🔒"] : personaBadge(d.persona)),
                 E("td", { class: "td", style: "text-align:right" }, d.flows),
                 E("td", { class: "td", style: "text-align:right" }, formatBps(d.rx_bps || 0)),
                 E("td", { class: "td", style: "text-align:right" }, formatBps(d.tx_bps || 0))

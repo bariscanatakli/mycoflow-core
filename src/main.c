@@ -18,6 +18,7 @@
 #include "myco_ewma.h"
 #include "myco_flow.h"
 #include "myco_device.h"
+#include "myco_dns.h"
 #include "myco_ubus.h"
 
 #include <signal.h>
@@ -108,6 +109,21 @@ int main(void) {
     device_table_t device_table;
     device_table_init(&device_table);
     myco_set_device_table(&device_table, cfg.per_device_enabled);
+
+    /* DNS snooping: passive cache for IP→domain→persona mapping.
+     * Started unconditionally — the cache feeds hints into per-device
+     * aggregation. If the raw socket fails (no CAP_NET_RAW), the thread
+     * exits silently and the system degrades to port+behavior (78%). */
+    dns_cache_t dns_cache;
+    dns_cache_init(&dns_cache);
+    pthread_t dns_thread;
+    int dns_thread_started = 0;
+    if (pthread_create(&dns_thread, NULL, dns_sniff_thread, &dns_cache) == 0) {
+        dns_thread_started = 1;
+        log_msg(LOG_INFO, "main", "DNS sniffer thread launched");
+    } else {
+        log_msg(LOG_WARN, "main", "DNS sniffer thread failed to start");
+    }
 
     double interval_s = 1.0 / cfg.sample_hz;
     log_msg(LOG_INFO, "main", "baseline capture: %d samples", cfg.baseline_samples);
@@ -214,9 +230,9 @@ int main(void) {
         /* Per-device persona: aggregate flows by src_ip, infer per-device,
          * apply DSCP mangle rules when any device persona changes. */
         if (cfg.per_device_enabled) {
-            device_table_aggregate(&device_table, &flow_table, ft_now);
+            device_table_aggregate(&device_table, &flow_table, ft_now, &dns_cache);
             device_table_evict_stale(&device_table, ft_now, 120.0);
-            int dev_changes = device_table_update_personas(&device_table);
+            int dev_changes = device_table_update_personas(&device_table, &cfg);
             if (dev_changes > 0) {
                 device_apply_all_dscp(&device_table, cfg.no_tc);
             }
@@ -252,7 +268,7 @@ int main(void) {
              * (e.g. 11 devices × 25 flows = 275 → false TORRENT). */
             persona = device_table_dominant_persona(&device_table);
         } else {
-            persona = persona_update(&persona_state, &metrics);
+            persona = persona_update(&persona_state, &metrics, PERSONA_UNKNOWN);
         }
         if (persona_override) {
             persona = override_val;
@@ -345,6 +361,13 @@ int main(void) {
 
         sleep_interval(interval_s);
     }
+
+    /* Stop DNS sniffer thread (g_stop already set by signal handler) */
+    if (dns_thread_started) {
+        pthread_join(dns_thread, NULL);
+        log_msg(LOG_INFO, "main", "DNS sniffer thread joined");
+    }
+    dns_cache_destroy(&dns_cache);
 
     if (cfg.per_device_enabled) {
         act_teardown_dscp_chain(cfg.no_tc);

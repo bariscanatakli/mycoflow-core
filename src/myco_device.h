@@ -11,6 +11,7 @@
 
 #include "myco_types.h"
 #include "myco_flow.h"
+#include "myco_dns.h"
 
 #include <stdint.h>
 
@@ -38,10 +39,16 @@ typedef struct {
     double          udp_avg_pkt;      /* udp_bytes / udp_packets */
     int             elephant_flow;    /* 1 if one flow carries >60% of device bytes */
 
+    /* Per-device port/domain hint aggregation */
+    int             hint_votes[PERSONA_COUNT]; /* vote count per persona from port hints */
+    persona_t       dominant_hint;    /* winning hint after vote count */
+    int             has_hint;         /* 1 if any non-UNKNOWN hint exists */
+
     /* Per-device persona inference */
     persona_state_t persona_state;    /* 2-of-3 history window */
     persona_t       persona;          /* current inferred persona */
     persona_t       applied_dscp;     /* last DSCP persona applied via iptables */
+    int             override_active;  /* 1 if overriden by config */
 } device_entry_t;
 
 typedef struct {
@@ -53,12 +60,15 @@ typedef struct {
 void device_table_init(device_table_t *dt);
 
 /* Aggregate flow table entries by src_ip into per-device metrics.
- * Resets per-device counters before aggregation. */
-void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double now);
+ * Resets per-device counters before aggregation.
+ * If dns_cache is non-NULL, also looks up each flow's dst_ip for
+ * domain-based hints (Phase 2 DNS snooping). */
+void device_table_aggregate(device_table_t *dt, const flow_table_t *ft,
+                            double now, dns_cache_t *dns_cache);
 
 /* Run persona inference for each active device.
  * Returns the number of devices whose persona changed this cycle. */
-int device_table_update_personas(device_table_t *dt);
+int device_table_update_personas(device_table_t *dt, const myco_config_t *cfg);
 
 /* Evict devices not seen for max_age_s seconds */
 void device_table_evict_stale(device_table_t *dt, double now, double max_age_s);

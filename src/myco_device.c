@@ -10,6 +10,8 @@
 #include "myco_device.h"
 #include "myco_log.h"
 #include "myco_persona.h"
+#include "myco_hint.h"
+#include "myco_dns.h"
 
 #include <arpa/inet.h>
 #include <stdio.h>
@@ -74,7 +76,8 @@ void device_table_init(device_table_t *dt) {
     memset(dt, 0, sizeof(*dt));
 }
 
-void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double now) {
+void device_table_aggregate(device_table_t *dt, const flow_table_t *ft,
+                            double now, dns_cache_t *dns_cache) {
     if (!dt || !ft) {
         return;
     }
@@ -96,6 +99,9 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
             dt->devices[i].bandwidth_bps = 0.0;
             dt->devices[i].tx_rx_ratio   = 1.0;
             dt->devices[i].elephant_flow = 0;
+            memset(dt->devices[i].hint_votes, 0, sizeof(dt->devices[i].hint_votes));
+            dt->devices[i].dominant_hint = PERSONA_UNKNOWN;
+            dt->devices[i].has_hint = 0;
         }
     }
 
@@ -156,7 +162,8 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
         /* TX/RX ratio: >4 = heavy uploader (BULK), <0.25 = heavy downloader (STREAMING) */
         dev->tx_rx_ratio = (double)dev->tx_bytes / (double)(dev->rx_bytes + 1);
 
-        /* Per-device elephant flow detection using delta bytes (this cycle).
+        /* Per-device elephant flow detection + port hint collection.
+         * Both piggyback on the same per-flow scan — zero extra iterations.
          * Delta-based avoids stale cumulative bytes diluting the ratio when
          * many old flows exist but only one is actively transferring. */
         uint64_t max_delta = 0;
@@ -172,15 +179,48 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft, double n
             if (flow_delta > max_delta) {
                 max_delta = flow_delta;
             }
+
+            /* Port hint: look up dst_port for this flow */
+            persona_t hint = hint_from_port(ft->entries[j].key.protocol,
+                                            ft->entries[j].key.dst_port);
+
+            /* DNS hint: if port hint is UNKNOWN (e.g., port 443), try
+             * the DNS cache for a domain-based hint. DNS resolves the
+             * 443 ambiguity that port hints cannot. */
+            if (hint == PERSONA_UNKNOWN && dns_cache) {
+                hint = dns_cache_lookup(dns_cache, ft->entries[j].key.dst_ip);
+            }
+
+            if (hint != PERSONA_UNKNOWN) {
+                dev->hint_votes[(int)hint]++;
+            }
         }
         if (total_delta > 0 &&
             (double)max_delta / (double)total_delta >= 0.60) {
             dev->elephant_flow = 1;
         }
+
+        /* Resolve dominant hint: highest vote count, UNKNOWN excluded.
+         * Tie-break by priority (lower enum = higher priority). */
+        int best_votes = 0;
+        persona_t best_hint = PERSONA_UNKNOWN;
+        for (int p = 1; p < PERSONA_COUNT; p++) {
+            if (dev->hint_votes[p] > best_votes) {
+                best_votes = dev->hint_votes[p];
+                best_hint = (persona_t)p;
+            } else if (dev->hint_votes[p] == best_votes && best_votes > 0) {
+                /* Tie: prefer higher priority (lower enum value) */
+                if (p < (int)best_hint) {
+                    best_hint = (persona_t)p;
+                }
+            }
+        }
+        dev->dominant_hint = best_hint;
+        dev->has_hint = (best_hint != PERSONA_UNKNOWN) ? 1 : 0;
     }
 }
 
-int device_table_update_personas(device_table_t *dt) {
+int device_table_update_personas(device_table_t *dt, const myco_config_t *cfg) {
     if (!dt) {
         return 0;
     }
@@ -207,14 +247,32 @@ int device_table_update_personas(device_table_t *dt) {
         dev_metrics.tx_bps = (double)dev->tx_bytes * 8.0 / 0.5;
         dev_metrics.rx_bps = (double)dev->rx_bytes * 8.0 / 0.5;
 
+        char ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &dev->ip, ip_str, sizeof(ip_str));
+
         persona_t prev = dev->persona;
-        dev->persona = persona_update(&dev->persona_state, &dev_metrics);
+        dev->override_active = 0;
+
+        if (cfg && cfg->num_device_overrides > 0) {
+            for (int j = 0; j < cfg->num_device_overrides; j++) {
+                if (strcmp(cfg->device_overrides[j].ip, ip_str) == 0 &&
+                    cfg->device_overrides[j].persona != PERSONA_UNKNOWN) {
+                    dev->override_active = 1;
+                    dev->persona = cfg->device_overrides[j].persona;
+                    break;
+                }
+            }
+        }
+
+        if (!dev->override_active) {
+            dev->persona = persona_update(&dev->persona_state, &dev_metrics,
+                                          dev->dominant_hint);
+        }
 
         if (dev->persona != prev) {
-            char ip_str[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &dev->ip, ip_str, sizeof(ip_str));
-            log_msg(LOG_INFO, "device", "%s persona: %s -> %s",
-                    ip_str, persona_name(prev), persona_name(dev->persona));
+            log_msg(LOG_INFO, "device", "%s persona: %s -> %s%s",
+                    ip_str, persona_name(prev), persona_name(dev->persona),
+                    dev->override_active ? " (override)" : "");
             changes++;
         }
     }

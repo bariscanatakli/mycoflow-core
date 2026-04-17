@@ -234,6 +234,75 @@ static void apply_uci_overrides(myco_config_t *cfg) {
     }
 }
 
+static persona_t parse_persona_name(const char *name) {
+    if (!name) return PERSONA_UNKNOWN;
+    if (strcasecmp(name, "voip") == 0) return PERSONA_VOIP;
+    if (strcasecmp(name, "gaming") == 0 || strcasecmp(name, "interactive") == 0) return PERSONA_GAMING;
+    if (strcasecmp(name, "video") == 0) return PERSONA_VIDEO;
+    if (strcasecmp(name, "streaming") == 0) return PERSONA_STREAMING;
+    if (strcasecmp(name, "bulk") == 0) return PERSONA_BULK;
+    if (strcasecmp(name, "torrent") == 0) return PERSONA_TORRENT;
+    return PERSONA_UNKNOWN;
+}
+
+static void apply_uci_device_overrides(myco_config_t *cfg) {
+    cfg->num_device_overrides = 0;
+    memset(cfg->device_overrides, 0, sizeof(cfg->device_overrides));
+    FILE *fp = popen("uci -q show mycoflow", "r");
+    if (!fp) return;
+
+    char buf[256];
+    while (fgets(buf, sizeof(buf), fp)) {
+        trim_whitespace(buf);
+        if (strncmp(buf, "mycoflow.@device[", 17) == 0) {
+            char *idx_str_end = strchr(buf + 17, ']');
+            if (!idx_str_end) continue;
+            int idx = atoi(buf + 17);
+            if (idx < 0 || idx >= MAX_DEVICE_OVERRIDES) continue;
+
+            if (idx >= cfg->num_device_overrides) {
+                cfg->num_device_overrides = idx + 1;
+            }
+
+            char *dot = strchr(idx_str_end + 1, '.');
+            if (!dot) continue;
+            char *eq = strchr(dot + 1, '=');
+            if (!eq) continue;
+
+            *eq = '\0';
+            char *key = dot + 1;
+            char *val = eq + 1;
+
+            if (val[0] == '\'' || val[0] == '"') val++;
+            size_t len = strlen(val);
+            if (len > 0 && (val[len - 1] == '\'' || val[len - 1] == '"')) {
+                val[len - 1] = '\0';
+            }
+
+            if (strcmp(key, "ip") == 0) {
+                strncpy(cfg->device_overrides[idx].ip, val, sizeof(cfg->device_overrides[idx].ip)-1);
+            } else if (strcmp(key, "mac") == 0) {
+                strncpy(cfg->device_overrides[idx].mac, val, sizeof(cfg->device_overrides[idx].mac)-1);
+            } else if (strcmp(key, "persona") == 0) {
+                cfg->device_overrides[idx].persona = parse_persona_name(val);
+            }
+        }
+    }
+    pclose(fp);
+
+    /* Compact array to remove empty indices */
+    int valid_count = 0;
+    for (int i = 0; i < cfg->num_device_overrides; i++) {
+        if (cfg->device_overrides[i].ip[0] != '\0') {
+            if (i != valid_count) {
+                cfg->device_overrides[valid_count] = cfg->device_overrides[i];
+            }
+            valid_count++;
+        }
+    }
+    cfg->num_device_overrides = valid_count;
+}
+
 /* ── Environment overrides ──────────────────────────────────── */
 
 static void apply_env_overrides(myco_config_t *cfg) {
@@ -300,6 +369,7 @@ int config_load(myco_config_t *cfg) {
     }
     apply_defaults(cfg);
     apply_uci_overrides(cfg);
+    apply_uci_device_overrides(cfg);
     apply_env_overrides(cfg);
     if (cfg->sample_hz <= 0.1) {
         cfg->sample_hz = 0.1;

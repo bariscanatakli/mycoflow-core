@@ -170,7 +170,7 @@ void myco_dump_json(void) {
             }
             char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &dev->ip, ip_str, sizeof(ip_str));
-            fprintf(f, "%s\n\t\t{\"ip\":\"%s\",\"persona\":\"%s\",\"flows\":%d,\"udp\":%d,\"tcp\":%d,\"udp_avg_pkt\":%d,\"bytes\":%llu,\"avg_pkt\":%d,\"elephant\":%d,\"rx_bps\":%.0f,\"tx_bps\":%.0f}",
+            fprintf(f, "%s\n\t\t{\"ip\":\"%s\",\"persona\":\"%s\",\"flows\":%d,\"udp\":%d,\"tcp\":%d,\"udp_avg_pkt\":%d,\"bytes\":%llu,\"avg_pkt\":%d,\"elephant\":%d,\"rx_bps\":%.0f,\"tx_bps\":%.0f,\"override\":%s}",
                     first ? "" : ",",
                     ip_str, persona_name(dev->persona),
                     dev->flow_count,
@@ -181,7 +181,8 @@ void myco_dump_json(void) {
                     (int)dev->avg_pkt_size,
                     dev->elephant_flow,
                     dev->rx_bytes * 8.0 / 1.0,
-                    dev->tx_bytes * 8.0 / 1.0);
+                    dev->tx_bytes * 8.0 / 1.0,
+                    dev->override_active ? "true" : "false");
             first = 0;
         }
     }

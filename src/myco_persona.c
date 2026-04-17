@@ -28,7 +28,7 @@
  *
  * Priority: first matching rule wins.
  */
-static persona_t decide_persona(const metrics_t *metrics) {
+static persona_t decide_persona(const metrics_t *metrics, persona_t hint) {
     if (!metrics) {
         return PERSONA_UNKNOWN;
     }
@@ -39,11 +39,13 @@ static persona_t decide_persona(const metrics_t *metrics) {
     double tx_rx_ratio = tx_bps / (rx_bps + 1.0);
     int flows = metrics->active_flows;
 
-    /* Rule 1 — TORRENT: swarm of connections + significant bandwidth
-     * Old threshold (30) was too low — modern browsers maintain 30-50+
-     * concurrent connections (QUIC, prefetch, extensions, keep-alive).
-     * Now requires both high flow count AND meaningful bandwidth to avoid
-     * misclassifying idle browser sessions as torrent. */
+    /* Rule 0 — Hint pre-check: if behavior would return UNKNOWN but we
+     * have a port hint, use the hint. This catches low-traffic periods
+     * where behavioral signals are too weak to classify. */
+
+    /* Rule 1 — TORRENT: swarm of connections + significant bandwidth.
+     * Strong behavioral signal — hint CANNOT override this.
+     * Even if some flows hit gaming ports, 100+ flows is a swarm. */
     if (flows > 100 && bw_bps > 500000.0) {
         return PERSONA_TORRENT;
     }
@@ -51,35 +53,59 @@ static persona_t decide_persona(const metrics_t *metrics) {
     int udp_flows = metrics->udp_flows;
     double udp_ratio = (flows > 0) ? (double)udp_flows / (double)flows : 0.0;
 
-    /* Rule 2 — High UDP ratio: STREAMING vs GAMING split by rx bandwidth.
-     *
-     * Both gaming (CS2, Valorant) and video streaming (YouTube, Netflix)
-     * produce high UDP flow ratios (>25%). The discriminator is download
-     * bandwidth: 4K video pushes 40-150+ Mbps over QUIC, while games
-     * rarely exceed 30 Mbps (game state + voice).
-     *
-     * Minimum bandwidth gate (500 kbps) prevents idle devices with only
-     * DNS/NTP UDP flows from being classified as GAMING.
-     *
-     * 2a: STREAMING — heavy UDP download (QUIC video, rx > 30 Mbps)
-     * 2b: GAMING   — moderate UDP traffic (game server, rx <= 30 Mbps) */
+    /* Rule 2a — STREAMING: heavy UDP download (QUIC video, rx > 30 Mbps).
+     * But if hint says GAMING, trust the hint — could be a UDP game with
+     * heavy download (large map, spectator mode). */
     if (udp_ratio >= 0.25 && rx_bps > 30000000.0 && tx_rx_ratio < 0.30) {
+        if (hint == PERSONA_GAMING) {
+            return PERSONA_GAMING;
+        }
         return PERSONA_STREAMING;
     }
+
+    /* Rule 2b — GAMING: high UDP ratio + moderate bandwidth.
+     * Already correct for UDP games — hint reinforces.
+     * Exception: if hint says VIDEO (e.g., Zoom on port 8801), trust the hint.
+     * Video calls and games both produce high UDP ratios, but port resolves it. */
     if (udp_ratio >= 0.25 && bw_bps > 500000.0) {
+        if (hint == PERSONA_VIDEO) {
+            return PERSONA_VIDEO;
+        }
         return PERSONA_GAMING;
     }
 
-    /* Rule 3 — BULK: elephant flow (one flow dominates >60% of cycle bytes)
-     * OR high-bandwidth download with low UDP ratio (TCP-dominated). */
+    /* Rule 3 — BULK: elephant flow or heavy TCP download.
+     * KEY FIX: hint overrides elephant detection for interactive traffic.
+     * LoL (TCP game) has one dominant connection → elephant_flow=1 → was BULK.
+     * Now: if hint says GAMING/VOIP/VIDEO/STREAMING, trust the hint.
+     * Sanity check: GAMING hint with >20 Mbps is likely a launcher download. */
     if (metrics->elephant_flow) {
+        if (hint == PERSONA_GAMING && bw_bps <= 20000000.0) {
+            return PERSONA_GAMING;
+        }
+        if (hint == PERSONA_VOIP && bw_bps <= 5000000.0) {
+            return PERSONA_VOIP;
+        }
+        if (hint == PERSONA_VIDEO) {
+            return PERSONA_VIDEO;
+        }
+        if (hint == PERSONA_STREAMING) {
+            return PERSONA_STREAMING;
+        }
         return PERSONA_BULK;
     }
     if (rx_bps > 5000000.0 && tx_rx_ratio < 0.30 && udp_ratio < 0.25) {
+        if (hint == PERSONA_GAMING && bw_bps <= 20000000.0) {
+            return PERSONA_GAMING;
+        }
+        if (hint == PERSONA_STREAMING) {
+            return PERSONA_STREAMING;
+        }
         return PERSONA_BULK;
     }
 
-    /* Rule 4 — VOIP: tiny codec packets, very low rate */
+    /* Rule 4 — VOIP: tiny codec packets, very low rate.
+     * Strong behavioral signal — no hint needed. */
     if (metrics->avg_pkt_size > 0.0 &&
         metrics->avg_pkt_size < 120.0 &&
         bw_bps < 200000.0) {
@@ -97,6 +123,12 @@ static persona_t decide_persona(const metrics_t *metrics) {
     /* Rule 6 — VIDEO: mid-range bandwidth (200 kbps – 8 Mbps) */
     if (bw_bps >= 200000.0 && bw_bps <= 8000000.0) {
         return PERSONA_VIDEO;
+    }
+
+    /* Rule 7 — Hint fallback: behavior says UNKNOWN, but hint has a signal.
+     * Trust the hint for active traffic. */
+    if (hint != PERSONA_UNKNOWN && bw_bps > 50000.0) {
+        return hint;
     }
 
     return PERSONA_UNKNOWN;
@@ -128,12 +160,13 @@ const char *persona_name(persona_t persona) {
  * the new candidate appears at least 2 times (2-of-3 majority).
  * This means persona stabilises after ~1 second at 2 Hz sampling.
  */
-persona_t persona_update(persona_state_t *state, const metrics_t *metrics) {
+persona_t persona_update(persona_state_t *state, const metrics_t *metrics,
+                         persona_t hint) {
     if (!state || !metrics) {
         return PERSONA_UNKNOWN;
     }
 
-    persona_t candidate = decide_persona(metrics);
+    persona_t candidate = decide_persona(metrics, hint);
     int window = (int)(sizeof(state->history) / sizeof(state->history[0]));
 
     if (state->history_len < window) {
