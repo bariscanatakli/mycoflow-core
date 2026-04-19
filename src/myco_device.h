@@ -25,8 +25,8 @@ typedef struct {
 
     /* Aggregated metrics (recomputed each cycle from flow table) */
     int             flow_count;       /* active flows for this device */
-    uint64_t        total_bytes;      /* total bytes across all device flows (TX) */
-    uint64_t        total_packets;    /* total packets across all device flows */
+    uint64_t        total_bytes;      /* total bytes across all device flows (TX+RX cumulative) */
+    uint64_t        total_packets;    /* total packets across all device flows (TX+RX cumulative) */
     uint64_t        tx_bytes;         /* forward direction bytes this cycle */
     uint64_t        rx_bytes;         /* reverse direction bytes this cycle */
     double          avg_pkt_size;     /* total_bytes / total_packets */

@@ -73,7 +73,8 @@ static int find_lru_slot(const flow_table_t *ft) {
 }
 
 int flow_table_update(flow_table_t *ft, const flow_key_t *key,
-                      uint64_t packets, uint64_t bytes, uint64_t rx_bytes,
+                      uint64_t packets, uint64_t rx_packets,
+                      uint64_t bytes, uint64_t rx_bytes,
                       double now) {
     if (!ft || !key) return -1;
 
@@ -84,37 +85,40 @@ int flow_table_update(flow_table_t *ft, const flow_key_t *key,
         uint32_t slot = (idx + i) % FLOW_TABLE_SIZE;
         if (!ft->entries[slot].active) {
             /* Insert here */
-            ft->entries[slot].key       = *key;
-            ft->entries[slot].packets   = packets;
-            ft->entries[slot].bytes     = bytes;
-            ft->entries[slot].rx_bytes  = rx_bytes;
-            ft->entries[slot].tx_delta  = bytes;
-            ft->entries[slot].rx_delta  = rx_bytes;
-            ft->entries[slot].last_seen = now;
-            ft->entries[slot].active    = 1;
+            ft->entries[slot].key        = *key;
+            ft->entries[slot].packets    = packets;
+            ft->entries[slot].rx_packets = rx_packets;
+            ft->entries[slot].bytes      = bytes;
+            ft->entries[slot].rx_bytes   = rx_bytes;
+            ft->entries[slot].tx_delta   = bytes;
+            ft->entries[slot].rx_delta   = rx_bytes;
+            ft->entries[slot].last_seen  = now;
+            ft->entries[slot].active     = 1;
             ft->count++;
             return 0;
         }
         if (key_equal(&ft->entries[slot].key, key)) {
             /* Update existing */
-            ft->entries[slot].tx_delta  = bytes >= ft->entries[slot].bytes ? bytes - ft->entries[slot].bytes : 0;
-            ft->entries[slot].rx_delta  = rx_bytes >= ft->entries[slot].rx_bytes ? rx_bytes - ft->entries[slot].rx_bytes : 0;
-            ft->entries[slot].packets   = packets;
-            ft->entries[slot].bytes     = bytes;
-            ft->entries[slot].rx_bytes  = rx_bytes;
-            ft->entries[slot].last_seen = now;
+            ft->entries[slot].tx_delta   = bytes >= ft->entries[slot].bytes ? bytes - ft->entries[slot].bytes : 0;
+            ft->entries[slot].rx_delta   = rx_bytes >= ft->entries[slot].rx_bytes ? rx_bytes - ft->entries[slot].rx_bytes : 0;
+            ft->entries[slot].packets    = packets;
+            ft->entries[slot].rx_packets = rx_packets;
+            ft->entries[slot].bytes      = bytes;
+            ft->entries[slot].rx_bytes   = rx_bytes;
+            ft->entries[slot].last_seen  = now;
             return 0;
         }
     }
 
     /* Table full — evict LRU */
     int victim = find_lru_slot(ft);
-    ft->entries[victim].key       = *key;
-    ft->entries[victim].packets   = packets;
-    ft->entries[victim].bytes     = bytes;
-    ft->entries[victim].rx_bytes  = rx_bytes;
-    ft->entries[victim].last_seen = now;
-    ft->entries[victim].active    = 1;
+    ft->entries[victim].key        = *key;
+    ft->entries[victim].packets    = packets;
+    ft->entries[victim].rx_packets = rx_packets;
+    ft->entries[victim].bytes      = bytes;
+    ft->entries[victim].rx_bytes   = rx_bytes;
+    ft->entries[victim].last_seen  = now;
+    ft->entries[victim].active     = 1;
     return 0;
 }
 
@@ -163,7 +167,7 @@ int flow_table_populate_conntrack(flow_table_t *ft, double now) {
         int proto_num = 0;
         char src_str[64] = {0}, dst_str[64] = {0};
         int sport = 0, dport = 0;
-        uint64_t pkts = 0, tx_byts = 0, rx_byts = 0;
+        uint64_t pkts = 0, rx_pkts = 0, tx_byts = 0, rx_byts = 0;
 
         /* Extract protocol number */
         char *p = strstr(line, "tcp");
@@ -187,8 +191,13 @@ int flow_table_populate_conntrack(flow_table_t *ft, double now) {
         if (p) sscanf(p, "sport=%d", &sport);
         p = strstr(line, "dport=");
         if (p) sscanf(p, "dport=%d", &dport);
+        /* nf_conntrack has TWO packets= fields per line (forward, then reverse) */
         p = strstr(line, "packets=");
-        if (p) sscanf(p, "packets=%llu", (unsigned long long *)&pkts);
+        if (p) {
+            sscanf(p, "packets=%llu", (unsigned long long *)&pkts);
+            p = strstr(p + 8, "packets=");
+            if (p) sscanf(p, "packets=%llu", (unsigned long long *)&rx_pkts);
+        }
 
         /* nf_conntrack has TWO bytes= fields per line:
          *   first  = forward direction (client→server, TX)
@@ -211,7 +220,7 @@ int flow_table_populate_conntrack(flow_table_t *ft, double now) {
         key.dst_port = (uint16_t)dport;
         key.protocol = (uint8_t)proto_num;
 
-        flow_table_update(ft, &key, pkts, tx_byts, rx_byts, now);
+        flow_table_update(ft, &key, pkts, rx_pkts, tx_byts, rx_byts, now);
         parsed++;
     }
 

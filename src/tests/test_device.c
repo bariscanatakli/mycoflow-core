@@ -37,7 +37,7 @@ static void add_flow(flow_table_t *ft, const char *src_ip_str, const char *dst_i
     key.src_port = sport;
     key.dst_port = dport;
     key.protocol = proto;
-    flow_table_update(ft, &key, packets, bytes, rx_bytes, now);
+    flow_table_update(ft, &key, packets, 0, bytes, rx_bytes, now);
 }
 
 /* ── Aggregation test ──────────────────────────────────────── */
@@ -94,6 +94,40 @@ static char *test_device_tx_rx_aggregation() {
     mu_assert("error, device C tx_bytes should be 50000",  dev_c->tx_bytes == 50000);
     mu_assert("error, device C rx_bytes should be 5000000", dev_c->rx_bytes == 5000000);
     mu_assert("error, device C tx_rx_ratio should be < 0.25", dev_c->tx_rx_ratio < 0.25);
+
+    return 0;
+}
+
+/* ── avg_pkt_size bidirectional regression test ────────────── */
+/* Regression: device downloading at 13 Mbps was classified as GAMING
+ * because avg_pkt_size used TX-only bytes (small ACKs ~48B).
+ * Fix: avg_pkt_size = (tx_bytes + rx_bytes) / (tx_packets + rx_packets).
+ * With tx=200 pkts × 60B ACKs + rx=5000 pkts × 1400B data → bidir avg ~1333B. */
+static char *test_device_avg_pkt_bidir() {
+    device_table_t dt;
+    flow_table_t ft;
+    device_table_init(&dt);
+    flow_table_init(&ft);
+
+    double now = 3000.0;
+
+    /* Simulate a download flow: 200 small TX ACKs (12000 B) + 5000 large RX data (7000000 B)
+     * rx_packets via second conntrack packets= field */
+    flow_key_t key;
+    memset(&key, 0, sizeof(key));
+    inet_pton(AF_INET, "192.168.1.40", &key.src_ip);
+    inet_pton(AF_INET, "52.1.2.3",     &key.dst_ip);
+    key.src_port = 60000; key.dst_port = 443; key.protocol = 6;
+    flow_table_update(&ft, &key, 200, 5000, 12000, 7000000, now);
+
+    device_table_aggregate(&dt, &ft, now, NULL);
+
+    device_entry_t *dev = find_dev(&dt, "192.168.1.40");
+    mu_assert("error, download device not found", dev != NULL);
+    /* (12000 + 7000000) / (200 + 5000) = 7012000 / 5200 ≈ 1348B, well above 350B gaming threshold */
+    mu_assert("error, download avg_pkt should be > 350B (not gaming-sized)", dev->avg_pkt_size > 350.0);
+    /* Sanity: should be roughly 1350B */
+    mu_assert("error, download avg_pkt should be < 2000B", dev->avg_pkt_size < 2000.0);
 
     return 0;
 }
@@ -272,6 +306,7 @@ static char *all_tests() {
     /* Original tests */
     mu_run_test(test_device_aggregation);
     mu_run_test(test_device_tx_rx_aggregation);
+    mu_run_test(test_device_avg_pkt_bidir);
     mu_run_test(test_device_persona_inference);
     mu_run_test(test_device_eviction);
 

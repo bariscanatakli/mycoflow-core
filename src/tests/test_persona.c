@@ -34,17 +34,19 @@ static char *test_voip() {
 }
 
 /* ── GAMING ────────────────────────────────────────────────── */
+/* CS2-like: moderate bandwidth, bidirectional UDP (tx_rx_ratio ≈ 0.5).
+ * tx_rx_ratio=0.5 satisfies the >= 0.10 guard in Rule 2b. */
 static char *test_gaming() {
     persona_state_t state;
     persona_init(&state);
 
     metrics_t m = {
         .avg_pkt_size = 470.0,
-        .tx_bps       = 350000.0,
-        .rx_bps       = 8000000.0,
-        .active_flows = 72,
+        .tx_bps       = 500000.0,
+        .rx_bps       = 1000000.0,
+        .active_flows = 6,
         .elephant_flow = 0,
-        .udp_flows    = 32,
+        .udp_flows    = 4,
     };
     FEED2(state, m, PERSONA_UNKNOWN);
     mu_assert("GAMING: should detect after 2/3 votes", state.current == PERSONA_GAMING);

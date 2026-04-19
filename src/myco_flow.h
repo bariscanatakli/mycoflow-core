@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#define FLOW_TABLE_SIZE 256  /* max concurrent flows tracked */
+#define FLOW_TABLE_SIZE 1024  /* max concurrent flows tracked */
 
 /* 5-tuple flow key */
 typedef struct {
@@ -21,7 +21,8 @@ typedef struct {
 /* Per-flow statistics */
 typedef struct {
     flow_key_t key;
-    uint64_t   packets;
+    uint64_t   packets;     /* forward direction packets (client→server / TX) */
+    uint64_t   rx_packets;  /* reverse direction packets (server→client / RX) */
     uint64_t   bytes;       /* forward direction bytes (client→server / TX) */
     uint64_t   rx_bytes;    /* reverse direction bytes (server→client / RX) */
     uint64_t   tx_delta;    /* bytes transferred in the last cycle */
@@ -37,7 +38,8 @@ typedef struct {
 
 void flow_table_init(flow_table_t *ft);
 int  flow_table_update(flow_table_t *ft, const flow_key_t *key,
-                       uint64_t packets, uint64_t bytes, uint64_t rx_bytes,
+                       uint64_t packets, uint64_t rx_packets,
+                       uint64_t bytes, uint64_t rx_bytes,
                        double now);
 const flow_entry_t *flow_table_lookup(const flow_table_t *ft,
                                       const flow_key_t *key);

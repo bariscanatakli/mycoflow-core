@@ -53,21 +53,25 @@ static persona_t decide_persona(const metrics_t *metrics, persona_t hint) {
     int udp_flows = metrics->udp_flows;
     double udp_ratio = (flows > 0) ? (double)udp_flows / (double)flows : 0.0;
 
-    /* Rule 2a — STREAMING: heavy UDP download (QUIC video, rx > 30 Mbps).
+    /* Rule 2a — STREAMING: heavy UDP download (QUIC video, rx > 5 Mbps).
+     * Threshold lowered from 30→5 Mbps to catch typical YouTube/Netflix QUIC.
+     * tx_rx_ratio < 0.20: mostly downloading (not a bidirectional game session).
      * But if hint says GAMING, trust the hint — could be a UDP game with
      * heavy download (large map, spectator mode). */
-    if (udp_ratio >= 0.25 && rx_bps > 30000000.0 && tx_rx_ratio < 0.30) {
+    if (udp_ratio >= 0.25 && rx_bps > 5000000.0 && tx_rx_ratio < 0.20) {
         if (hint == PERSONA_GAMING) {
             return PERSONA_GAMING;
         }
         return PERSONA_STREAMING;
     }
 
-    /* Rule 2b — GAMING: high UDP ratio + moderate bandwidth.
-     * Already correct for UDP games — hint reinforces.
-     * Exception: if hint says VIDEO (e.g., Zoom on port 8801), trust the hint.
-     * Video calls and games both produce high UDP ratios, but port resolves it. */
-    if (udp_ratio >= 0.25 && bw_bps > 500000.0) {
+    /* Rule 2b — GAMING: high UDP ratio + moderate bandwidth + bidirectional.
+     * Guard: tx_rx_ratio >= 0.10 ensures the UDP traffic is genuinely
+     * bidirectional (game state). Purely downloading devices often have many
+     * UDP side-channels (DNS, mDNS, QUIC acks) that inflate udp_ratio even
+     * though the real traffic is a TCP bulk download.
+     * Exception: if hint says VIDEO (e.g., Zoom on port 8801), trust the hint. */
+    if (udp_ratio >= 0.25 && bw_bps > 500000.0 && tx_rx_ratio >= 0.10) {
         if (hint == PERSONA_VIDEO) {
             return PERSONA_VIDEO;
         }

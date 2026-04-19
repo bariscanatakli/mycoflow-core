@@ -119,8 +119,8 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft,
         }
 
         dev->flow_count++;
-        dev->total_bytes   += fe->bytes;
-        dev->total_packets += fe->packets;
+        dev->total_bytes   += fe->bytes + fe->rx_bytes;
+        dev->total_packets += fe->packets + fe->rx_packets;
         dev->tx_bytes      += fe->tx_delta;
         dev->rx_bytes      += fe->rx_delta;
         dev->last_seen      = now;
