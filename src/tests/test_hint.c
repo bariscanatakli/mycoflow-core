@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "../minunit.h"
 #include "../myco_types.h"
+#include "../myco_service.h"
 #include "../myco_hint.h"
 
 int tests_run = 0;
@@ -125,6 +126,73 @@ static char *test_unknown_ports() {
     return 0;
 }
 
+/* ── v3: service_from_port ────────────────────────────────────── */
+
+static char *test_svc_game_rt() {
+    mu_assert("Valve UDP → GAME_RT",    service_from_port(17, 27020) == SVC_GAME_RT);
+    mu_assert("Riot UDP → GAME_RT",     service_from_port(17, 7500)  == SVC_GAME_RT);
+    mu_assert("Riot TCP → GAME_RT",     service_from_port(6, 5222)   == SVC_GAME_RT);
+    mu_assert("Epic 5222 → GAME_RT",    service_from_port(17, 5222)  == SVC_GAME_RT);
+    mu_assert("Epic 5795 → GAME_RT",    service_from_port(17, 5795)  == SVC_GAME_RT);
+    mu_assert("MC Bedrock → GAME_RT",   service_from_port(17, 19132) == SVC_GAME_RT);
+    mu_assert("MC Java → GAME_RT",      service_from_port(6, 25565)  == SVC_GAME_RT);
+    mu_assert("Supercell → GAME_RT",    service_from_port(6, 9339)   == SVC_GAME_RT);
+    mu_assert("Riot auth → GAME_RT",    service_from_port(6, 2099)   == SVC_GAME_RT);
+    return 0;
+}
+
+static char *test_svc_voip_call() {
+    mu_assert("STUN → VOIP_CALL",       service_from_port(17, 3478) == SVC_VOIP_CALL);
+    mu_assert("TURN → VOIP_CALL",       service_from_port(17, 3479) == SVC_VOIP_CALL);
+    mu_assert("SIP UDP → VOIP_CALL",    service_from_port(17, 5060) == SVC_VOIP_CALL);
+    mu_assert("SIP TCP → VOIP_CALL",    service_from_port(6, 5061)  == SVC_VOIP_CALL);
+    return 0;
+}
+
+static char *test_svc_video_conf() {
+    mu_assert("Meet → VIDEO_CONF",      service_from_port(17, 19305) == SVC_VIDEO_CONF);
+    mu_assert("Zoom → VIDEO_CONF",      service_from_port(17, 8801)  == SVC_VIDEO_CONF);
+    mu_assert("Zoom upper → CONF",      service_from_port(17, 8810)  == SVC_VIDEO_CONF);
+    return 0;
+}
+
+static char *test_svc_video_live() {
+    mu_assert("RTMP UDP → VIDEO_LIVE",  service_from_port(17, 1935) == SVC_VIDEO_LIVE);
+    mu_assert("RTMP TCP → VIDEO_LIVE",  service_from_port(6, 1935)  == SVC_VIDEO_LIVE);
+    return 0;
+}
+
+static char *test_svc_torrent() {
+    mu_assert("BT TCP → TORRENT",       service_from_port(6, 6881)  == SVC_TORRENT);
+    mu_assert("BT TCP upper → TORRENT", service_from_port(6, 6889)  == SVC_TORRENT);
+    mu_assert("BT tracker → TORRENT",   service_from_port(6, 6969)  == SVC_TORRENT);
+    mu_assert("BT DHT UDP → TORRENT",   service_from_port(17, 6881) == SVC_TORRENT);
+    return 0;
+}
+
+static char *test_svc_system() {
+    mu_assert("DNS → SYSTEM",           service_from_port(17, 53)   == SVC_SYSTEM);
+    mu_assert("NTP → SYSTEM",           service_from_port(17, 123)  == SVC_SYSTEM);
+    mu_assert("DHCP 67 → SYSTEM",       service_from_port(17, 67)   == SVC_SYSTEM);
+    mu_assert("DHCP 68 → SYSTEM",       service_from_port(17, 68)   == SVC_SYSTEM);
+    mu_assert("mDNS → SYSTEM",          service_from_port(17, 5353) == SVC_SYSTEM);
+    return 0;
+}
+
+static char *test_svc_web_interactive() {
+    mu_assert("SSH → WEB_INTERACTIVE",  service_from_port(6, 22) == SVC_WEB_INTERACTIVE);
+    return 0;
+}
+
+static char *test_svc_unknown() {
+    mu_assert("HTTPS 443 TCP",          service_from_port(6, 443)   == SVC_UNKNOWN);
+    mu_assert("HTTPS 443 UDP",          service_from_port(17, 443)  == SVC_UNKNOWN);
+    mu_assert("HTTP 80",                service_from_port(6, 80)    == SVC_UNKNOWN);
+    mu_assert("random high",            service_from_port(6, 54321) == SVC_UNKNOWN);
+    mu_assert("ICMP proto",             service_from_port(1, 0)     == SVC_UNKNOWN);
+    return 0;
+}
+
 static char *all_tests() {
     mu_run_test(test_valve_udp);
     mu_run_test(test_riot_tcp);
@@ -139,6 +207,14 @@ static char *all_tests() {
     mu_run_test(test_rtmp);
     mu_run_test(test_bittorrent);
     mu_run_test(test_unknown_ports);
+    mu_run_test(test_svc_game_rt);
+    mu_run_test(test_svc_voip_call);
+    mu_run_test(test_svc_video_conf);
+    mu_run_test(test_svc_video_live);
+    mu_run_test(test_svc_torrent);
+    mu_run_test(test_svc_system);
+    mu_run_test(test_svc_web_interactive);
+    mu_run_test(test_svc_unknown);
     return 0;
 }
 

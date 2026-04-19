@@ -79,3 +79,76 @@ persona_t hint_from_port(uint8_t protocol, uint16_t dst_port) {
 
     return PERSONA_UNKNOWN;
 }
+
+/* ─────────────────────────────────────────────────────────────────
+ * service_from_port — v3 finer-grained port→service mapping
+ *
+ * Maps well-known ports to service_t (12 classes) rather than the
+ * coarser persona_t (6 classes). Returns SVC_UNKNOWN for ports that
+ * cannot be reliably attributed (e.g. 443, 80).
+ *
+ * Port 1935 (RTMP) maps to SVC_VIDEO_LIVE rather than generic
+ * streaming — RTMP is real-time push, not buffered VOD. Zoom/Meet
+ * are SVC_VIDEO_CONF (interactive). STUN/TURN/SIP are SVC_VOIP_CALL.
+ * System ports (DNS/NTP/DHCP/mDNS) are SVC_SYSTEM so they get
+ * explicit best-effort treatment instead of falling through.
+ * ─────────────────────────────────────────────────────────────── */
+service_t service_from_port(uint8_t protocol, uint16_t dst_port) {
+    /* ── UDP ports ─────────────────────────────────────────────── */
+    if (protocol == 17) {
+        /* SYSTEM */
+        if (dst_port == 53)                         return SVC_SYSTEM;   /* DNS */
+        if (dst_port == 123)                        return SVC_SYSTEM;   /* NTP */
+        if (dst_port == 67 || dst_port == 68)       return SVC_SYSTEM;   /* DHCP */
+        if (dst_port == 5353)                       return SVC_SYSTEM;   /* mDNS */
+
+        /* VOIP_CALL — signalling + real-time voice */
+        if (dst_port >= 3478 && dst_port <= 3479)   return SVC_VOIP_CALL; /* STUN/TURN */
+        if (dst_port >= 5060 && dst_port <= 5061)   return SVC_VOIP_CALL; /* SIP */
+
+        /* VIDEO_CONF — interactive video calls */
+        if (dst_port >= 19302 && dst_port <= 19309) return SVC_VIDEO_CONF; /* Google Meet */
+        if (dst_port >= 8801 && dst_port <= 8810)   return SVC_VIDEO_CONF; /* Zoom */
+
+        /* GAME_RT — real-time game traffic */
+        if (dst_port >= 27015 && dst_port <= 27050) return SVC_GAME_RT;   /* Valve */
+        if (dst_port >= 7000 && dst_port <= 8000)   return SVC_GAME_RT;   /* Riot/PUBG */
+        if (dst_port == 5222)                       return SVC_GAME_RT;   /* Epic */
+        if (dst_port >= 5795 && dst_port <= 5847)   return SVC_GAME_RT;   /* Epic */
+        if (dst_port == 19132)                      return SVC_GAME_RT;   /* MC Bedrock */
+
+        /* VIDEO_LIVE — RTMP push streaming */
+        if (dst_port == 1935)                       return SVC_VIDEO_LIVE;
+
+        /* TORRENT — DHT */
+        if (dst_port >= 6881 && dst_port <= 6889)   return SVC_TORRENT;
+
+        return SVC_UNKNOWN;
+    }
+
+    /* ── TCP ports ─────────────────────────────────────────────── */
+    if (protocol == 6) {
+        /* WEB_INTERACTIVE — remote shell / control channels */
+        if (dst_port == 22)                         return SVC_WEB_INTERACTIVE; /* SSH */
+
+        /* VOIP_CALL — SIP over TCP */
+        if (dst_port >= 5060 && dst_port <= 5061)   return SVC_VOIP_CALL;
+
+        /* GAME_RT */
+        if (dst_port >= 5000 && dst_port <= 5500)   return SVC_GAME_RT;   /* Riot */
+        if (dst_port == 2099)                       return SVC_GAME_RT;   /* Riot auth */
+        if (dst_port == 25565)                      return SVC_GAME_RT;   /* MC Java */
+        if (dst_port == 9339)                       return SVC_GAME_RT;   /* Supercell */
+
+        /* VIDEO_LIVE — RTMP */
+        if (dst_port == 1935)                       return SVC_VIDEO_LIVE;
+
+        /* TORRENT */
+        if (dst_port >= 6881 && dst_port <= 6889)   return SVC_TORRENT;
+        if (dst_port == 6969)                       return SVC_TORRENT;   /* tracker */
+
+        return SVC_UNKNOWN;
+    }
+
+    return SVC_UNKNOWN;
+}

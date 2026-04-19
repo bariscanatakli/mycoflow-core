@@ -10,6 +10,7 @@
 #define MYCO_HINT_H
 
 #include "myco_types.h"
+#include "myco_service.h"
 #include <stdint.h>
 
 /*
@@ -21,5 +22,11 @@
  * Protocol: 6 = TCP, 17 = UDP.
  */
 persona_t hint_from_port(uint8_t protocol, uint16_t dst_port);
+
+/*
+ * Finer-grained v3 port→service mapping. Returns SVC_UNKNOWN for ports
+ * that don't carry a reliable signal (e.g., 443). Protocol: 6=TCP, 17=UDP.
+ */
+service_t service_from_port(uint8_t protocol, uint16_t dst_port);
 
 #endif /* MYCO_HINT_H */

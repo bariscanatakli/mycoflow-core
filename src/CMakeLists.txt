@@ -56,7 +56,7 @@ add_test(NAME config COMMAND test_config)
 add_executable(test_persona tests/test_persona.c myco_persona.c myco_log.c)
 add_test(NAME persona COMMAND test_persona)
 
-add_executable(test_hint tests/test_hint.c myco_hint.c)
+add_executable(test_hint tests/test_hint.c myco_hint.c myco_service.c)
 add_test(NAME hint COMMAND test_hint)
 
 add_executable(test_dns tests/test_dns.c myco_dns.c myco_service.c myco_log.c)
