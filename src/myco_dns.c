@@ -108,6 +108,132 @@ static const domain_hint_t domain_table[] = {
     { NULL, PERSONA_UNKNOWN }  /* sentinel */
 };
 
+/* ── Domain suffix → service table (v3, finer-grained) ──────────
+ * 90+ suffixes covering the service taxonomy (architecture §5).
+ * Iterated in order, first matching suffix wins — put specific
+ * subdomains before generic ones to avoid shadowing.
+ */
+typedef struct {
+    const char *suffix;
+    service_t   service;
+} domain_service_t;
+
+static const domain_service_t domain_service_table[] = {
+    /* ═══ SVC_VIDEO_CONF — real-time conferencing (specific first) ═══ */
+    { "meet.google.com",        SVC_VIDEO_CONF },
+    { "teams.microsoft.com",    SVC_VIDEO_CONF },
+    { "teams.live.com",         SVC_VIDEO_CONF },
+    { "zoom.us",                SVC_VIDEO_CONF },
+    { "zoomgov.com",            SVC_VIDEO_CONF },
+    { "webex.com",              SVC_VIDEO_CONF },
+    { "gotomeeting.com",        SVC_VIDEO_CONF },
+    { "whereby.com",            SVC_VIDEO_CONF },
+    { "bluejeans.com",          SVC_VIDEO_CONF },
+    { "skype.com",              SVC_VIDEO_CONF },
+
+    /* ═══ SVC_VOIP_CALL — voice-primary ═══ */
+    { "discord.media",          SVC_VOIP_CALL },
+    { "whatsapp.net",           SVC_VOIP_CALL },
+    { "whatsapp.com",           SVC_VOIP_CALL },
+    { "signal.org",             SVC_VOIP_CALL },
+    { "telegram.org",           SVC_VOIP_CALL },
+    { "viber.com",              SVC_VOIP_CALL },
+    { "vonage.com",             SVC_VOIP_CALL },
+
+    /* ═══ SVC_VIDEO_LIVE — live streams (specific before generic) ═══ */
+    { "tiktokcdn-live.com",     SVC_VIDEO_LIVE },
+    { "ttvnw.net",              SVC_VIDEO_LIVE },   /* Twitch CDN */
+    { "jtvnw.net",              SVC_VIDEO_LIVE },   /* Twitch legacy */
+    { "twitch.tv",              SVC_VIDEO_LIVE },
+
+    /* ═══ SVC_VIDEO_VOD — buffered video/audio ═══ */
+    { "googlevideo.com",        SVC_VIDEO_VOD },    /* YouTube */
+    { "ytimg.com",              SVC_VIDEO_VOD },
+    { "youtube.com",            SVC_VIDEO_VOD },
+    { "ggpht.com",              SVC_VIDEO_VOD },
+    { "nflxvideo.net",          SVC_VIDEO_VOD },    /* Netflix */
+    { "netflix.com",            SVC_VIDEO_VOD },
+    { "aiv-cdn.net",            SVC_VIDEO_VOD },    /* Amazon Prime */
+    { "primevideo.com",         SVC_VIDEO_VOD },
+    { "dssott.com",             SVC_VIDEO_VOD },    /* Disney+ */
+    { "disneyplus.com",         SVC_VIDEO_VOD },
+    { "hls.apple.com",          SVC_VIDEO_VOD },    /* Apple TV+ */
+    { "aaplimg.com",            SVC_VIDEO_VOD },
+    { "hbomax.com",             SVC_VIDEO_VOD },
+    { "hulustream.com",         SVC_VIDEO_VOD },
+    { "hulu.com",               SVC_VIDEO_VOD },
+    { "video.fbcdn.net",        SVC_VIDEO_VOD },    /* Meta video (specific) */
+    { "fbcdn.net",              SVC_VIDEO_VOD },    /* Meta CDN (generic) */
+    { "cdninstagram.com",       SVC_VIDEO_VOD },
+    { "tiktokcdn.com",          SVC_VIDEO_VOD },
+    { "tiktokv.com",            SVC_VIDEO_VOD },
+    { "spotify.com",            SVC_VIDEO_VOD },    /* Audio VOD */
+    { "scdn.co",                SVC_VIDEO_VOD },
+
+    /* ═══ SVC_GAME_LAUNCHER — bulk game content (before GAME_RT) ═══ */
+    { "steamcontent.com",       SVC_GAME_LAUNCHER },
+    { "steamserver.net",        SVC_GAME_LAUNCHER },
+
+    /* ═══ SVC_GAME_RT — real-time gameplay ═══ */
+    { "riotgames.com",          SVC_GAME_RT },
+    { "riotcdn.net",            SVC_GAME_RT },
+    { "leagueoflegends.com",    SVC_GAME_RT },
+    { "steampowered.com",       SVC_GAME_RT },
+    { "valvesoftware.com",      SVC_GAME_RT },
+    { "epicgames.com",          SVC_GAME_RT },
+    { "unrealengine.com",       SVC_GAME_RT },
+    { "battle.net",             SVC_GAME_RT },
+    { "blizzard.com",           SVC_GAME_RT },
+    { "xboxlive.com",           SVC_GAME_RT },
+    { "gamepass.com",           SVC_GAME_RT },
+    { "playstation.net",        SVC_GAME_RT },
+    { "playstation.com",        SVC_GAME_RT },
+    { "ea.com",                 SVC_GAME_RT },
+    { "easports.com",           SVC_GAME_RT },
+    { "origin.com",             SVC_GAME_RT },
+    { "ubisoft.com",            SVC_GAME_RT },
+    { "ubi.com",                SVC_GAME_RT },
+    { "mojang.com",             SVC_GAME_RT },
+    { "minecraft.net",          SVC_GAME_RT },
+    { "roblox.com",             SVC_GAME_RT },
+
+    /* ═══ SVC_FILE_SYNC — cloud drives (specific subdomains first) ═══ */
+    { "drive.google.com",       SVC_FILE_SYNC },
+    { "docs.google.com",        SVC_FILE_SYNC },
+    { "onedrive.live.com",      SVC_FILE_SYNC },
+    { "files.live.com",         SVC_FILE_SYNC },
+    { "icloud-content.com",     SVC_FILE_SYNC },
+    { "icloud.com",             SVC_FILE_SYNC },
+    { "dropboxusercontent.com", SVC_FILE_SYNC },
+    { "dropbox.com",            SVC_FILE_SYNC },
+    { "box.com",                SVC_FILE_SYNC },
+    { "mega.nz",                SVC_FILE_SYNC },
+    { "pcloud.com",             SVC_FILE_SYNC },
+
+    /* ═══ SVC_BULK_DL — software distribution ═══ */
+    { "githubusercontent.com",  SVC_BULK_DL },
+    { "github.com",             SVC_BULK_DL },
+    { "github.io",              SVC_BULK_DL },
+    { "docker.io",              SVC_BULK_DL },
+    { "docker.com",             SVC_BULK_DL },
+    { "pypi.org",               SVC_BULK_DL },
+    { "pythonhosted.org",       SVC_BULK_DL },
+    { "npmjs.com",              SVC_BULK_DL },
+    { "npmjs.org",              SVC_BULK_DL },
+    { "archive.ubuntu.com",     SVC_BULK_DL },
+    { "security.ubuntu.com",    SVC_BULK_DL },
+    { "ubuntu.com",             SVC_BULK_DL },
+    { "debian.org",             SVC_BULK_DL },
+    { "kernel.org",             SVC_BULK_DL },
+
+    /* ═══ SVC_WEB_INTERACTIVE — chat/web apps (non-voice Discord etc.) ═══ */
+    { "discord.gg",             SVC_WEB_INTERACTIVE },
+    { "discordapp.com",         SVC_WEB_INTERACTIVE },
+    { "t.me",                   SVC_WEB_INTERACTIVE },
+
+    { NULL, SVC_UNKNOWN }  /* sentinel */
+};
+
 /* ── Domain suffix → persona lookup ──────────────────────────── */
 
 persona_t dns_domain_to_hint(const char *domain) {
@@ -133,6 +259,29 @@ persona_t dns_domain_to_hint(const char *domain) {
     }
 
     return PERSONA_UNKNOWN;
+}
+
+service_t dns_domain_to_service(const char *domain) {
+    if (!domain || domain[0] == '\0') {
+        return SVC_UNKNOWN;
+    }
+
+    size_t dlen = strlen(domain);
+
+    for (const domain_service_t *e = domain_service_table; e->suffix; e++) {
+        size_t slen = strlen(e->suffix);
+        if (slen > dlen) {
+            continue;
+        }
+        const char *tail = domain + (dlen - slen);
+        if (strcasecmp(tail, e->suffix) == 0) {
+            if (slen == dlen || *(tail - 1) == '.') {
+                return e->service;
+            }
+        }
+    }
+
+    return SVC_UNKNOWN;
 }
 
 /* ── Cache operations ────────────────────────────────────────── */
@@ -243,10 +392,38 @@ void dns_cache_insert(dns_cache_t *cache, uint32_t ip,
     strncpy(slot->domain, domain, DNS_DOMAIN_MAXLEN - 1);
     slot->domain[DNS_DOMAIN_MAXLEN - 1] = '\0';
     slot->hint = hint;
+    slot->service = dns_domain_to_service(domain);
     slot->expire_time = now + (double)ttl_s;
     slot->active = 1;
 
     pthread_mutex_unlock(&cache->lock);
+}
+
+service_t dns_cache_lookup_service(dns_cache_t *cache, uint32_t ip) {
+    if (!cache) {
+        return SVC_UNKNOWN;
+    }
+
+    service_t result = SVC_UNKNOWN;
+    pthread_mutex_lock(&cache->lock);
+
+    for (int i = 0; i < DNS_CACHE_SIZE; i++) {
+        dns_entry_t *e = &cache->entries[i];
+        if (e->active && e->ip == ip) {
+            struct timespec ts;
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            double now = (double)ts.tv_sec + (double)ts.tv_nsec / 1e9;
+            if (now < e->expire_time) {
+                result = e->service;
+            } else {
+                e->active = 0;
+            }
+            break;
+        }
+    }
+
+    pthread_mutex_unlock(&cache->lock);
+    return result;
 }
 
 /* ── DNS response parser ─────────────────────────────────────── */

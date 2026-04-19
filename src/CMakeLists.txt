@@ -59,11 +59,11 @@ add_test(NAME persona COMMAND test_persona)
 add_executable(test_hint tests/test_hint.c myco_hint.c)
 add_test(NAME hint COMMAND test_hint)
 
-add_executable(test_dns tests/test_dns.c myco_dns.c myco_log.c)
+add_executable(test_dns tests/test_dns.c myco_dns.c myco_service.c myco_log.c)
 target_link_libraries(test_dns PRIVATE Threads::Threads)
 add_test(NAME dns COMMAND test_dns)
 
-add_executable(test_device tests/test_device.c myco_device.c myco_persona.c myco_flow.c myco_hint.c myco_dns.c myco_log.c)
+add_executable(test_device tests/test_device.c myco_device.c myco_persona.c myco_flow.c myco_hint.c myco_dns.c myco_service.c myco_log.c)
 target_link_libraries(test_device PRIVATE Threads::Threads)
 add_test(NAME device COMMAND test_device)
 

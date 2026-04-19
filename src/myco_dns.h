@@ -20,6 +20,7 @@
 #define MYCO_DNS_H
 
 #include "myco_types.h"
+#include "myco_service.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <pthread.h>
@@ -33,6 +34,7 @@ typedef struct {
     uint32_t  ip;                         /* IPv4 in network byte order */
     char      domain[DNS_DOMAIN_MAXLEN];  /* e.g. "rr1---sn-abc.googlevideo.com" */
     persona_t hint;                       /* persona derived from domain suffix */
+    service_t service;                    /* finer-grained service from domain suffix (v3) */
     double    expire_time;                /* monotonic time when entry expires */
     int       active;                     /* 1 = occupied slot */
 } dns_entry_t;
@@ -55,6 +57,11 @@ void dns_cache_destroy(dns_cache_t *cache);
  * Thread-safe (acquires lock). */
 persona_t dns_cache_lookup(dns_cache_t *cache, uint32_t ip);
 
+/* Same as dns_cache_lookup but returns the finer-grained service_t.
+ * Returns SVC_UNKNOWN if IP not cached or expired. Thread-safe.
+ * Added in v3 for flow-aware classification (architecture §5). */
+service_t dns_cache_lookup_service(dns_cache_t *cache, uint32_t ip);
+
 /* Insert or update a cache entry. Resolves domain→persona via suffix
  * matching. TTL is in seconds (from DNS response). Evicts LRU if full.
  * Thread-safe (acquires lock). */
@@ -67,6 +74,12 @@ void dns_cache_insert(dns_cache_t *cache, uint32_t ip,
  * Returns PERSONA_UNKNOWN if no suffix matches.
  * E.g., "rr1---sn-abc.googlevideo.com" matches "googlevideo.com" → STREAMING */
 persona_t dns_domain_to_hint(const char *domain);
+
+/* Finer-grained v3 classification: suffix-match against the service table.
+ * Returns SVC_UNKNOWN if no suffix matches.
+ * E.g., "us-west1.discord.media" matches "discord.media" → SVC_VOIP_CALL
+ * (which is PERSONA_VOIP — finer than the old VIDEO classification). */
+service_t dns_domain_to_service(const char *domain);
 
 /* ── DNS response parser ──────────────────────────────────────── */
 

@@ -409,6 +409,103 @@ static char *test_parser_riot_response() {
     return 0;
 }
 
+/* ══════════════════════════════════════════════════════════════
+ * Service (v3) finer-grained domain classification
+ * ══════════════════════════════════════════════════════════════ */
+
+static char *test_svc_vod_googlevideo() {
+    mu_assert("youtube VOD CDN → VIDEO_VOD",
+              dns_domain_to_service("rr1---sn-abc.googlevideo.com") == SVC_VIDEO_VOD);
+    return 0;
+}
+static char *test_svc_vod_netflix() {
+    mu_assert("netflix CDN → VIDEO_VOD",
+              dns_domain_to_service("ipv4-c001.nflxvideo.net") == SVC_VIDEO_VOD);
+    return 0;
+}
+static char *test_svc_vod_spotify() {
+    mu_assert("spotify audio CDN → VIDEO_VOD",
+              dns_domain_to_service("audio-fa.scdn.co") == SVC_VIDEO_VOD);
+    return 0;
+}
+static char *test_svc_live_twitch() {
+    mu_assert("twitch CDN → VIDEO_LIVE (not VOD — it's live content)",
+              dns_domain_to_service("video-edge-1.ttvnw.net") == SVC_VIDEO_LIVE);
+    return 0;
+}
+static char *test_svc_conf_zoom() {
+    mu_assert("zoom → VIDEO_CONF",
+              dns_domain_to_service("us04web.zoom.us") == SVC_VIDEO_CONF);
+    return 0;
+}
+static char *test_svc_conf_meet() {
+    mu_assert("google meet → VIDEO_CONF (not generic google.com)",
+              dns_domain_to_service("meet.google.com") == SVC_VIDEO_CONF);
+    return 0;
+}
+static char *test_svc_voip_discord_media() {
+    mu_assert("discord.media → VOIP_CALL (voice-specific, finer than old VIDEO)",
+              dns_domain_to_service("us-west1.discord.media") == SVC_VOIP_CALL);
+    return 0;
+}
+static char *test_svc_voip_whatsapp() {
+    mu_assert("whatsapp → VOIP_CALL",
+              dns_domain_to_service("media-ist1.whatsapp.net") == SVC_VOIP_CALL);
+    return 0;
+}
+static char *test_svc_game_rt_riot() {
+    mu_assert("riot → GAME_RT",
+              dns_domain_to_service("lol.sgp.riotgames.com") == SVC_GAME_RT);
+    return 0;
+}
+static char *test_svc_game_rt_steampowered() {
+    mu_assert("steampowered → GAME_RT (store/matchmaking)",
+              dns_domain_to_service("store.steampowered.com") == SVC_GAME_RT);
+    return 0;
+}
+static char *test_svc_game_launcher_steamcontent() {
+    mu_assert("steamcontent → GAME_LAUNCHER (bulk, distinct from matchmaking)",
+              dns_domain_to_service("cdn.steamcontent.com") == SVC_GAME_LAUNCHER);
+    return 0;
+}
+static char *test_svc_sync_dropbox() {
+    mu_assert("dropbox → FILE_SYNC",
+              dns_domain_to_service("client.dropbox.com") == SVC_FILE_SYNC);
+    return 0;
+}
+static char *test_svc_bulk_github() {
+    mu_assert("github → BULK_DL",
+              dns_domain_to_service("raw.githubusercontent.com") == SVC_BULK_DL);
+    return 0;
+}
+static char *test_svc_web_discordapp() {
+    mu_assert("discordapp.com → WEB_INTERACTIVE (chat, not voice)",
+              dns_domain_to_service("cdn.discordapp.com") == SVC_WEB_INTERACTIVE);
+    return 0;
+}
+static char *test_svc_null_safe() {
+    mu_assert("NULL → SVC_UNKNOWN", dns_domain_to_service(NULL) == SVC_UNKNOWN);
+    mu_assert("empty → SVC_UNKNOWN", dns_domain_to_service("") == SVC_UNKNOWN);
+    mu_assert("generic → SVC_UNKNOWN",
+              dns_domain_to_service("1.1.1.1.cloudflare.com") == SVC_UNKNOWN);
+    return 0;
+}
+static char *test_svc_cache_lookup() {
+    dns_cache_t cache;
+    dns_cache_init(&cache);
+    uint32_t ip = 0x08080808;
+    dns_cache_insert(&cache, ip, "us-west1.discord.media", 300);
+    mu_assert("cache service lookup → VOIP_CALL",
+              dns_cache_lookup_service(&cache, ip) == SVC_VOIP_CALL);
+    mu_assert("cache persona still resolves → VOIP (derived)",
+              dns_cache_lookup(&cache, ip) == PERSONA_VIDEO);
+    /* Note: persona lookup uses the OLD persona table for backward
+     * compat with device.c; service lookup uses the new table.
+     * Both can coexist until device.c migrates to service-based. */
+    dns_cache_destroy(&cache);
+    return 0;
+}
+
 /* ══════════════════════════════════════════════════════════════ */
 
 static char *all_tests() {
@@ -439,6 +536,24 @@ static char *all_tests() {
     mu_run_test(test_cache_miss);
     mu_run_test(test_cache_update);
     mu_run_test(test_cache_fill_eviction);
+
+    /* Service (v3 finer-grained) tests */
+    mu_run_test(test_svc_vod_googlevideo);
+    mu_run_test(test_svc_vod_netflix);
+    mu_run_test(test_svc_vod_spotify);
+    mu_run_test(test_svc_live_twitch);
+    mu_run_test(test_svc_conf_zoom);
+    mu_run_test(test_svc_conf_meet);
+    mu_run_test(test_svc_voip_discord_media);
+    mu_run_test(test_svc_voip_whatsapp);
+    mu_run_test(test_svc_game_rt_riot);
+    mu_run_test(test_svc_game_rt_steampowered);
+    mu_run_test(test_svc_game_launcher_steamcontent);
+    mu_run_test(test_svc_sync_dropbox);
+    mu_run_test(test_svc_bulk_github);
+    mu_run_test(test_svc_web_discordapp);
+    mu_run_test(test_svc_null_safe);
+    mu_run_test(test_svc_cache_lookup);
 
     /* Parser tests */
     mu_run_test(test_parser_valid_response);
