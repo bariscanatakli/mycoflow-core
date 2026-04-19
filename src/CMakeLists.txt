@@ -18,6 +18,7 @@ set(SOURCES
     myco_service.c
     myco_mark.c
     myco_mangle.c
+    myco_classifier.c
     myco_ubus.c
 )
 
@@ -89,6 +90,16 @@ add_test(NAME mangle COMMAND test_mangle)
 if(HAVE_LIBNFCT_H AND LIBNFCT_LIB)
     target_compile_definitions(test_mangle PRIVATE HAVE_LIBNFCT)
     target_link_libraries(test_mangle PRIVATE ${LIBNFCT_LIB})
+endif()
+
+add_executable(test_classifier tests/test_classifier.c
+    myco_classifier.c myco_service.c myco_hint.c myco_dns.c
+    myco_flow.c myco_mark.c myco_log.c)
+target_link_libraries(test_classifier PRIVATE Threads::Threads)
+add_test(NAME classifier COMMAND test_classifier)
+if(HAVE_LIBNFCT_H AND LIBNFCT_LIB)
+    target_compile_definitions(test_classifier PRIVATE HAVE_LIBNFCT)
+    target_link_libraries(test_classifier PRIVATE ${LIBNFCT_LIB})
 endif()
 
 # Optional ubus support (OpenWrt)
