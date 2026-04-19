@@ -1,0 +1,82 @@
+/*
+ * test_mangle.c — Unit tests for mangle iface validator and mark engine
+ * stub. Does not test mangle_apply() directly because it invokes iptables.
+ */
+#include <stdio.h>
+#include <string.h>
+#include "../minunit.h"
+#include "../myco_mangle.h"
+#include "../myco_mark.h"
+
+int tests_run = 0;
+
+/* ── iface validator ───────────────────────────────────────────── */
+
+static char *test_iface_valid() {
+    mu_assert("eth0 valid",      mangle_iface_is_safe("eth0"));
+    mu_assert("wan valid",       mangle_iface_is_safe("wan"));
+    mu_assert("pppoe-wan valid", mangle_iface_is_safe("pppoe-wan"));
+    mu_assert("br.lan valid",    mangle_iface_is_safe("br.lan"));
+    mu_assert("eth0_1 valid",    mangle_iface_is_safe("eth0_1"));
+    return 0;
+}
+
+static char *test_iface_invalid() {
+    mu_assert("null rejected",    !mangle_iface_is_safe(NULL));
+    mu_assert("empty rejected",   !mangle_iface_is_safe(""));
+    mu_assert("shell meta rejected",
+              !mangle_iface_is_safe("eth0; rm -rf /"));
+    mu_assert("pipe rejected",    !mangle_iface_is_safe("eth0|ls"));
+    mu_assert("space rejected",   !mangle_iface_is_safe("eth0 evil"));
+    mu_assert("slash rejected",   !mangle_iface_is_safe("eth/0"));
+    mu_assert("too long rejected",
+              !mangle_iface_is_safe("abcdefghijklmnopq"));  /* 17 chars */
+    return 0;
+}
+
+/* ── mark engine stub ──────────────────────────────────────────── */
+
+static char *test_mark_engine_open_close() {
+    mark_engine_t *eng = mark_engine_open();
+    /* Real handle requires CAP_NET_ADMIN; stub always succeeds. Either
+     * way the daemon must never crash on open. */
+    mark_engine_close(eng);
+    return 0;
+}
+
+static char *test_mark_engine_set_null_safe() {
+    flow_key_t key = {
+        .src_ip = 0x0100007f, .dst_ip = 0x08080808,
+        .src_port = 12345, .dst_port = 443, .protocol = 6,
+    };
+    mu_assert("NULL engine → 0 (no-op)",
+              mark_engine_set(NULL, &key, 1) == 0);
+    return 0;
+}
+
+static char *test_mark_engine_stats_null_safe() {
+    mu_assert("stat_ok(NULL) == 0",  mark_engine_stat_ok(NULL) == 0);
+    mu_assert("stat_err(NULL) == 0", mark_engine_stat_err(NULL) == 0);
+    return 0;
+}
+
+static char *all_tests() {
+    mu_run_test(test_iface_valid);
+    mu_run_test(test_iface_invalid);
+    mu_run_test(test_mark_engine_open_close);
+    mu_run_test(test_mark_engine_set_null_safe);
+    mu_run_test(test_mark_engine_stats_null_safe);
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    (void)argc; (void)argv;
+    char *result = all_tests();
+    if (result != 0) {
+        printf("FAILED: %s\n", result);
+    } else {
+        printf("ALL TESTS PASSED\n");
+    }
+    printf("Tests run: %d\n", tests_run);
+    return result != 0;
+}

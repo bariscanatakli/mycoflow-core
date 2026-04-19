@@ -16,6 +16,8 @@ set(SOURCES
     myco_hint.c
     myco_dns.c
     myco_service.c
+    myco_mark.c
+    myco_mangle.c
     myco_ubus.c
 )
 
@@ -69,6 +71,25 @@ add_test(NAME device COMMAND test_device)
 
 add_executable(test_service tests/test_service.c myco_service.c)
 add_test(NAME service COMMAND test_service)
+
+# Optional libnetfilter_conntrack support (real ct mark push).
+# Checked before test targets so tests can opt into real impl too.
+check_include_file(libnetfilter_conntrack/libnetfilter_conntrack.h HAVE_LIBNFCT_H)
+if(HAVE_LIBNFCT_H)
+    find_library(LIBNFCT_LIB netfilter_conntrack)
+    if(LIBNFCT_LIB)
+        message(STATUS "Found libnetfilter_conntrack: ${LIBNFCT_LIB}")
+        target_compile_definitions(mycoflowd PRIVATE HAVE_LIBNFCT)
+        target_link_libraries(mycoflowd PRIVATE ${LIBNFCT_LIB})
+    endif()
+endif()
+
+add_executable(test_mangle tests/test_mangle.c myco_mangle.c myco_mark.c myco_log.c)
+add_test(NAME mangle COMMAND test_mangle)
+if(HAVE_LIBNFCT_H AND LIBNFCT_LIB)
+    target_compile_definitions(test_mangle PRIVATE HAVE_LIBNFCT)
+    target_link_libraries(test_mangle PRIVATE ${LIBNFCT_LIB})
+endif()
 
 # Optional ubus support (OpenWrt)
 check_include_file(libubus.h HAVE_UBUS_H)
