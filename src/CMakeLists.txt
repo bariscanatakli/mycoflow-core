@@ -15,6 +15,7 @@ set(SOURCES
     myco_device.c
     myco_hint.c
     myco_dns.c
+    myco_service.c
     myco_ubus.c
 )
 
@@ -65,6 +66,9 @@ add_test(NAME dns COMMAND test_dns)
 add_executable(test_device tests/test_device.c myco_device.c myco_persona.c myco_flow.c myco_hint.c myco_dns.c myco_log.c)
 target_link_libraries(test_device PRIVATE Threads::Threads)
 add_test(NAME device COMMAND test_device)
+
+add_executable(test_service tests/test_service.c myco_service.c)
+add_test(NAME service COMMAND test_service)
 
 # Optional ubus support (OpenWrt)
 check_include_file(libubus.h HAVE_UBUS_H)
