@@ -2,6 +2,11 @@
  * MycoFlow — Bio-Inspired Reflexive QoS System
  * myco_dns.c — Passive DNS snooping + IP→persona cache
  *
+ * Note: _GNU_SOURCE must be defined before any header is included so musl
+ * exposes the Linux-style udphdr fields (source/dest) we rely on below. */
+#define _GNU_SOURCE
+/*
+ *
  * Passively captures DNS responses on br-lan (UDP port 53) to build
  * an IP→domain→persona mapping cache. This allows MycoFlow to identify
  * traffic on port 443 (HTTPS/QUIC) by domain name — the key signal

@@ -355,6 +355,28 @@ static char *test_hint_streaming_tcp_high_rx() {
     return 0;
 }
 
+/* ── 4K video / CS2 with background chatter: elephant + many flows → NOT torrent */
+static char *test_elephant_many_flows_not_torrent() {
+    persona_state_t state;
+    persona_init(&state);
+
+    /* 4K YouTube TCP: one dominant video flow + 100+ background (DNS, telemetry,
+     * tab prefetch, extension traffic). Torrent swarms distribute bytes; this
+     * does not, so elephant_flow=1 must exclude it from TORRENT. */
+    metrics_t m = {
+        .avg_pkt_size = 1200.0,
+        .tx_bps       = 200000.0,
+        .rx_bps       = 20000000.0,
+        .active_flows = 130,
+        .elephant_flow = 1,
+        .udp_flows    = 5,
+    };
+    FEED2(state, m, PERSONA_UNKNOWN);
+    mu_assert("4K video with background flows should NOT be TORRENT",
+              state.current != PERSONA_TORRENT);
+    return 0;
+}
+
 /* ── hint fallback: behavior=UNKNOWN but hint has signal ─────── */
 static char *test_hint_fallback_unknown() {
     persona_state_t state;
@@ -396,6 +418,7 @@ static char *all_tests() {
     mu_run_test(test_hint_cannot_override_torrent);
     mu_run_test(test_hint_gaming_overrides_streaming);
     mu_run_test(test_hint_streaming_tcp_high_rx);
+    mu_run_test(test_elephant_many_flows_not_torrent);
     mu_run_test(test_hint_fallback_unknown);
     return 0;
 }

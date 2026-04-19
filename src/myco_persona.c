@@ -44,9 +44,11 @@ static persona_t decide_persona(const metrics_t *metrics, persona_t hint) {
      * where behavioral signals are too weak to classify. */
 
     /* Rule 1 — TORRENT: swarm of connections + significant bandwidth.
-     * Strong behavioral signal — hint CANNOT override this.
-     * Even if some flows hit gaming ports, 100+ flows is a swarm. */
-    if (flows > 100 && bw_bps > 500000.0) {
+     * Guard with !elephant_flow: real torrent swarms distribute bytes across
+     * many peers, so no single flow dominates. A device with 100+ flows but
+     * one flow carrying >60% of bytes is a 4K video / big download with
+     * background chatter (DNS/telemetry/etc.), not a torrent. */
+    if (flows > 100 && bw_bps > 500000.0 && !metrics->elephant_flow) {
         return PERSONA_TORRENT;
     }
 
