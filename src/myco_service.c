@@ -110,3 +110,68 @@ service_t service_classify(const service_signals_t *signals) {
     }
     return (service_t)best;
 }
+
+/* ── Behavior-based inference ───────────────────────────────────
+ * Thresholds tuned from live captures (see docs/architecture-v3):
+ *
+ *   VOIP_CALL   : UDP, avg pkt 60..220B, bw 10..150 kbps, ~symmetric.
+ *                 Opus/SILK codecs send ~50 pkt/s of 80-160B; WhatsApp
+ *                 typically 30-80 kbps.
+ *   GAME_RT     : UDP, avg pkt 40..300B, bw < 600 kbps. Tighter than VOIP
+ *                 on packet size floor (DTLS handshakes) but higher bw
+ *                 ceiling (Valorant tick 128Hz ≈ 300 kbps).
+ *   VIDEO_CONF  : UDP, avg pkt 400..1100B, bw 0.3..4 Mbps, mixed rx/tx.
+ *                 Zoom/Meet in 720p call mode.
+ *   VIDEO_LIVE /
+ *   VIDEO_VOD   : avg pkt > 900B, rx_ratio > 0.85, bw > 1 Mbps.
+ *                 Can't separate live vs VOD behaviorally — DNS decides.
+ *                 We return SVC_VIDEO_VOD because VOD (YouTube) is the
+ *                 overwhelmingly more common case; if DNS/port says LIVE,
+ *                 their 0.6/0.3 weights win over our 0.1.
+ *   BULK_DL     : TCP, rx_ratio > 0.9, bw > 2 Mbps, avg pkt ~MSS (>1300B).
+ *                 Harder to separate from VOD on behavior; we don't try.
+ *
+ * All numbers require pkts_total >= 20 so we don't speculate on
+ * flows that just opened.
+ */
+service_t service_infer_behavior(const flow_features_t *feat) {
+    if (!feat)                    return SVC_UNKNOWN;
+    if (feat->pkts_total < 20)    return SVC_UNKNOWN;   /* too young to tell */
+    if (feat->bw_bps <= 0.0)      return SVC_UNKNOWN;   /* idle this window */
+
+    const uint8_t  proto  = feat->proto;
+    const double   apkt   = feat->avg_pkt_size;
+    const double   bw     = feat->bw_bps;
+    const double   rxr    = feat->rx_ratio;
+
+    /* VOIP_CALL — tiny packets, very low bw, roughly symmetric, UDP */
+    if (proto == 17 &&
+        apkt >= 60.0 && apkt <= 220.0 &&
+        bw   >= 10000.0 && bw <= 150000.0 &&
+        rxr  >= 0.30 && rxr <= 0.70) {
+        return SVC_VOIP_CALL;
+    }
+
+    /* VIDEO_CONF — medium packets, moderate bw, mixed direction, UDP */
+    if (proto == 17 &&
+        apkt >= 400.0 && apkt <= 1100.0 &&
+        bw   >= 300000.0 && bw <= 4000000.0 &&
+        rxr  >= 0.25 && rxr <= 0.80) {
+        return SVC_VIDEO_CONF;
+    }
+
+    /* GAME_RT — small packets, low bw, UDP (broader catch-all after
+     * the VOIP/CONF checks above) */
+    if (proto == 17 &&
+        apkt >= 40.0 && apkt <= 300.0 &&
+        bw   <= 600000.0) {
+        return SVC_GAME_RT;
+    }
+
+    /* VOD-ish bulk media — large packets, heavily asymmetric rx>>tx, high bw */
+    if (apkt >= 900.0 && rxr >= 0.85 && bw >= 1000000.0) {
+        return SVC_VIDEO_VOD;
+    }
+
+    return SVC_UNKNOWN;
+}

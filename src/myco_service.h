@@ -88,4 +88,29 @@ typedef struct {
  */
 service_t service_classify(const service_signals_t *signals);
 
+/* ── Behavior-based signal producer (Phase 3d) ──────────────────
+ * Observable per-flow features, pre-computed by the caller.
+ * proto: IPPROTO_TCP (6) or IPPROTO_UDP (17).
+ * avg_pkt_size: (tx_bytes + rx_bytes) / (tx_pkts + rx_pkts).
+ * bw_bps: 8 * (tx_delta + rx_delta) / window_s (bidirectional).
+ * rx_ratio: rx_delta / (tx_delta + rx_delta) in the current window (0..1).
+ * pkts_total: cumulative tx+rx packet count (used to gate decisions on
+ *             flows too young to characterise).
+ */
+typedef struct {
+    uint8_t  proto;
+    double   avg_pkt_size;
+    double   bw_bps;
+    double   rx_ratio;
+    uint64_t pkts_total;
+} flow_features_t;
+
+/* Infer a service_t from behavioral fingerprints. Intentionally conservative:
+ * returns SVC_UNKNOWN when the pattern is ambiguous (e.g. idle flow, or a
+ * bulk-ish download that behavior alone can't separate from a VOD).
+ *
+ * Weighted at 0.1 in service_classify(), so this is a tiebreaker —
+ * getting it wrong never flips a DNS/port verdict on its own. */
+service_t service_infer_behavior(const flow_features_t *feat);
+
 #endif /* MYCO_SERVICE_H */

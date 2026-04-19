@@ -163,6 +163,105 @@ static char *test_voter_null_safe() {
     return 0;
 }
 
+/* ══════════════════════════════════════════════════════════════
+ * Phase 3d: behavior-based inference
+ * ══════════════════════════════════════════════════════════════ */
+
+static char *test_behavior_voip_udp() {
+    /* Discord voice — 160B pkts, 60 kbps, symmetric */
+    flow_features_t f = {
+        .proto = 17, .avg_pkt_size = 160.0, .bw_bps = 60000.0,
+        .rx_ratio = 0.5, .pkts_total = 500,
+    };
+    mu_assert("Discord voice → VOIP_CALL",
+              service_infer_behavior(&f) == SVC_VOIP_CALL);
+    return 0;
+}
+
+static char *test_behavior_video_conf_udp() {
+    /* Zoom 720p — 900B pkts, 1.5 Mbps, mixed direction */
+    flow_features_t f = {
+        .proto = 17, .avg_pkt_size = 900.0, .bw_bps = 1500000.0,
+        .rx_ratio = 0.55, .pkts_total = 1000,
+    };
+    mu_assert("Zoom → VIDEO_CONF",
+              service_infer_behavior(&f) == SVC_VIDEO_CONF);
+    return 0;
+}
+
+static char *test_behavior_game_rt_udp() {
+    /* CS2 — 80B pkts, 200 kbps, asymmetric tx-heavy */
+    flow_features_t f = {
+        .proto = 17, .avg_pkt_size = 80.0, .bw_bps = 200000.0,
+        .rx_ratio = 0.45, .pkts_total = 800,
+    };
+    mu_assert("CS2 → GAME_RT",
+              service_infer_behavior(&f) == SVC_GAME_RT);
+    return 0;
+}
+
+static char *test_behavior_vod_bulk_asymmetric() {
+    /* YouTube 4K — MSS packets, 8 Mbps, heavily rx-dominant */
+    flow_features_t f = {
+        .proto = 6, .avg_pkt_size = 1400.0, .bw_bps = 8000000.0,
+        .rx_ratio = 0.97, .pkts_total = 5000,
+    };
+    mu_assert("YouTube → VIDEO_VOD",
+              service_infer_behavior(&f) == SVC_VIDEO_VOD);
+    return 0;
+}
+
+static char *test_behavior_young_flow_unknown() {
+    /* Only 5 packets — too young to classify */
+    flow_features_t f = {
+        .proto = 17, .avg_pkt_size = 80.0, .bw_bps = 200000.0,
+        .rx_ratio = 0.5, .pkts_total = 5,
+    };
+    mu_assert("young flow → UNKNOWN",
+              service_infer_behavior(&f) == SVC_UNKNOWN);
+    return 0;
+}
+
+static char *test_behavior_idle_flow_unknown() {
+    /* Established flow but 0 bw this window */
+    flow_features_t f = {
+        .proto = 17, .avg_pkt_size = 80.0, .bw_bps = 0.0,
+        .rx_ratio = 0.5, .pkts_total = 500,
+    };
+    mu_assert("idle flow → UNKNOWN",
+              service_infer_behavior(&f) == SVC_UNKNOWN);
+    return 0;
+}
+
+static char *test_behavior_web_browsing_unknown() {
+    /* HTTPS browsing — medium packets, moderate bw, TCP — ambiguous */
+    flow_features_t f = {
+        .proto = 6, .avg_pkt_size = 600.0, .bw_bps = 500000.0,
+        .rx_ratio = 0.7, .pkts_total = 200,
+    };
+    mu_assert("web browsing → UNKNOWN",
+              service_infer_behavior(&f) == SVC_UNKNOWN);
+    return 0;
+}
+
+static char *test_behavior_null_safe() {
+    mu_assert("NULL → UNKNOWN", service_infer_behavior(NULL) == SVC_UNKNOWN);
+    return 0;
+}
+
+/* Integration: behavior hint strengthens port signal into a win */
+static char *test_behavior_composes_with_voter() {
+    /* Port says GAME_RT (0.3), behavior says GAME_RT (0.1) → 0.4, classify */
+    service_signals_t s = {
+        .dns_hint = SVC_UNKNOWN,
+        .port_hint = SVC_GAME_RT,
+        .behavior_hint = SVC_GAME_RT,
+    };
+    mu_assert("port+behavior agree → GAME_RT",
+              service_classify(&s) == SVC_GAME_RT);
+    return 0;
+}
+
 static char *all_tests() {
     mu_run_test(test_service_names_stable);
     mu_run_test(test_service_to_persona);
@@ -176,6 +275,15 @@ static char *all_tests() {
     mu_run_test(test_voter_all_agree);
     mu_run_test(test_voter_all_unknown);
     mu_run_test(test_voter_null_safe);
+    mu_run_test(test_behavior_voip_udp);
+    mu_run_test(test_behavior_video_conf_udp);
+    mu_run_test(test_behavior_game_rt_udp);
+    mu_run_test(test_behavior_vod_bulk_asymmetric);
+    mu_run_test(test_behavior_young_flow_unknown);
+    mu_run_test(test_behavior_idle_flow_unknown);
+    mu_run_test(test_behavior_web_browsing_unknown);
+    mu_run_test(test_behavior_null_safe);
+    mu_run_test(test_behavior_composes_with_voter);
     return 0;
 }
 
