@@ -93,7 +93,7 @@ if(HAVE_LIBNFCT_H AND LIBNFCT_LIB)
     target_link_libraries(test_mangle PRIVATE ${LIBNFCT_LIB})
 endif()
 
-add_executable(test_profile tests/test_profile.c myco_profile.c myco_service.c myco_log.c)
+add_executable(test_profile tests/test_profile.c myco_profile.c myco_service.c myco_mangle.c myco_log.c)
 add_test(NAME profile COMMAND test_profile)
 
 add_executable(test_classifier tests/test_classifier.c

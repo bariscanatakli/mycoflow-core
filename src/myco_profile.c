@@ -4,6 +4,7 @@
  */
 #include "myco_profile.h"
 #include "myco_log.h"
+#include "myco_mangle.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -367,4 +368,75 @@ service_t profile_derive_winner(const profile_t *p,
 persona_t profile_derive_persona(const profile_t *p,
                                  const int counts[SERVICE_COUNT]) {
     return service_to_persona(profile_derive_winner(p, counts));
+}
+
+/* ── Mangle rebuild driver (Phase 4c) ────────────────────────── */
+
+/* Build a mark_dscp_rule_t[] from a profile's service_dscp table. The
+ * connmark comes from service_to_ct_mark(); we skip SVC_UNKNOWN (mark=0)
+ * since unmarked flows fall through to POSTROUTING's default path. */
+static size_t profile_build_rules(const profile_t *p,
+                                  mark_dscp_rule_t *out, size_t max) {
+    size_t n = 0;
+    for (int s = 1; s < SERVICE_COUNT && n < max; s++) {
+        uint8_t mark = service_to_ct_mark((service_t)s);
+        if (mark == 0) continue;
+        out[n].ct_mark = mark;
+        out[n].dscp    = p->service_dscp[s];
+        n++;
+    }
+    return n;
+}
+
+int profile_apply_mangle(const profile_set_t *ps, const char *egress_iface) {
+    if (!ps) return -1;
+
+    if (mangle_profile_begin() != 0) {
+        log_msg(LOG_WARN, "profile", "mangle_profile_begin failed");
+        return -1;
+    }
+
+    /* 1. Install per-profile sub-chains. */
+    for (int i = 0; i < ps->num_profiles; i++) {
+        const profile_t *p = &ps->profiles[i];
+        mark_dscp_rule_t rules[SERVICE_COUNT];
+        size_t n = profile_build_rules(p, rules, SERVICE_COUNT);
+        if (mangle_profile_rules(p->name, rules, n) != 0) {
+            log_msg(LOG_WARN, "profile",
+                    "mangle_profile_rules failed for '%s'", p->name);
+            return -1;
+        }
+    }
+
+    /* 2. Bind per-device src-IP jumps to their resolved profile. */
+    for (int i = 0; i < ps->num_bindings; i++) {
+        const device_profile_binding_t *b = &ps->bindings[i];
+        if (b->profile_idx < 0 || b->profile_idx >= ps->num_profiles) continue;
+        const profile_t *p = &ps->profiles[b->profile_idx];
+        if (mangle_profile_bind_ip(b->ip, p->name) != 0) {
+            log_msg(LOG_WARN, "profile",
+                    "bind_ip failed: %s → %s", b->ip, p->name);
+            /* Non-fatal — keep going so default still gets installed. */
+        }
+    }
+
+    /* 3. Catch-all default profile. */
+    if (ps->default_idx >= 0 && ps->default_idx < ps->num_profiles) {
+        const char *def_name = ps->profiles[ps->default_idx].name;
+        if (mangle_profile_bind_default(def_name) != 0) {
+            log_msg(LOG_WARN, "profile",
+                    "bind_default failed for '%s'", def_name);
+            return -1;
+        }
+    }
+
+    /* 4. Hook dispatch into POSTROUTING. */
+    if (mangle_profile_commit(egress_iface) != 0) {
+        return -1;
+    }
+
+    log_msg(LOG_INFO, "profile",
+            "mangle rebuilt (%d profile(s), %d binding(s)) on %s",
+            ps->num_profiles, ps->num_bindings, egress_iface);
+    return 0;
 }

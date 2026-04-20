@@ -47,6 +47,33 @@ int mangle_apply(const mark_dscp_rule_t *rules, size_t n,
 /* Tear down MYCOFLOW chain. Idempotent — missing chain is not an error. */
 int mangle_clear(const char *egress_iface);
 
+/* ── Profile-aware rebuild (Phase 4c) ────────────────────────────
+ * Usage:
+ *   1. mangle_profile_begin()              — flush dispatch + old profile chains
+ *   2. mangle_profile_rules(name, rules, n)— install one sub-chain per profile
+ *   3. mangle_profile_bind_ip(ip, name)    — src-IP → profile sub-chain jump
+ *   4. mangle_profile_bind_default(name)   — catch-all for unbound IPs
+ *   5. mangle_profile_commit(iface)        — hook dispatch from POSTROUTING
+ *
+ * All sub-chains live under MYCOFLOW_PROF_<name>. The dispatch chain
+ * (MYCOFLOW_DISPATCH) is the single POSTROUTING jump target.
+ *
+ * Profile names are validated (alphanumeric + '-' '_' up to 24 chars).
+ * IP strings use the same validator as myco_act.c.
+ */
+int mangle_profile_begin(void);
+int mangle_profile_rules(const char *profile_name,
+                         const mark_dscp_rule_t *rules, size_t n);
+int mangle_profile_bind_ip(const char *ip, const char *profile_name);
+int mangle_profile_bind_default(const char *profile_name);
+int mangle_profile_commit(const char *egress_iface);
+
+/* Internal (exposed for tests): validate profile name. */
+int mangle_profile_name_is_safe(const char *name);
+
+/* Internal (exposed for tests): validate dotted-quad IP. */
+int mangle_ip_is_safe(const char *ip);
+
 /* Internal (exposed for unit tests): validate interface name. Returns 1
  * if safe, 0 otherwise. Matches the same predicate used in myco_act.c. */
 int mangle_iface_is_safe(const char *iface);

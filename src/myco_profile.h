@@ -119,4 +119,19 @@ service_t profile_derive_winner(const profile_t *p,
 persona_t profile_derive_persona(const profile_t *p,
                                  const int service_counts[SERVICE_COUNT]);
 
+/* ── Mangle rebuild driver (Phase 4c) ────────────────────────────
+ * Push the entire profile set into the mangle table:
+ *   1. For each profile, install one MYCOFLOW_PROF_<name> sub-chain
+ *      with connmark→DSCP rules derived from its service_dscp[] table.
+ *   2. For each device binding, add a src-IP jump into the sub-chain.
+ *   3. Add a catch-all default jump for unbound IPs.
+ *   4. Hook the dispatch chain into POSTROUTING on `egress_iface`.
+ *
+ * Returns 0 on success, -1 on any subcommand failure (mangle left in
+ * a partial state — caller should log + retry next cycle).
+ *
+ * `egress_iface` is validated by the mangle layer.
+ */
+int profile_apply_mangle(const profile_set_t *ps, const char *egress_iface);
+
 #endif /* MYCO_PROFILE_H */
