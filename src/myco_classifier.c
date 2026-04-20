@@ -93,10 +93,71 @@ static void compute_features(const flow_entry_t *fe, double window_s,
         : 0.5;
 }
 
+/* Phase 5 auto-corrector. Called after the stability gate has pushed
+ * the authoritative ct_mark for this flow. Monitors RTT against the
+ * service's latency target and demotes / re-promotes accordingly.
+ *
+ * Why 2 consecutive ticks instead of EWMA: ticks run at ~1 Hz, so
+ * 2-tick confirmation is ~2s — long enough to avoid reacting to a
+ * single sampling spike, short enough that a genuinely congested flow
+ * is demoted before a human notices. Matches the stability gate idiom
+ * already used for classification. */
+static void rtt_autocorrect(flow_service_t *fs, const flow_key_t *key,
+                            rtt_engine_t *rtt, mark_engine_t *eng) {
+    if (!rtt || !fs->stable) return;
+
+    uint32_t rtt_ms = rtt_engine_lookup_ms(rtt, key);
+    if (rtt_ms == 0) return;   /* no data (UDP or not measured yet) */
+    fs->rtt_ms = (uint16_t)(rtt_ms > 0xFFFFu ? 0xFFFFu : rtt_ms);
+
+    uint32_t target = service_rtt_target_ms(fs->service);
+    if (target == 0) return;   /* class opted out (bulk/torrent/system) */
+
+    if (rtt_ms > target + target / 2) {
+        /* Over budget this tick. */
+        if (fs->rtt_breach_ticks < 255) fs->rtt_breach_ticks++;
+        fs->rtt_recover_ticks = 0;
+
+        if (!fs->demoted && fs->rtt_breach_ticks >= 2) {
+            service_t demoted = service_demote(fs->service);
+            if (demoted != fs->service) {
+                uint8_t new_mark = service_to_ct_mark(demoted);
+                if (mark_engine_set(eng, key, new_mark) == 0) {
+                    fs->ct_mark  = new_mark;
+                    fs->demoted  = 1;
+                    log_msg(LOG_INFO, "rtt",
+                            "demote %s → %s (rtt=%ums target=%ums)",
+                            service_name(fs->service),
+                            service_name(demoted),
+                            rtt_ms, target);
+                }
+            }
+        }
+    } else {
+        /* Healthy tick. */
+        fs->rtt_breach_ticks = 0;
+        if (fs->demoted) {
+            if (fs->rtt_recover_ticks < 255) fs->rtt_recover_ticks++;
+            if (fs->rtt_recover_ticks >= 2) {
+                uint8_t orig_mark = service_to_ct_mark(fs->service);
+                if (mark_engine_set(eng, key, orig_mark) == 0) {
+                    fs->ct_mark  = orig_mark;
+                    fs->demoted  = 0;
+                    fs->rtt_recover_ticks = 0;
+                    log_msg(LOG_INFO, "rtt",
+                            "repromote %s (rtt=%ums target=%ums)",
+                            service_name(fs->service), rtt_ms, target);
+                }
+            }
+        }
+    }
+}
+
 void classifier_tick(flow_service_table_t *tab,
                      const flow_table_t *ft,
                      dns_cache_t *dns,
                      mark_engine_t *eng,
+                     rtt_engine_t *rtt,
                      double now,
                      double window_s) {
     if (!tab || !ft) return;
@@ -156,10 +217,15 @@ void classifier_tick(flow_service_table_t *tab,
                 }
             }
         } else {
-            /* Verdict flipped — restart stability window. */
+            /* Verdict flipped — restart stability window + clear demote. */
             fs->service = verdict;
             fs->stable = 0;
+            fs->demoted = 0;
+            fs->rtt_breach_ticks = 0;
+            fs->rtt_recover_ticks = 0;
         }
+
+        rtt_autocorrect(fs, &fe->key, rtt, eng);
     }
 
     /* ── Evict entries whose underlying flow is gone ─────────── */

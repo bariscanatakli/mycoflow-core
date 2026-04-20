@@ -22,6 +22,7 @@
 #include "myco_dns.h"
 #include "myco_flow.h"
 #include "myco_mark.h"
+#include "myco_rtt.h"
 #include "myco_service.h"
 
 typedef struct flow_service_table flow_service_table_t;
@@ -37,6 +38,7 @@ void classifier_destroy(flow_service_table_t *tab);
  *   ft        : latest flow table snapshot (read-only)
  *   dns       : DNS cache for IP→service lookup (may be NULL)
  *   eng       : mark engine for ct mark push (may be NULL — stub/off)
+ *   rtt       : RTT engine for auto-correction (may be NULL — skip)
  *   now       : monotonic time (seconds)
  *   window_s  : length of the delta window (flow_entry_t.tx_delta etc.
  *               accumulate over this interval). Used for bw computation.
@@ -45,12 +47,16 @@ void classifier_destroy(flow_service_table_t *tab);
  *   - Upserts a flow_service_t entry per flow in ft.
  *   - Calls mark_engine_set() for flows whose verdict just became
  *     stable (and whose mark changed from whatever was there before).
+ *   - When `rtt` is non-NULL, runs the auto-corrector: demotes a flow's
+ *     ct_mark after two consecutive ticks with RTT > target×1.5; re-
+ *     promotes after two consecutive recovered ticks.
  *   - Evicts entries for flows no longer in ft.
  */
 void classifier_tick(flow_service_table_t *tab,
                      const flow_table_t *ft,
                      dns_cache_t *dns,
                      mark_engine_t *eng,
+                     rtt_engine_t *rtt,
                      double now,
                      double window_s);
 

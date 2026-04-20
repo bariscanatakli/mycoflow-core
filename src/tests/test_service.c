@@ -249,6 +249,45 @@ static char *test_behavior_null_safe() {
     return 0;
 }
 
+/* ── RTT target + demote (Phase 5a) ──────────────────────────── */
+
+static char *test_rtt_target_nonzero_for_rt_classes() {
+    mu_assert("GAME_RT  target = 50",  service_rtt_target_ms(SVC_GAME_RT) == 50);
+    mu_assert("VOIP     target = 20",  service_rtt_target_ms(SVC_VOIP_CALL) == 20);
+    mu_assert("CONF     target = 75",  service_rtt_target_ms(SVC_VIDEO_CONF) == 75);
+    mu_assert("LIVE     target = 150", service_rtt_target_ms(SVC_VIDEO_LIVE) == 150);
+    mu_assert("VOD      target = 200", service_rtt_target_ms(SVC_VIDEO_VOD) == 200);
+    mu_assert("WEB      target = 200", service_rtt_target_ms(SVC_WEB_INTERACTIVE) == 200);
+    return 0;
+}
+
+static char *test_rtt_target_zero_for_opt_out_classes() {
+    mu_assert("BULK     target = 0", service_rtt_target_ms(SVC_BULK_DL)       == 0);
+    mu_assert("FILE     target = 0", service_rtt_target_ms(SVC_FILE_SYNC)     == 0);
+    mu_assert("TORRENT  target = 0", service_rtt_target_ms(SVC_TORRENT)       == 0);
+    mu_assert("LAUNCHER target = 0", service_rtt_target_ms(SVC_GAME_LAUNCHER) == 0);
+    mu_assert("SYSTEM   target = 0", service_rtt_target_ms(SVC_SYSTEM)        == 0);
+    mu_assert("UNKNOWN  target = 0", service_rtt_target_ms(SVC_UNKNOWN)       == 0);
+    return 0;
+}
+
+static char *test_demote_ladder() {
+    mu_assert("GAME_RT → CONF",  service_demote(SVC_GAME_RT)    == SVC_VIDEO_CONF);
+    mu_assert("VOIP    → CONF",  service_demote(SVC_VOIP_CALL)  == SVC_VIDEO_CONF);
+    mu_assert("CONF    → LIVE",  service_demote(SVC_VIDEO_CONF) == SVC_VIDEO_LIVE);
+    mu_assert("LIVE    → VOD",   service_demote(SVC_VIDEO_LIVE) == SVC_VIDEO_VOD);
+    mu_assert("VOD     → WEB",   service_demote(SVC_VIDEO_VOD)  == SVC_WEB_INTERACTIVE);
+    return 0;
+}
+
+static char *test_demote_floor_returns_self() {
+    mu_assert("WEB     = floor", service_demote(SVC_WEB_INTERACTIVE) == SVC_WEB_INTERACTIVE);
+    mu_assert("BULK    = floor", service_demote(SVC_BULK_DL)         == SVC_BULK_DL);
+    mu_assert("TORRENT = floor", service_demote(SVC_TORRENT)         == SVC_TORRENT);
+    mu_assert("UNKNOWN = floor", service_demote(SVC_UNKNOWN)         == SVC_UNKNOWN);
+    return 0;
+}
+
 /* Integration: behavior hint strengthens port signal into a win */
 static char *test_behavior_composes_with_voter() {
     /* Port says GAME_RT (0.3), behavior says GAME_RT (0.1) → 0.4, classify */
@@ -284,6 +323,10 @@ static char *all_tests() {
     mu_run_test(test_behavior_web_browsing_unknown);
     mu_run_test(test_behavior_null_safe);
     mu_run_test(test_behavior_composes_with_voter);
+    mu_run_test(test_rtt_target_nonzero_for_rt_classes);
+    mu_run_test(test_rtt_target_zero_for_opt_out_classes);
+    mu_run_test(test_demote_ladder);
+    mu_run_test(test_demote_floor_returns_self);
     return 0;
 }
 

@@ -53,6 +53,24 @@ persona_t service_to_persona(service_t svc);
  * for SVC_UNKNOWN or out-of-range. */
 uint8_t service_to_ct_mark(service_t svc);
 
+/* Expected round-trip budget for a service class, in milliseconds.
+ * Used by the Phase 5 auto-corrector: a flow's measured RTT exceeding
+ * service_rtt_target_ms(svc) × 1.5 for 2 consecutive ticks triggers a
+ * demote. Returns 0 for classes where RTT is not load-bearing (BULK,
+ * TORRENT, SYSTEM, UNKNOWN) — the corrector skips these. */
+uint32_t service_rtt_target_ms(service_t svc);
+
+/* Return the service one tier below `svc` for auto-correction.
+ * Ordering mirrors the DiffServ tiers:
+ *   GAME_RT / VOIP_CALL  → VIDEO_CONF       (EF  → CS4)
+ *   VIDEO_CONF           → VIDEO_LIVE       (CS4 → CS3)
+ *   VIDEO_LIVE           → VIDEO_VOD        (CS3 → CS2)
+ *   VIDEO_VOD            → WEB_INTERACTIVE  (CS2 → CS0)
+ *   others               → unchanged (floor)
+ * Returning the input `svc` means "no tier below" — caller should not
+ * push a new mark in that case. */
+service_t service_demote(service_t svc);
+
 /* ── Flow service state ──────────────────────────────────────────
  * One entry per tracked flow (keyed by 5-tuple). Lives in the
  * flow_service_table_t (myco_flow.h addition, Phase 3f).
@@ -63,11 +81,20 @@ typedef struct {
     uint16_t  src_port;       /* host byte order */
     uint16_t  dst_port;
     uint8_t   proto;          /* IPPROTO_TCP / IPPROTO_UDP */
-    service_t service;        /* last classified service */
-    uint8_t   ct_mark;        /* last mark pushed to kernel (0 = none yet) */
+    service_t service;        /* last classified service (what the voter says) */
+    uint8_t   ct_mark;        /* last mark pushed to kernel (0 = none yet).
+                               * Usually == service_to_ct_mark(service), but
+                               * when `demoted` is set it carries the demoted
+                               * tier's mark instead. */
     double    detected_at;    /* monotonic timestamp of first classification */
     double    last_confirmed; /* last cycle the classification was re-asserted */
     uint8_t   stable;         /* 1 = survived 2 consecutive classifications */
+
+    /* ── Phase 5 auto-correction state ─────────────────────────── */
+    uint16_t  rtt_ms;             /* most recent observed RTT (0 = unknown) */
+    uint8_t   rtt_breach_ticks;   /* consecutive ticks over target×1.5 */
+    uint8_t   rtt_recover_ticks;  /* consecutive ticks at/below target post-demote */
+    uint8_t   demoted;            /* 1 = ct_mark carries a demoted tier */
 } flow_service_t;
 
 /* ── Classification (Phase 3b–3d wire-up) ──────────────────────── */

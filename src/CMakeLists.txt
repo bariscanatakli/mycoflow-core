@@ -18,6 +18,7 @@ set(SOURCES
     myco_service.c
     myco_mark.c
     myco_mangle.c
+    myco_rtt.c
     myco_classifier.c
     myco_profile.c
     myco_ubus.c
@@ -74,6 +75,9 @@ add_test(NAME device COMMAND test_device)
 add_executable(test_service tests/test_service.c myco_service.c)
 add_test(NAME service COMMAND test_service)
 
+add_executable(test_rtt tests/test_rtt.c myco_rtt.c myco_log.c)
+add_test(NAME rtt COMMAND test_rtt)
+
 # Optional libnetfilter_conntrack support (real ct mark push).
 # Checked before test targets so tests can opt into real impl too.
 check_include_file(libnetfilter_conntrack/libnetfilter_conntrack.h HAVE_LIBNFCT_H)
@@ -98,7 +102,7 @@ add_test(NAME profile COMMAND test_profile)
 
 add_executable(test_classifier tests/test_classifier.c
     myco_classifier.c myco_service.c myco_hint.c myco_dns.c
-    myco_flow.c myco_mark.c myco_log.c)
+    myco_flow.c myco_mark.c myco_rtt.c myco_log.c)
 target_link_libraries(test_classifier PRIVATE Threads::Threads)
 add_test(NAME classifier COMMAND test_classifier)
 if(HAVE_LIBNFCT_H AND LIBNFCT_LIB)

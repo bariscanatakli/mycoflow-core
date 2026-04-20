@@ -70,6 +70,38 @@ uint8_t service_to_ct_mark(service_t svc) {
     return (uint8_t)svc;  /* 1:1 until we need to decouple */
 }
 
+/* Per-class RTT budgets. Calibrated from common latency expectations:
+ *   GAME_RT    — competitive FPS tolerance band ≈ 50 ms
+ *   VOIP_CALL  — ITU-T G.114 one-way ≤ 150 ms; we target RTT ≤ 20 ms
+ *   VIDEO_CONF — Zoom/Meet comfortable ≤ 75 ms
+ *   VIDEO_LIVE — live streaming tolerates buffering; 150 ms still fine
+ *   VIDEO_VOD  — buffered, RTT only matters for seeks; 200 ms
+ *   WEB        — interactive but buffered; 200 ms
+ * Zero means "don't correct on RTT" — for bulk/torrent/system the
+ * user already opted into best-effort. */
+uint32_t service_rtt_target_ms(service_t svc) {
+    switch (svc) {
+        case SVC_GAME_RT:         return 50;
+        case SVC_VOIP_CALL:       return 20;
+        case SVC_VIDEO_CONF:      return 75;
+        case SVC_VIDEO_LIVE:      return 150;
+        case SVC_VIDEO_VOD:       return 200;
+        case SVC_WEB_INTERACTIVE: return 200;
+        default:                  return 0;
+    }
+}
+
+service_t service_demote(service_t svc) {
+    switch (svc) {
+        case SVC_GAME_RT:         return SVC_VIDEO_CONF;
+        case SVC_VOIP_CALL:       return SVC_VIDEO_CONF;
+        case SVC_VIDEO_CONF:      return SVC_VIDEO_LIVE;
+        case SVC_VIDEO_LIVE:      return SVC_VIDEO_VOD;
+        case SVC_VIDEO_VOD:       return SVC_WEB_INTERACTIVE;
+        default:                  return svc;   /* floor — no demote */
+    }
+}
+
 /* ── 3-signal weighted voter ────────────────────────────────────
  * Architecture §5:
  *   score[svc] = 0.6*(dns==svc) + 0.3*(port==svc) + 0.1*(behavior==svc)
