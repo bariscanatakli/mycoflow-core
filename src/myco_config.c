@@ -82,6 +82,11 @@ static void apply_defaults(myco_config_t *cfg) {
     strncpy(cfg->ingress_iface, "ifb0", sizeof(cfg->ingress_iface) - 1);
     cfg->ingress_iface[sizeof(cfg->ingress_iface) - 1] = '\0';
     cfg->ingress_bandwidth_kbit = 0;
+    cfg->flow_aware_enabled = 0;
+    strncpy(cfg->rtt_bpf_obj,
+            "/usr/lib/mycoflow/mycoflow_rtt.bpf.o",
+            sizeof(cfg->rtt_bpf_obj) - 1);
+    cfg->rtt_bpf_obj[sizeof(cfg->rtt_bpf_obj) - 1] = '\0';
 }
 
 /* ── UCI helpers ────────────────────────────────────────────── */
@@ -232,6 +237,13 @@ static void apply_uci_overrides(myco_config_t *cfg) {
     if (uci_get_option("ingress_bandwidth_kbit", val, sizeof(val))) {
         cfg->ingress_bandwidth_kbit = atoi(val);
     }
+    if (uci_get_option("flow_aware", val, sizeof(val))) {
+        cfg->flow_aware_enabled = atoi(val);
+    }
+    if (uci_get_option("rtt_bpf_obj", val, sizeof(val))) {
+        strncpy(cfg->rtt_bpf_obj, val, sizeof(cfg->rtt_bpf_obj) - 1);
+        cfg->rtt_bpf_obj[sizeof(cfg->rtt_bpf_obj) - 1] = '\0';
+    }
 }
 
 static persona_t parse_persona_name(const char *name) {
@@ -354,6 +366,12 @@ static void apply_env_overrides(myco_config_t *cfg) {
         cfg->ingress_iface[sizeof(cfg->ingress_iface) - 1] = '\0';
     }
     cfg->ingress_bandwidth_kbit = parse_env_int("MYCOFLOW_INGRESS_BW", cfg->ingress_bandwidth_kbit);
+    cfg->flow_aware_enabled = parse_env_int("MYCOFLOW_FLOW_AWARE", cfg->flow_aware_enabled);
+    const char *rtt_obj = getenv("MYCOFLOW_RTT_BPF_OBJ");
+    if (rtt_obj && *rtt_obj) {
+        strncpy(cfg->rtt_bpf_obj, rtt_obj, sizeof(cfg->rtt_bpf_obj) - 1);
+        cfg->rtt_bpf_obj[sizeof(cfg->rtt_bpf_obj) - 1] = '\0';
+    }
     const char *ebpf_tc_dir = getenv("MYCOFLOW_EBPF_TC_DIR");
     if (ebpf_tc_dir && *ebpf_tc_dir) {
         strncpy(cfg->ebpf_tc_dir, ebpf_tc_dir, sizeof(cfg->ebpf_tc_dir) - 1);

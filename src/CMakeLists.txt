@@ -24,6 +24,10 @@ set(SOURCES
     myco_ubus.c
 )
 
+# myco_ubus.c includes myco_classifier.h which needs HAVE_LIBNFCT gating — but
+# the classifier/mark/rtt translation units themselves are what need the
+# conntrack define. Add it below alongside the test target definitions.
+
 
 
 # Executable oluştur (mycoflowd)

@@ -71,6 +71,13 @@ typedef struct {
     double rtt_margin_factor;        /* congestion threshold = baseline_rtt * factor (default 0.30) */
     /* ── Per-device DSCP marking ────────────────────────────────── */
     int    per_device_enabled;       /* 0 = global persona only (default) */
+    /* ── Flow-aware classification (v3: classifier + CONNMARK + RTT) ─ */
+    int    flow_aware_enabled;       /* 0 = off (default). Turns on
+                                      * service classifier, CONNMARK
+                                      * push and RTT auto-correction. */
+    char   rtt_bpf_obj[128];         /* path to mycoflow_rtt.bpf.o — empty
+                                      * string ⇒ RTT engine stays in stub
+                                      * mode (no kernel probe).          */
     /* ── Ingress shaping (IFB) ──────────────────────────────────── */
     int    ingress_enabled;          /* 0 = skip ingress shaping (default) */
     char   ingress_iface[32];        /* IFB device name (default "ifb0") */

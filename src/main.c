@@ -20,6 +20,9 @@
 #include "myco_device.h"
 #include "myco_dns.h"
 #include "myco_ubus.h"
+#include "myco_classifier.h"
+#include "myco_mark.h"
+#include "myco_rtt.h"
 
 #include <signal.h>
 #include <stdio.h>
@@ -123,6 +126,26 @@ int main(void) {
         log_msg(LOG_INFO, "main", "DNS sniffer thread launched");
     } else {
         log_msg(LOG_WARN, "main", "DNS sniffer thread failed to start");
+    }
+
+    /* Flow-aware v3: service classifier + CONNMARK pusher + RTT engine.
+     * All three are no-ops when flow_aware_enabled=0. The classifier
+     * tolerates NULL mark/rtt engines, so any subsystem can be missing
+     * (e.g. no CAP_NET_ADMIN ⇒ mark_engine_open returns NULL). */
+    flow_service_table_t *classifier = NULL;
+    mark_engine_t        *mark_eng   = NULL;
+    rtt_engine_t         *rtt_eng    = NULL;
+    myco_set_flow_table(NULL, 0);   /* cleared ⇒ JSON omits "flows" array */
+    if (cfg.flow_aware_enabled) {
+        classifier = classifier_create();
+        mark_eng   = mark_engine_open();
+        const char *bpf_path =
+            (cfg.rtt_bpf_obj[0] != '\0') ? cfg.rtt_bpf_obj : NULL;
+        rtt_eng = rtt_engine_open(bpf_path, cfg.egress_iface);
+        myco_set_flow_table(classifier, 1);
+        log_msg(LOG_INFO, "main",
+                "flow-aware mode: classifier=%p mark=%p rtt=%p",
+                (void *)classifier, (void *)mark_eng, (void *)rtt_eng);
     }
 
     double interval_s = 1.0 / cfg.sample_hz;
@@ -236,6 +259,15 @@ int main(void) {
             if (dev_changes > 0) {
                 device_apply_all_dscp(&device_table, cfg.no_tc);
             }
+        }
+
+        /* Per-flow service classifier + RTT auto-correction. Runs after
+         * device-level aggregation so the main persona pass already has
+         * fresh flow data; runs before actuation so any demote-on-rtt
+         * push is visible to the next mark lookup. */
+        if (cfg.flow_aware_enabled && classifier) {
+            classifier_tick(classifier, &flow_table, &dns_cache,
+                            mark_eng, rtt_eng, ft_now, interval_s);
         }
 
         /* eBPF packet rate: delta from previous cumulative counter (pkt/s) */
@@ -369,6 +401,12 @@ int main(void) {
     }
     dns_cache_destroy(&dns_cache);
 
+    if (cfg.flow_aware_enabled) {
+        myco_set_flow_table(NULL, 0);
+        rtt_engine_close(rtt_eng);
+        mark_engine_close(mark_eng);
+        classifier_destroy(classifier);
+    }
     if (cfg.per_device_enabled) {
         act_teardown_dscp_chain(cfg.no_tc);
     }

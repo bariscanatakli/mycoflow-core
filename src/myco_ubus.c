@@ -8,6 +8,8 @@
 #include "myco_types.h"
 #include "myco_persona.h"
 #include "myco_device.h"
+#include "myco_classifier.h"
+#include "myco_service.h"
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,6 +29,10 @@ extern int g_last_safe_mode;
 /* Per-device table pointer — set by ubus_start() when per_device is enabled */
 static const device_table_t *g_device_table = NULL;
 static int g_per_device_enabled = 0;
+
+/* Per-flow service table pointer — set by main when flow_aware is enabled. */
+static const flow_service_table_t *g_flow_table = NULL;
+static int g_flow_aware_enabled = 0;
 
 #ifdef HAVE_UBUS
 #include <libubox/blobmsg_json.h>
@@ -119,6 +125,41 @@ void myco_set_device_table(const void *dt, int enabled) {
     g_per_device_enabled = enabled;
 }
 
+void myco_set_flow_table(const void *fst, int enabled) {
+    g_flow_table = (const flow_service_table_t *)fst;
+    g_flow_aware_enabled = enabled;
+}
+
+/* Visitor state for the flow-array emitter. */
+typedef struct {
+    FILE *f;
+    int   first;
+} flow_emit_ctx_t;
+
+static int emit_flow_entry(const flow_service_t *fs, void *user) {
+    flow_emit_ctx_t *ctx = (flow_emit_ctx_t *)user;
+    char src_str[INET_ADDRSTRLEN];
+    char dst_str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &fs->src_ip, src_str, sizeof(src_str));
+    inet_ntop(AF_INET, &fs->dst_ip, dst_str, sizeof(dst_str));
+
+    fprintf(ctx->f,
+            "%s\n\t\t{\"src\":\"%s\",\"dst\":\"%s\",\"sport\":%u,\"dport\":%u,"
+            "\"proto\":%u,\"service\":\"%s\",\"mark\":%u,\"stable\":%u,"
+            "\"rtt_ms\":%u,\"demoted\":%u}",
+            ctx->first ? "" : ",",
+            src_str, dst_str,
+            (unsigned)fs->src_port, (unsigned)fs->dst_port,
+            (unsigned)fs->proto,
+            service_name(fs->service),
+            (unsigned)fs->ct_mark,
+            (unsigned)fs->stable,
+            (unsigned)fs->rtt_ms,
+            (unsigned)fs->demoted);
+    ctx->first = 0;
+    return 0;
+}
+
 // Fallback: Dump state to JSON file for Lua Bridge
 void myco_dump_json(void) {
     if (pthread_mutex_trylock(&g_state_mutex) != 0) {
@@ -186,9 +227,17 @@ void myco_dump_json(void) {
             first = 0;
         }
     }
-    fprintf(f, "]\n");
+    fprintf(f, "]");
 
-    fprintf(f, "}\n");
+    /* Per-flow service classification + RTT state */
+    if (g_flow_aware_enabled && g_flow_table) {
+        fprintf(f, ",\n\t\"flows\": [");
+        flow_emit_ctx_t ctx = { .f = f, .first = 1 };
+        classifier_for_each(g_flow_table, emit_flow_entry, &ctx);
+        fprintf(f, "]");
+    }
+
+    fprintf(f, "\n}\n");
     
     fclose(f);
     rename("/tmp/myco_state.json.tmp", "/tmp/myco_state.json");

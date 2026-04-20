@@ -22,4 +22,10 @@ void myco_dump_json(void);
 struct device_table_t;  /* forward declare to avoid circular include */
 void myco_set_device_table(const void *dt, int enabled);
 
+/* Flow-aware service table registration for JSON dump. Opaque void*
+ * keeps myco_classifier.h out of the ubus translation unit. Passing
+ * NULL (or enabled=0) clears the pointer — the JSON output then omits
+ * the "flows" array entirely. */
+void myco_set_flow_table(const void *fst, int enabled);
+
 #endif /* MYCO_UBUS_H */

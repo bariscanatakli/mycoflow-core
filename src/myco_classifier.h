@@ -74,4 +74,12 @@ void classifier_device_counts(const flow_service_table_t *tab,
                               uint32_t device_ip,
                               int *out_counts);
 
+/* Iterate every live flow_service_t entry and invoke `cb` with a const
+ * snapshot. Iteration order is slot order (stable across ticks within
+ * the same process). Use for observability sinks (JSON dump, logs).
+ * Returning non-zero from cb aborts the walk. Safe on NULL tab. */
+typedef int (*classifier_visit_cb)(const flow_service_t *fs, void *user);
+void classifier_for_each(const flow_service_table_t *tab,
+                         classifier_visit_cb cb, void *user);
+
 #endif /* MYCO_CLASSIFIER_H */

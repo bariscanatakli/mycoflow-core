@@ -259,6 +259,16 @@ int classifier_active_count(const flow_service_table_t *tab) {
     return tab ? tab->count : 0;
 }
 
+void classifier_for_each(const flow_service_table_t *tab,
+                         classifier_visit_cb cb, void *user) {
+    if (!tab || !cb) return;
+    for (int i = 0; i < FST_SIZE; i++) {
+        const flow_service_t *e = &tab->entries[i];
+        if (e->detected_at == 0.0 && e->last_confirmed == 0.0) continue;
+        if (cb(e, user) != 0) return;
+    }
+}
+
 void classifier_device_counts(const flow_service_table_t *tab,
                               uint32_t device_ip,
                               int *out_counts) {
