@@ -22,9 +22,21 @@
 
 typedef struct rtt_engine rtt_engine_t;
 
-/* Open an RTT engine. Returns NULL on fatal error — callers should
- * continue without RTT-based auto-correction in that case. */
-rtt_engine_t *rtt_engine_open(void);
+/* Open an RTT engine.
+ *
+ *   bpf_obj_path : path to the mycoflow_rtt.bpf.o object (compiled by
+ *                  CMake). When libbpf is available and the file exists,
+ *                  the engine loads the program, pins it, and attaches
+ *                  TC egress+ingress filters on `egress_iface`. Pass NULL
+ *                  or a missing path to force the stub path.
+ *   egress_iface : WAN interface name (e.g. "wan", "eth1"). Ignored on
+ *                  the stub path.
+ *
+ * Returns NULL on fatal allocation error — callers should continue
+ * without RTT-based auto-correction in that case (the stub path still
+ * returns a valid handle on success). */
+rtt_engine_t *rtt_engine_open(const char *bpf_obj_path,
+                              const char *egress_iface);
 
 void rtt_engine_close(rtt_engine_t *eng);
 

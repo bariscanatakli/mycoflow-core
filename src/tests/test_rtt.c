@@ -17,7 +17,7 @@ volatile sig_atomic_t g_stop = 0;
 int tests_run = 0;
 
 static char *test_open_close_null_safe() {
-    rtt_engine_t *eng = rtt_engine_open();
+    rtt_engine_t *eng = rtt_engine_open(NULL, NULL);
     mu_assert("open returns non-null", eng != NULL);
     rtt_engine_close(eng);
     rtt_engine_close(NULL);   /* must not crash */
@@ -25,7 +25,7 @@ static char *test_open_close_null_safe() {
 }
 
 static char *test_lookup_unknown_returns_zero() {
-    rtt_engine_t *eng = rtt_engine_open();
+    rtt_engine_t *eng = rtt_engine_open(NULL, NULL);
     flow_key_t k = { 0x0a0a0a01u, 0x08080808u, 40000, 443, 6 };
     mu_assert("unknown flow → 0", rtt_engine_lookup_ms(eng, &k) == 0);
     rtt_engine_close(eng);
@@ -33,7 +33,7 @@ static char *test_lookup_unknown_returns_zero() {
 }
 
 static char *test_inject_then_lookup() {
-    rtt_engine_t *eng = rtt_engine_open();
+    rtt_engine_t *eng = rtt_engine_open(NULL, NULL);
     flow_key_t k = { 0x0a0a0a01u, 0x08080808u, 40000, 443, 6 };
     rtt_engine_inject_stub(eng, &k, 42);
     mu_assert("lookup after inject → 42", rtt_engine_lookup_ms(eng, &k) == 42);
@@ -44,7 +44,7 @@ static char *test_inject_then_lookup() {
 }
 
 static char *test_udp_flow_always_zero() {
-    rtt_engine_t *eng = rtt_engine_open();
+    rtt_engine_t *eng = rtt_engine_open(NULL, NULL);
     flow_key_t k = { 0x0a0a0a01u, 0x08080808u, 40000, 443, 17 };  /* UDP */
     rtt_engine_inject_stub(eng, &k, 25);   /* injection succeeds but... */
     mu_assert("UDP lookup skipped → 0", rtt_engine_lookup_ms(eng, &k) == 0);
@@ -54,7 +54,7 @@ static char *test_udp_flow_always_zero() {
 
 static char *test_null_lookup_safe() {
     mu_assert("NULL engine → 0", rtt_engine_lookup_ms(NULL, NULL) == 0);
-    rtt_engine_t *eng = rtt_engine_open();
+    rtt_engine_t *eng = rtt_engine_open(NULL, NULL);
     mu_assert("NULL key → 0", rtt_engine_lookup_ms(eng, NULL) == 0);
     rtt_engine_inject_stub(NULL, NULL, 1);   /* must not crash */
     rtt_engine_close(eng);

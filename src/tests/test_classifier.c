@@ -225,7 +225,7 @@ static char *test_rtt_demote_after_two_breaches() {
 
     flow_service_table_t *tab = classifier_create();
     mark_engine_t *eng = mark_engine_open();
-    rtt_engine_t  *rtt = rtt_engine_open();
+    rtt_engine_t  *rtt = rtt_engine_open(NULL, NULL);
 
     /* Tick 1: tentative classification, no mark yet. */
     classifier_tick(tab, &ft, NULL, eng, rtt, 1.0, 1.0);
@@ -261,7 +261,7 @@ static char *test_rtt_repromote_after_recovery() {
 
     flow_service_table_t *tab = classifier_create();
     mark_engine_t *eng = mark_engine_open();
-    rtt_engine_t  *rtt = rtt_engine_open();
+    rtt_engine_t  *rtt = rtt_engine_open(NULL, NULL);
     flow_key_t k = { 0x0a0a0a01u, 0x08080808u, 40000, 25565, 6 };
 
     /* Drive to demoted state first (ticks 1..3). */
@@ -296,7 +296,7 @@ static char *test_rtt_noop_when_under_target() {
 
     flow_service_table_t *tab = classifier_create();
     mark_engine_t *eng = mark_engine_open();
-    rtt_engine_t  *rtt = rtt_engine_open();
+    rtt_engine_t  *rtt = rtt_engine_open(NULL, NULL);
     flow_key_t k = { 0x0a0a0a01u, 0x08080808u, 40000, 25565, 6 };
 
     classifier_tick(tab, &ft, NULL, eng, rtt, 1.0, 1.0);

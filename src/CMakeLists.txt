@@ -137,7 +137,16 @@ if(CLANG_EXE)
         ${BPF_STRIP_CMD}
         DEPENDS bpf/mycoflow.bpf.c
     )
-    add_custom_target(bpf_target ALL DEPENDS mycoflow.bpf.o)
+    set(BPF_RTT_STRIP_CMD "")
+    if(LLVM_STRIP_EXE AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(BPF_RTT_STRIP_CMD COMMAND ${LLVM_STRIP_EXE} --strip-debug mycoflow_rtt.bpf.o)
+    endif()
+    add_custom_command(OUTPUT mycoflow_rtt.bpf.o
+        COMMAND ${CLANG_EXE} -O2 -g -target bpf -I${ARCH_INCLUDE} -c ${CMAKE_CURRENT_SOURCE_DIR}/bpf/mycoflow_rtt.bpf.c -o mycoflow_rtt.bpf.o
+        ${BPF_RTT_STRIP_CMD}
+        DEPENDS bpf/mycoflow_rtt.bpf.c
+    )
+    add_custom_target(bpf_target ALL DEPENDS mycoflow.bpf.o mycoflow_rtt.bpf.o)
     add_dependencies(mycoflowd bpf_target)
     
     # Needs libelf and zlib for libbpf
