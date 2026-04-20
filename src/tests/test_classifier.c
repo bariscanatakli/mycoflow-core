@@ -173,6 +173,38 @@ static char *test_null_safe() {
     return 0;
 }
 
+/* ── classifier_device_counts (Phase 4b) ─────────────────────── */
+static char *test_device_counts_aggregates_per_src_ip() {
+    flow_table_t ft;
+    memset(&ft, 0, sizeof(ft));
+
+    uint32_t a = 0x0a0a0a01u, b = 0x0a0a0a02u;
+    /* A: two GAME_RT flows */
+    seed_flow(&ft, 0, a, 0x08080808u, 40000, 27020, 17, 100, 10000, 5000, 5000, 1.0);
+    seed_flow(&ft, 1, a, 0x08080809u, 40001, 27021, 17, 100, 10000, 5000, 5000, 1.0);
+    /* A: one VIDEO_LIVE (RTMP) flow */
+    seed_flow(&ft, 2, a, 0x0101017fu, 40002, 1935,   6,  100, 10000, 5000, 5000, 1.0);
+    /* B: one TORRENT flow */
+    seed_flow(&ft, 3, b, 0x02020202u, 40003, 6881,   6,  100, 10000, 5000, 5000, 1.0);
+
+    flow_service_table_t *tab = classifier_create();
+    classifier_tick(tab, &ft, NULL, NULL, 1.0, 1.0);
+
+    int counts[SERVICE_COUNT] = {0};
+    classifier_device_counts(tab, a, counts);
+    mu_assert("A has 2 GAME_RT",    counts[SVC_GAME_RT]    == 2);
+    mu_assert("A has 1 VIDEO_LIVE", counts[SVC_VIDEO_LIVE] == 1);
+    mu_assert("A has 0 TORRENT",    counts[SVC_TORRENT]    == 0);
+
+    memset(counts, 0, sizeof(counts));
+    classifier_device_counts(tab, b, counts);
+    mu_assert("B has 1 TORRENT",    counts[SVC_TORRENT]    == 1);
+    mu_assert("B has 0 GAME_RT",    counts[SVC_GAME_RT]    == 0);
+
+    classifier_destroy(tab);
+    return 0;
+}
+
 static char *all_tests() {
     mu_run_test(test_port_only_classifies);
     mu_run_test(test_stability_gate_requires_two_ticks);
@@ -180,6 +212,7 @@ static char *all_tests() {
     mu_run_test(test_unknown_does_not_track);
     mu_run_test(test_dns_beats_port);
     mu_run_test(test_null_safe);
+    mu_run_test(test_device_counts_aggregates_per_src_ip);
     return 0;
 }
 

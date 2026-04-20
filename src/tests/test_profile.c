@@ -122,6 +122,101 @@ static char *test_null_safety() {
     return 0;
 }
 
+/* ── Winner derivation (Phase 4b) ─────────────────────────────── */
+
+static char *test_winner_gaming_prefers_game_rt() {
+    profile_set_t ps;
+    profile_load_defaults(&ps);
+    const profile_t *g = profile_find(&ps, "gaming");
+
+    int counts[SERVICE_COUNT] = {0};
+    counts[SVC_GAME_RT] = 1;
+    counts[SVC_VIDEO_VOD] = 3;   /* more flows, but gaming wins by priority */
+    mu_assert("gaming picks GAME_RT over VOD",
+              profile_derive_winner(g, counts) == SVC_GAME_RT);
+    return 0;
+}
+
+static char *test_winner_gaming_falls_to_voip_when_no_game() {
+    profile_set_t ps;
+    profile_load_defaults(&ps);
+    const profile_t *g = profile_find(&ps, "gaming");
+    int counts[SERVICE_COUNT] = {0};
+    counts[SVC_VOIP_CALL] = 1;
+    counts[SVC_VIDEO_VOD] = 5;
+    mu_assert("gaming picks VOIP over VOD (2nd priority)",
+              profile_derive_winner(g, counts) == SVC_VOIP_CALL);
+    return 0;
+}
+
+static char *test_winner_remote_work_prefers_conf() {
+    profile_set_t ps;
+    profile_load_defaults(&ps);
+    const profile_t *rw = profile_find(&ps, "remote_work");
+    int counts[SERVICE_COUNT] = {0};
+    counts[SVC_VIDEO_CONF] = 1;
+    counts[SVC_GAME_RT] = 1;
+    mu_assert("remote_work picks VIDEO_CONF over GAME_RT",
+              profile_derive_winner(rw, counts) == SVC_VIDEO_CONF);
+    return 0;
+}
+
+static char *test_winner_auto_latency_sensitive() {
+    profile_set_t ps;
+    profile_load_defaults(&ps);
+    const profile_t *au = profile_find(&ps, "auto");
+    int counts[SERVICE_COUNT] = {0};
+    counts[SVC_VIDEO_VOD] = 1;
+    counts[SVC_GAME_RT] = 1;
+    mu_assert("auto picks lowest enum (GAME_RT)",
+              profile_derive_winner(au, counts) == SVC_GAME_RT);
+    return 0;
+}
+
+static char *test_winner_empty_counts() {
+    profile_set_t ps;
+    profile_load_defaults(&ps);
+    int counts[SERVICE_COUNT] = {0};
+    mu_assert("no active → UNKNOWN",
+              profile_derive_winner(profile_find(&ps, "gaming"), counts)
+              == SVC_UNKNOWN);
+    return 0;
+}
+
+static char *test_winner_persona_map() {
+    profile_set_t ps;
+    profile_load_defaults(&ps);
+    int counts[SERVICE_COUNT] = {0};
+    counts[SVC_GAME_RT] = 1;
+    mu_assert("GAME_RT → PERSONA_GAMING",
+              profile_derive_persona(profile_find(&ps, "gaming"), counts)
+              == PERSONA_GAMING);
+    return 0;
+}
+
+static char *test_winner_priority_fallthrough() {
+    /* Profile has winner_priority with services none of which are active.
+     * Should fall through to auto behavior (pick lowest enum). */
+    profile_set_t ps;
+    profile_load_defaults(&ps);
+    const profile_t *g = profile_find(&ps, "gaming");
+    int counts[SERVICE_COUNT] = {0};
+    counts[SVC_TORRENT] = 1;  /* not in gaming's priority list */
+    mu_assert("priority list inactive → fall through to auto",
+              profile_derive_winner(g, counts) == SVC_TORRENT);
+    return 0;
+}
+
+static char *test_winner_null_safety() {
+    int counts[SERVICE_COUNT] = {0};
+    counts[SVC_GAME_RT] = 1;
+    mu_assert("NULL profile → auto behavior",
+              profile_derive_winner(NULL, counts) == SVC_GAME_RT);
+    mu_assert("NULL counts → UNKNOWN",
+              profile_derive_winner(NULL, NULL) == SVC_UNKNOWN);
+    return 0;
+}
+
 static char *all_tests() {
     mu_run_test(test_defaults_shape);
     mu_run_test(test_gaming_priority);
@@ -132,6 +227,14 @@ static char *all_tests() {
     mu_run_test(test_profile_for_ip_bound);
     mu_run_test(test_unresolved_binding_falls_back);
     mu_run_test(test_null_safety);
+    mu_run_test(test_winner_gaming_prefers_game_rt);
+    mu_run_test(test_winner_gaming_falls_to_voip_when_no_game);
+    mu_run_test(test_winner_remote_work_prefers_conf);
+    mu_run_test(test_winner_auto_latency_sensitive);
+    mu_run_test(test_winner_empty_counts);
+    mu_run_test(test_winner_persona_map);
+    mu_run_test(test_winner_priority_fallthrough);
+    mu_run_test(test_winner_null_safety);
     return 0;
 }
 

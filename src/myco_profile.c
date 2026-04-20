@@ -340,3 +340,31 @@ int profile_load(profile_set_t *ps) {
     profile_load_uci(ps);
     return 0;
 }
+
+/* ── Winner derivation ───────────────────────────────────────── */
+
+service_t profile_derive_winner(const profile_t *p,
+                                const int counts[SERVICE_COUNT]) {
+    if (!counts) return SVC_UNKNOWN;
+
+    if (p && p->num_winners > 0) {
+        for (int i = 0; i < p->num_winners; i++) {
+            service_t s = p->winner_priority[i];
+            if ((int)s > 0 && (int)s < SERVICE_COUNT && counts[s] > 0) {
+                return s;
+            }
+        }
+        /* None of the priority services active → fall through to auto */
+    }
+
+    /* Auto: pick lowest-enum-index active (most latency-sensitive). */
+    for (int i = 1; i < SERVICE_COUNT; i++) {
+        if (counts[i] > 0) return (service_t)i;
+    }
+    return SVC_UNKNOWN;
+}
+
+persona_t profile_derive_persona(const profile_t *p,
+                                 const int counts[SERVICE_COUNT]) {
+    return service_to_persona(profile_derive_winner(p, counts));
+}

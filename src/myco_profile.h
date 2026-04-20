@@ -99,4 +99,24 @@ int profile_parse_dscp(const char *s);
  * service_name(). Returns SVC_UNKNOWN on no match. */
 service_t profile_parse_service(const char *s);
 
+/* ── Winner derivation (Phase 4b) ────────────────────────────────
+ * Given a profile and the active service counts for a device (indexed
+ * by service_t, 0 = inactive, >0 = number of active flows), return
+ * the service_t that "wins" for that device this cycle.
+ *
+ * Algorithm:
+ *   1. If the profile has a winner_priority list, walk it in order and
+ *      return the first service whose count > 0.
+ *   2. Otherwise ("auto"), return the most latency-sensitive active
+ *      service using the natural service_t ordering (enum is arranged
+ *      from most to least RT-sensitive — game_rt, voip_call, …).
+ *   3. If no service is active, return SVC_UNKNOWN.
+ */
+service_t profile_derive_winner(const profile_t *p,
+                                const int service_counts[SERVICE_COUNT]);
+
+/* Convenience: winner → persona via service_to_persona(). */
+persona_t profile_derive_persona(const profile_t *p,
+                                 const int service_counts[SERVICE_COUNT]);
+
 #endif /* MYCO_PROFILE_H */

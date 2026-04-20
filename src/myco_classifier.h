@@ -61,4 +61,11 @@ service_t classifier_get_service(const flow_service_table_t *tab,
 /* Observability: number of active entries. */
 int classifier_active_count(const flow_service_table_t *tab);
 
+/* Populate `out_counts[service_t] = #flows of that service` for flows
+ * whose src_ip matches `device_ip` (network byte order). out_counts must
+ * have SERVICE_COUNT entries; we zero it before filling. */
+void classifier_device_counts(const flow_service_table_t *tab,
+                              uint32_t device_ip,
+                              int *out_counts);
+
 #endif /* MYCO_CLASSIFIER_H */
