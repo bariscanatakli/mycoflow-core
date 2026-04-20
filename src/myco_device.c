@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEVICE_ACTIVE_FLOW_MIN_DELTA_BYTES 256
+
 /* ── Helpers ───────────────────────────────────────────────── */
 
 static device_entry_t *find_device(device_table_t *dt, uint32_t ip) {
@@ -111,6 +113,10 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft,
             continue;
         }
         const flow_entry_t *fe = &ft->entries[i];
+        uint64_t flow_delta = fe->tx_delta + fe->rx_delta;
+        if (flow_delta < DEVICE_ACTIVE_FLOW_MIN_DELTA_BYTES) {
+            continue;
+        }
         uint32_t src_ip = fe->key.src_ip;
 
         device_entry_t *dev = find_device(dt, src_ip);
@@ -176,6 +182,9 @@ void device_table_aggregate(device_table_t *dt, const flow_table_t *ft,
                 continue;
             }
             uint64_t flow_delta = ft->entries[j].tx_delta + ft->entries[j].rx_delta;
+            if (flow_delta < DEVICE_ACTIVE_FLOW_MIN_DELTA_BYTES) {
+                continue;
+            }
             if (flow_delta > max_delta) {
                 max_delta = flow_delta;
             }

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./test_service)",
+      "Bash(pkg-config --exists libnetfilter_conntrack)",
+      "Bash(pkg-config --modversion libnetfilter_conntrack)",
+      "Bash(./test_mangle)",
+      "Bash(./test_classifier)",
+      "Bash(./test_profile)",
+      "Bash(bash -n scripts/multi-app-bench.sh)"
+    ]
+  }
+}

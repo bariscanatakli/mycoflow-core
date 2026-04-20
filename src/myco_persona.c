@@ -43,15 +43,6 @@ static persona_t decide_persona(const metrics_t *metrics, persona_t hint) {
      * have a port hint, use the hint. This catches low-traffic periods
      * where behavioral signals are too weak to classify. */
 
-    /* Rule 1 — TORRENT: swarm of connections + significant bandwidth.
-     * Guard with !elephant_flow: real torrent swarms distribute bytes across
-     * many peers, so no single flow dominates. A device with 100+ flows but
-     * one flow carrying >60% of bytes is a 4K video / big download with
-     * background chatter (DNS/telemetry/etc.), not a torrent. */
-    if (flows > 100 && bw_bps > 500000.0 && !metrics->elephant_flow) {
-        return PERSONA_TORRENT;
-    }
-
     int udp_flows = metrics->udp_flows;
     double udp_ratio = (flows > 0) ? (double)udp_flows / (double)flows : 0.0;
 
@@ -78,6 +69,18 @@ static persona_t decide_persona(const metrics_t *metrics, persona_t hint) {
             return PERSONA_VIDEO;
         }
         return PERSONA_GAMING;
+    }
+
+    /* Rule 2c — TORRENT: swarm of connections + significant bandwidth.
+     * Placed after strong STREAMING/GAMING checks so high-flow devices can
+     * still be recognized as interactive/video when those signals are clear.
+     * Guard with !elephant_flow: one dominant flow is more likely BULK/VIDEO. */
+    if (flows > 100 && bw_bps > 500000.0 && !metrics->elephant_flow) {
+        if (hint == PERSONA_GAMING || hint == PERSONA_VOIP ||
+            hint == PERSONA_VIDEO || hint == PERSONA_STREAMING) {
+            return hint;
+        }
+        return PERSONA_TORRENT;
     }
 
     /* Rule 3 — BULK: elephant flow or heavy TCP download.

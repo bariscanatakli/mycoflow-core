@@ -1,6 +1,7 @@
 config mycoflow 'core'
 	option enabled '1'
 	option egress_iface 'br-lan'
+	option per_device '1'
 	option sample_hz '2'
 	option ewma_alpha '0.3'
 	option baseline_samples '5'

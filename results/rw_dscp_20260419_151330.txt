@@ -1,0 +1,6 @@
+-N mycoflow_dscp
+-A mycoflow_dscp -s 10.10.1.172/32 -j DSCP --set-dscp 0x20
+-A mycoflow_dscp -s 127.0.0.1/32 -j DSCP --set-dscp 0x2e
+-A mycoflow_dscp -s 10.10.1.188/32 -j DSCP --set-dscp 0x08
+-A mycoflow_dscp -s 10.10.1.1/32 -j DSCP --set-dscp 0x08
+-A mycoflow_dscp -s 100.101.40.36/32 -j DSCP --set-dscp 0x2e

@@ -1,0 +1,23 @@
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+64 bytes from 8.8.8.8: seq=1 ttl=117 time=33.512 ms
+64 bytes from 8.8.8.8: seq=2 ttl=117 time=33.581 ms
+64 bytes from 8.8.8.8: seq=3 ttl=117 time=33.568 ms
+64 bytes from 8.8.8.8: seq=4 ttl=117 time=33.803 ms
+64 bytes from 8.8.8.8: seq=5 ttl=117 time=33.752 ms
+64 bytes from 8.8.8.8: seq=6 ttl=117 time=33.385 ms
+64 bytes from 8.8.8.8: seq=7 ttl=117 time=33.268 ms
+64 bytes from 8.8.8.8: seq=8 ttl=117 time=33.170 ms
+64 bytes from 8.8.8.8: seq=9 ttl=117 time=34.021 ms
+64 bytes from 8.8.8.8: seq=10 ttl=117 time=34.142 ms
+64 bytes from 8.8.8.8: seq=11 ttl=117 time=33.797 ms
+64 bytes from 8.8.8.8: seq=12 ttl=117 time=53.608 ms
+64 bytes from 8.8.8.8: seq=13 ttl=117 time=34.212 ms
+64 bytes from 8.8.8.8: seq=14 ttl=117 time=34.099 ms
+64 bytes from 8.8.8.8: seq=15 ttl=117 time=34.520 ms
+64 bytes from 8.8.8.8: seq=17 ttl=117 time=34.057 ms
+64 bytes from 8.8.8.8: seq=18 ttl=117 time=34.597 ms
+64 bytes from 8.8.8.8: seq=19 ttl=117 time=33.977 ms
+
+--- 8.8.8.8 ping statistics ---
+20 packets transmitted, 18 packets received, 10% packet loss
+round-trip min/avg/max = 33.170/34.948/53.608 ms

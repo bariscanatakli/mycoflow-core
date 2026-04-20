@@ -293,8 +293,8 @@ static char *test_hint_unknown_elephant() {
     return 0;
 }
 
-/* ── Torrent is NOT overridden by hint ─────────────────────── */
-static char *test_hint_cannot_override_torrent() {
+/* ── Strong hint can override torrent swarm signature ───────── */
+static char *test_hint_can_override_torrent() {
     persona_state_t state;
     persona_init(&state);
 
@@ -306,8 +306,8 @@ static char *test_hint_cannot_override_torrent() {
         .elephant_flow = 0,
     };
     FEED2(state, m, PERSONA_GAMING);
-    mu_assert("HINT: torrent behavior (150 flows) overrides GAMING hint",
-              state.current == PERSONA_TORRENT);
+    mu_assert("HINT: GAMING hint should override torrent swarm signature",
+              state.current == PERSONA_GAMING);
     return 0;
 }
 
@@ -415,7 +415,7 @@ static char *all_tests() {
     mu_run_test(test_hint_streaming_tcp_bulk);
     mu_run_test(test_hint_video_elephant);
     mu_run_test(test_hint_unknown_elephant);
-    mu_run_test(test_hint_cannot_override_torrent);
+    mu_run_test(test_hint_can_override_torrent);
     mu_run_test(test_hint_gaming_overrides_streaming);
     mu_run_test(test_hint_streaming_tcp_high_rx);
     mu_run_test(test_elephant_many_flows_not_torrent);
