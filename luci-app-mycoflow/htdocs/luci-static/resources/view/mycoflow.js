@@ -40,6 +40,35 @@ function formatBps(bps) {
   return bps.toFixed(0) + " bps";
 }
 
+// Service classes (Phase 6: per-flow classification).
+// Colors follow CAKE tin ordering: warm = latency-sensitive, cool = bulk.
+var SERVICE_STYLES = {
+  game_rt:         { color: "#E91E63", icon: "🎯", label: "GAME" },
+  voip_call:       { color: "#FF5722", icon: "📞", label: "VOIP" },
+  video_conf:      { color: "#FF9800", icon: "🎥", label: "CONF" },
+  video_live:      { color: "#FFC107", icon: "📡", label: "LIVE" },
+  video_vod:       { color: "#CDDC39", icon: "📺", label: "VOD"  },
+  web_interactive: { color: "#4CAF50", icon: "🌐", label: "WEB"  },
+  bulk_dl:         { color: "#03A9F4", icon: "⬇️",  label: "BULK" },
+  file_sync:       { color: "#00BCD4", icon: "☁️",  label: "SYNC" },
+  torrent:         { color: "#9C27B0", icon: "🧲", label: "TOR"  },
+  game_launcher:   { color: "#3F51B5", icon: "🚀", label: "GLNCH"},
+  system:          { color: "#607D8B", icon: "⚙️",  label: "SYS"  },
+  unknown:         { color: "#9E9E9E", icon: "❓", label: "?"    },
+};
+
+function serviceBadge(service, demoted) {
+  var s = SERVICE_STYLES[service] || SERVICE_STYLES["unknown"];
+  var label = s.icon + " " + s.label + (demoted ? " ↓" : "");
+  return E("span", {
+    style:
+      "display:inline-block;padding:2px 8px;border-radius:10px;" +
+      "background:" + s.color + ";color:#fff;font-weight:bold;font-size:11px;" +
+      (demoted ? "outline:2px dashed #F44336;" : ""),
+    title: demoted ? "Demoted by RTT auto-corrector" : "",
+  }, label);
+}
+
 function personaBadge(persona) {
   var colors = {
     interactive: "#2196F3",
@@ -249,6 +278,39 @@ return view.extend({
                 "#607D8B",
               ),
             ]),
+
+            E("h3", { style: "margin-top:24px" }, "🌊 Active Flows (per-service)"),
+            (s.flows && s.flows.length > 0) ? E("table", { class: "table cbi-section-table" }, [
+              E("tr", { class: "tr table-titles" }, [
+                E("th", { class: "th" }, "Service"),
+                E("th", { class: "th" }, "Source"),
+                E("th", { class: "th" }, "Destination"),
+                E("th", { class: "th", style: "text-align:right" }, "Port"),
+                E("th", { class: "th", style: "text-align:right" }, "Proto"),
+                E("th", { class: "th", style: "text-align:right" }, "Mark"),
+                E("th", { class: "th", style: "text-align:right" }, "RTT (ms)"),
+                E("th", { class: "th" }, "State"),
+              ])
+            ].concat(s.flows.map(function(flow) {
+              var state;
+              if (flow.demoted) {
+                state = E("span", { style: "color:#F44336;font-weight:bold" }, "demoted");
+              } else if (flow.stable) {
+                state = E("span", { style: "color:#4CAF50" }, "stable");
+              } else {
+                state = E("span", { style: "color:#9E9E9E" }, "probing");
+              }
+              return E("tr", { class: "tr cbi-rowstyle-1" }, [
+                E("td", { class: "td" }, serviceBadge(flow.service, flow.demoted)),
+                E("td", { class: "td" }, flow.src),
+                E("td", { class: "td" }, flow.dst),
+                E("td", { class: "td", style: "text-align:right" }, flow.dport),
+                E("td", { class: "td", style: "text-align:right" }, flow.proto === 6 ? "TCP" : (flow.proto === 17 ? "UDP" : flow.proto)),
+                E("td", { class: "td", style: "text-align:right" }, flow.mark),
+                E("td", { class: "td", style: "text-align:right" }, flow.rtt_ms || "—"),
+                E("td", { class: "td" }, state),
+              ]);
+            }))) : E("em", { style: "color:#999" }, "No classified flows (flow-aware mode may be disabled)."),
 
             E("h3", { style: "margin-top:24px" }, "📱 Connected Devices"),
             (s.devices && s.devices.length > 0) ? E("table", { class: "table cbi-section-table" }, [
