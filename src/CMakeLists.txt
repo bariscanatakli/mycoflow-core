@@ -19,6 +19,7 @@ set(SOURCES
     myco_mark.c
     myco_mangle.c
     myco_classifier.c
+    myco_profile.c
     myco_ubus.c
 )
 
@@ -91,6 +92,9 @@ if(HAVE_LIBNFCT_H AND LIBNFCT_LIB)
     target_compile_definitions(test_mangle PRIVATE HAVE_LIBNFCT)
     target_link_libraries(test_mangle PRIVATE ${LIBNFCT_LIB})
 endif()
+
+add_executable(test_profile tests/test_profile.c myco_profile.c myco_service.c myco_log.c)
+add_test(NAME profile COMMAND test_profile)
 
 add_executable(test_classifier tests/test_classifier.c
     myco_classifier.c myco_service.c myco_hint.c myco_dns.c
