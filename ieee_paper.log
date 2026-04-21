@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.12.27)  21 MAR 2026 12:58
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.12.27)  21 APR 2026 07:40
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -984,70 +984,69 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 (/usr/share/texlive/texmf-dist/tex/latex/microtype/mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
-) [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texm
-f-dist/fonts/enc/dvips/base/8r.enc}
+)
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf
+-dist/fonts/enc/dvips/base/8r.enc}
 
 
 ]
-LaTeX Font Info:    Trying to load font information for T1+pcr on input line 18
-6.
- (/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pcr.fd
+Underfull \hbox (badness 10000) in paragraph at lines 153--159
+\T1/ptm/m/n/10 (+20) voip_call, video_conf, video_live, video_vod,
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 153--159
+\T1/ptm/m/n/10 (+20) web_interactive, bulk_dl, file_sync, tor-rent,
+ []
+
+
+Underfull \hbox (badness 2213) in paragraph at lines 153--159
+\T1/ptm/m/n/10 (+20) game_launcher, sys-tem, un-known) clas-si-fied by a
+ []
+
+
+Underfull \hbox (badness 1845) in paragraph at lines 153--159
+\T1/ptm/m/n/10 (+20) three-signal weighted voter that com-bines pas-sive
+ []
+
+
+Underfull \vbox (badness 7685) has occurred while \output is active []
+
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 22
+2.
+
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pcr.fd
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 )
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `pcr' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
-
-[2]
-Underfull \hbox (badness 10000) in paragraph at lines 322--322
+ [2]
+Underfull \hbox (badness 10000) in paragraph at lines 358--358
 []|\T1/ptm/m/n/9 (+20) Adaptive
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 322--322
+Underfull \hbox (badness 10000) in paragraph at lines 358--358
 \T1/ptm/m/n/9 (+20) nu-tri-ent
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 323--323
+Underfull \hbox (badness 10000) in paragraph at lines 359--359
 []|\T1/ptm/m/n/9 (+20) Hysteresis
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 323--323
+Underfull \hbox (badness 10000) in paragraph at lines 359--359
 \T1/ptm/m/n/9 (+20) & struc-tural
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 324--324
-[]|\T1/ptm/m/n/9 (+20) Mycelial
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 324--324
-\T1/ptm/m/n/9 (+20) net-work
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 419--420
-[]|\T1/ptm/m/n/9 (+20) ICMP multi-ping, \T1/pcr/m/n/9 /proc/net/dev\T1/ptm/m/n/
-9 (+20) ,
- []
-
-
-Overfull \hbox (2.20396pt too wide) in paragraph at lines 420--420
-[]|\T1/pcr/m/n/9 myco_persona| 
- []
-
-
-Overfull \hbox (2.20396pt too wide) in paragraph at lines 421--421
-[]|\T1/pcr/m/n/9 myco_control| 
- []
-
-
-Overfull \hbox (2.20396pt too wide) in paragraph at lines 426--426
-[]|\T1/pcr/m/n/9 myco_netlink| 
+Underfull \hbox (badness 10000) in paragraph at lines 360--360
+[]|\T1/ptm/m/n/9 (+20) Load-triggered
  []
 
 [3
@@ -1055,316 +1054,435 @@ pdfTeX warning (ext4): destination with the same identifier (name{table.1}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.457 
-      
+l.405   \item \textbf
+                     {Infer:} Apply EWMA smoothing to raw metrics; run the
 pdfTeX warning (ext4): destination with the same identifier (name{table.2}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.457 
-      
-pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
-s been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.457 
-      ]
-Underfull \hbox (badness 3209) in paragraph at lines 458--464
+l.405   \item \textbf
+                     {Infer:} Apply EWMA smoothing to raw metrics; run the]
+Underfull \hbox (badness 10000) in paragraph at lines 470--471
+[]|\T1/ptm/m/n/9 (+20) ICMP multi-ping, \T1/pcr/m/n/9 /proc/net/dev\T1/ptm/m/n/
+9 (+20) ,
+ []
+
+
+Overfull \hbox (2.20396pt too wide) in paragraph at lines 471--471
+[]|\T1/pcr/m/n/9 myco_control| 
+ []
+
+
+Overfull \hbox (2.20396pt too wide) in paragraph at lines 474--474
+[]|\T1/pcr/m/n/9 myco_netlink| 
+ []
+
+
+Overfull \hbox (2.20396pt too wide) in paragraph at lines 481--481
+[]|\T1/pcr/m/n/9 myco_persona| 
+ []
+
+
+Overfull \hbox (2.20396pt too wide) in paragraph at lines 486--486
+[]|\T1/pcr/m/n/9 myco_service| 
+ []
+
+
+Overfull \hbox (2.20396pt too wide) in paragraph at lines 489--489
+[]|\T1/pcr/m/n/9 myco_profile| 
+ []
+
+
+Overfull \hbox (18.40395pt too wide) in paragraph at lines 490--490
+[]|\T1/pcr/m/n/9 myco_classifier| 
+ []
+
+
+Underfull \hbox (badness 3209) in paragraph at lines 521--527
 []\T1/ptm/b/n/10 (+20) Queue statis-tics. \T1/ptm/m/n/10 (+20) A raw NETLINK_RO
 UTE socket
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 465--475
+Underfull \hbox (badness 10000) in paragraph at lines 528--538
 []\T1/ptm/b/n/10 (+20) Flow statis-tics. \T1/pcr/m/n/10 myco_flow \T1/ptm/m/n/1
 0 (+20) parses
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 465--475
+Underfull \hbox (badness 10000) in paragraph at lines 528--538
 \T1/pcr/m/n/10 /proc/net/nf_conntrack \T1/ptm/m/n/10 (+20) into a userspace LRU
 
  []
 
-
-Underfull \hbox (badness 2617) in paragraph at lines 499--499
+[4
+pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.551 
+      
+pdfTeX warning (ext4): destination with the same identifier (name{table.3}) has
+ been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.551 
+      ]
+Underfull \hbox (badness 2617) in paragraph at lines 562--562
 []|$[] \OML/cmm/m/it/9 < \OT1/cmr/m/n/9 120$\T1/ptm/m/n/9 (+20) B and $[] \OML/
 cmm/m/it/9 <
  []
 
 
-Overfull \hbox (1.32092pt too wide) in paragraph at lines 492--507
+Overfull \hbox (1.32092pt too wide) in paragraph at lines 555--570
  [][] 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 537--541
+Underfull \hbox (badness 10000) in paragraph at lines 695--699
 []\T1/ptm/b/n/10 (+20) Adaptive thresh-olds. \T1/ptm/m/n/10 (+20) Let $\OMS/cms
 y/m/n/10 L \OT1/cmr/m/n/10 =
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 537--541
+Underfull \hbox (badness 10000) in paragraph at lines 695--699
 \OMS/cmsy/m/n/10 f[]g$ \T1/ptm/m/n/10 (+20) (latency-sensitive) and
  []
 
-[4
-pdfTeX warning (ext4): destination with the same identifier (name{table.3}) has
- been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.580 T
-       he ring is evaluated whenever a new record is filled:
+
+Underfull \vbox (badness 3568) has occurred while \output is active []
+
+ [5
 pdfTeX warning (ext4): destination with the same identifier (name{figure.2}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.580 T
-       he ring is evaluated whenever a new record is filled:
+l.704 \end{align}
+                 
 pdfTeX warning (ext4): destination with the same identifier (name{table.4}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.580 T
-       he ring is evaluated whenever a new record is filled:]
-Underfull \hbox (badness 1655) in paragraph at lines 632--634
+l.704 \end{align}
+                 
+pdfTeX warning (ext4): destination with the same identifier (name{table.5}) has
+ been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.704 \end{align}
+                 ]
+Underfull \hbox (badness 1655) in paragraph at lines 790--792
 []\T1/ptm/m/n/10 (+20) Installs a CAKE qdisc on \T1/pcr/m/n/10 ifb0 \T1/ptm/m/n
 /10 (+20) with the same
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 706--707
-[]\T1/pcr/m/n/10 test_ewma\T1/ptm/m/n/10 (+20) : EWMA con-ver-gence with
+[6]
+Underfull \hbox (badness 10000) in paragraph at lines 868--874
+[]\T1/ptm/m/it/10 (+20) Core: \T1/pcr/m/n/10 test_ewma \T1/ptm/m/n/10 (+20) (EW
+MA con-ver-gence with
  []
 
 
-Underfull \hbox (badness 2875) in paragraph at lines 737--737
+Underfull \hbox (badness 1603) in paragraph at lines 868--874
+\T1/ptm/m/n/10 (+20) ring); \T1/pcr/m/n/10 test_config \T1/ptm/m/n/10 (+20) (UC
+I pars-ing, env over-rides,
+ []
+
+
+Underfull \hbox (badness 2875) in paragraph at lines 906--906
 []|\T1/ptm/m/n/9 (+20) P1: Re-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 738--738
+Underfull \hbox (badness 10000) in paragraph at lines 907--907
 []|\T1/ptm/m/n/9 (+20) Nov
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 739--743
+Underfull \hbox (badness 10000) in paragraph at lines 908--912
 []|\T1/ptm/m/n/9 (+20) Literature sur-vey (CAKE, CoDel,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 739--743
+Underfull \hbox (badness 10000) in paragraph at lines 908--912
 \T1/ptm/m/n/9 (+20) fq_CoDel, Diff-Serv); base-line
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 739--743
+Underfull \hbox (badness 10000) in paragraph at lines 908--912
 \T1/ptm/m/n/9 (+20) la-tency mea-sure-ments on home
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 739--743
+Underfull \hbox (badness 10000) in paragraph at lines 908--912
 \T1/ptm/m/n/9 (+20) net-work; Open-Wrt toolchain setup
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 739--743
+Underfull \hbox (badness 10000) in paragraph at lines 908--912
 \T1/ptm/m/n/9 (+20) (\T1/pcr/m/n/9 aarch64-openwrt-linux-musl\T1/ptm/m/n/9 (+20
 ) );
  []
 
 
-Underfull \hbox (badness 5802) in paragraph at lines 739--743
+Underfull \hbox (badness 5802) in paragraph at lines 908--912
 \T1/ptm/m/n/9 (+20) bio-inspired de-sign ra-tio-nale; project
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 744--744
+Underfull \hbox (badness 10000) in paragraph at lines 913--913
 []|\T1/ptm/m/n/9 (+20) P2:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 744--744
+Underfull \hbox (badness 10000) in paragraph at lines 913--913
 \T1/ptm/m/n/9 (+20) Ar-chi-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 744--744
+Underfull \hbox (badness 10000) in paragraph at lines 913--913
 \T1/ptm/m/n/9 (+20) tec-ture
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 744--744
+Underfull \hbox (badness 10000) in paragraph at lines 913--913
 \T1/ptm/m/n/9 (+20) &
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 745--745
+Underfull \hbox (badness 10000) in paragraph at lines 914--914
 []|\T1/ptm/m/n/9 (+20) Dec
  []
 
 
-Underfull \hbox (badness 2409) in paragraph at lines 746--750
-\T1/ptm/m/n/9 (+20) hys-tere-sis thresh-olds, k-of-m ma-jor-ity
+Underfull \hbox (badness 1603) in paragraph at lines 915--919
+\T1/ptm/m/n/9 (+20) hys-tere-sis thresh-olds, $\OML/cmm/m/it/9 k$\T1/ptm/m/n/9 
+(+20) -of-$\OML/cmm/m/it/9 m$ \T1/ptm/m/n/9 (+20) ma-jor-ity
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 751--751
+Underfull \hbox (badness 10000) in paragraph at lines 920--920
 \T1/ptm/m/n/9 (+20) Im-ple-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 751--751
+Underfull \hbox (badness 10000) in paragraph at lines 920--920
 \T1/ptm/m/n/9 (+20) men-ta-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 752--752
+Underfull \hbox (badness 10000) in paragraph at lines 921--921
 []|\T1/ptm/m/n/9 (+20) Jan
  []
 
 
-Underfull \hbox (badness 1874) in paragraph at lines 753--757
+Underfull \hbox (badness 1874) in paragraph at lines 922--926
 []|\T1/pcr/m/n/9 mycoflowd \T1/ptm/m/n/9 (+20) dae-mon: sens-ing (ICMP,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 758--758
+Underfull \hbox (badness 10000) in paragraph at lines 927--927
 \T1/ptm/m/n/9 (+20) vanced
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 759--759
+Underfull \hbox (badness 10000) in paragraph at lines 928--928
 []|\T1/ptm/m/n/9 (+20) Feb
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 767--767
+Underfull \hbox (badness 10000) in paragraph at lines 936--936
 []|\T1/ptm/m/n/9 (+20) Mar
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 768--770
-[]|\T1/ptm/m/n/9 (+20) Real-hardware de-ploy-ment on
+Underfull \hbox (badness 5274) in paragraph at lines 937--940
+[]|\T1/ptm/m/n/9 (+20) 6-persona mixed-workload bench-mark
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 768--770
-\T1/ptm/m/n/9 (+20) Xi-aomi AX3000T (in progress); 6-
+Underfull \hbox (badness 10000) in paragraph at lines 941--941
+[]|\T1/ptm/m/n/9 (+20) P6:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 768--770
-\T1/ptm/m/n/9 (+20) persona mixed-workload bench-mark
+Underfull \hbox (badness 10000) in paragraph at lines 941--941
+\T1/ptm/m/n/9 (+20) Flow-
  []
 
-[5
-pdfTeX warning (ext4): destination with the same identifier (name{table.5}) has
- been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.772 \end{table}
-                 ]
-Underfull \hbox (badness 2050) in paragraph at lines 810--815
-\T1/ptm/m/n/10 (+20) send-ing UDP at 300 kbps with 91-byte pack-ets, and
+
+Underfull \hbox (badness 10000) in paragraph at lines 941--941
+\T1/ptm/m/n/9 (+20) Aware
  []
 
-[6
+
+Underfull \hbox (badness 10000) in paragraph at lines 941--941
+\T1/ptm/m/n/9 (+20) v3
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 941--941
+\T1/ptm/m/n/9 (+20) ware
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 941--941
+\T1/ptm/m/n/9 (+20) De-ploy-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 942--942
+[]|\T1/ptm/m/n/9 (+20) Mar--
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 942--942
+\T1/ptm/m/n/9 (+20) Apr
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 943--951
+[]|\T1/ptm/m/n/9 (+20) 12-class ser-vice tax-on-omy
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 943--951
+\T1/ptm/m/n/9 (+20) voter (\T1/pcr/m/n/9 myco_classifier\T1/ptm/m/n/9 (+20) ) w
+ith
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 943--951
+\T1/ptm/m/n/9 (+20) DNS, port, and be-hav-ioral pro-file
+ []
+
+
+Underfull \hbox (badness 3088) in paragraph at lines 943--951
+\T1/ptm/m/n/9 (+20) flow ser-vice ta-ble with live de-mote
+ []
+
+[7
 pdfTeX warning (ext4): destination with the same identifier (name{table.6}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.896 \end{table}
-                 
+l.988 
+      
 pdfTeX warning (ext4): destination with the same identifier (name{table.7}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.896 \end{table}
-                 
-pdfTeX warning (ext4): destination with the same identifier (name{table.8}) has
- been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.896 \end{table}
-                 ]
-Overfull \hbox (2.5102pt too wide) in paragraph at lines 910--921
+l.988 
+      ]
+Underfull \hbox (badness 2050) in paragraph at lines 991--996
+\T1/ptm/m/n/10 (+20) send-ing UDP at 300 kbps with 91-byte pack-ets, and
+ []
+
+
+Overfull \hbox (2.5102pt too wide) in paragraph at lines 1091--1102
  [][] 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1013--1013
+Underfull \hbox (badness 10000) in paragraph at lines 1194--1194
 []|\T1/ptm/m/n/9 (+20) .14
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1014--1014
+Underfull \hbox (badness 10000) in paragraph at lines 1195--1195
 []|\T1/ptm/m/n/9 (+20) .13
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1015--1015
+Underfull \hbox (badness 10000) in paragraph at lines 1196--1196
 []|\T1/ptm/m/n/9 (+20) .12
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1017--1017
+Underfull \hbox (badness 10000) in paragraph at lines 1198--1198
 []|\T1/ptm/m/n/9 (+20) .254
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 1018--1018
+Underfull \hbox (badness 10000) in paragraph at lines 1199--1199
 []|\T1/ptm/m/n/9 (+20) .10
  []
 
-[7
+[8
+pdfTeX warning (ext4): destination with the same identifier (name{table.8}) has
+ been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1228 
+       
 pdfTeX warning (ext4): destination with the same identifier (name{table.9}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.1098 
+l.1228 
        
 pdfTeX warning (ext4): destination with the same identifier (name{table.10}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.1098 
-       
-pdfTeX warning (ext4): destination with the same identifier (name{figure.3}) ha
-s been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.1098 
+l.1228 
        
 pdfTeX warning (ext4): destination with the same identifier (name{table.11}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.1098 
+l.1228 
        ]
-Underfull \hbox (badness 1810) in paragraph at lines 1177--1187
+Underfull \hbox (badness 1609) in paragraph at lines 1293--1301
+[]\T1/ptm/m/n/10 (+20) The dae-mon, LuCI pack-age, and the v3 flow-aware
+ []
+
+[9
+pdfTeX warning (ext4): destination with the same identifier (name{figure.3}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1310   \item Z
+                ero writes to the NAND flash are observed via
+pdfTeX warning (ext4): destination with the same identifier (name{table.12}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1310   \item Z
+                ero writes to the NAND flash are observed via
+pdfTeX warning (ext4): destination with the same identifier (name{table.13}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1310   \item Z
+                ero writes to the NAND flash are observed via
+pdfTeX warning (ext4): destination with the same identifier (name{table.14}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.1310   \item Z
+                ero writes to the NAND flash are observed via]
+Underfull \hbox (badness 1460) in paragraph at lines 1310--1314
+[]\T1/ptm/m/n/10 (+20) Zero writes to the NAND flash are ob-served via
+ []
+
+
+Underfull \hbox (badness 1533) in paragraph at lines 1319--1334
+\T1/ptm/m/n/10 (+20) flow count above the \T1/ptm/m/sc/10 (+20) tor-rent \T1/pt
+m/m/n/10 (+20) thresh-old while car-ry-
+ []
+
+[10]
+Underfull \hbox (badness 1810) in paragraph at lines 1446--1456
 \T1/ptm/m/n/10 (+20) al-low-ing neigh-bor routers to ex-change ag-gre-gated con
 -
  []
 
 
-Underfull \hbox (badness 3088) in paragraph at lines 1177--1187
+Underfull \hbox (badness 3088) in paragraph at lines 1446--1456
 \T1/ptm/m/n/10 (+20) ges-tion sig-nals; sub-second eBPF-driven sens-ing us-ing
  []
 
-[8
-pdfTeX warning (ext4): destination with the same identifier (name{table.12}) ha
-s been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.1187 
-       
-pdfTeX warning (ext4): destination with the same identifier (name{table.13}) ha
-s been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.1187 
-       ]
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -1376,7 +1494,7 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[9
+[11
 
 ] (./ieee_paper.aux)
  ***********
@@ -1384,14 +1502,14 @@ LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
 Package rerunfilecheck Info: File `ieee_paper.out' has not changed.
-(rerunfilecheck)             Checksum: 3893B5E151476FA88EA3F149E733AFFB;5300.
+(rerunfilecheck)             Checksum: A25599CFA80AE97E8F48A1495F0862C3;5856.
  ) 
 Here is how much of TeX's memory you used:
- 35645 strings out of 476182
- 818550 string characters out of 5795594
- 1959975 words of memory out of 5000000
- 56641 multiletter control sequences out of 15000+600000
- 700572 words of font info for 386 fonts, out of 8000000 for 9000
+ 35726 strings out of 476182
+ 819323 string characters out of 5795594
+ 1960975 words of memory out of 5000000
+ 56648 multiletter control sequences out of 15000+600000
+ 704986 words of font info for 432 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  84i,14n,93p,1007b,2287s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></us
@@ -1414,10 +1532,10 @@ nts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw
 /times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmbi8a.
 pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share
 /texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on ieee_paper.pdf (9 pages, 310566 bytes).
+Output written on ieee_paper.pdf (11 pages, 328262 bytes).
 PDF statistics:
- 424 PDF objects out of 1000 (max. 8388607)
- 365 compressed objects within 4 object streams
- 97 named destinations out of 1000 (max. 500000)
- 70421 words of extra memory for PDF output out of 74296 (max. 10000000)
+ 448 PDF objects out of 1000 (max. 8388607)
+ 387 compressed objects within 4 object streams
+ 105 named destinations out of 1000 (max. 500000)
+ 74533 words of extra memory for PDF output out of 89155 (max. 10000000)
 

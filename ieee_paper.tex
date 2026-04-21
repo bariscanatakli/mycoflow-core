@@ -29,7 +29,7 @@
   \IEEEauthorblockA{Department of Software Engineering\\
     Mu\u{g}la S\i{}tk\i{} Ko\c{c}man University\\
     Mu\u{g}la, Turkey\\
-    baris.atakli@ogr.mu.edu.tr}
+    bariscanatakli@posta.mu.edu.tr}
   \and
   \IEEEauthorblockN{Dr.\ \"{O}\u{g}r.\ \"{U}yesi Cihat \c{C}etinkaya}
   \IEEEauthorblockA{Department of Software Engineering\\
@@ -354,10 +354,10 @@ MycoFlow's design (Table~\ref{tab:bio}):
 \toprule
 \textbf{Biology} & \textbf{MycoFlow Mechanism} \\
 \midrule
-Hyphal tip sensing & ICMP multi-ping probes; Netlink qdisc stats; eBPF packet counters \\
-Adaptive nutrient redistribution & Per-device DSCP marking into CAKE priority tins \\
-Hysteresis \& structural memory & Majority-vote history window; stable-state snapshots; action cooldown timers \\
-Mycelial network remodeling & Sliding EWMA baseline; bandwidth step adaptation via action feedback ring \\
+Hyphal tip sensing & ICMP multi-ping; Netlink qdisc stats; conntrack; passive DNS; BPF passive TCP RTT \\
+Adaptive nutrient redistribution & Per-device and per-flow DSCP marking into CAKE priority tins (via iptables and CONNMARK/nftables) \\
+Hysteresis \& structural memory & Majority-vote window; two-tick flow stability gate; action cooldown timers \\
+Load-triggered remodeling & Sliding EWMA baseline; step adaptation via action feedback ring; per-flow RTT demote/re-promote ladder \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -384,10 +384,13 @@ cooldown timers serve the same purpose.
 
 \subsection{Overview}
 
-MycoFlow consists of five components deployed on the OpenWrt router:
+MycoFlow consists of seven components deployed on the OpenWrt router:
 \texttt{mycoflowd} (the control daemon), a CAKE qdisc on the WAN interface,
-an optional CAKE qdisc on an IFB device for ingress shaping, an iptables mangle
-chain for DSCP marking, and the LuCI dashboard.
+an optional CAKE qdisc on an IFB device for ingress shaping, an iptables
+mangle chain for per-device DSCP marking, an nftables mangle POSTROUTING
+chain that restores per-flow CONNMARKs to DSCP, an optional BPF TC~clsact
+program that samples passive TCP RTT on the WAN interface, and the LuCI
+dashboard.
 
 Fig.~\ref{fig:arch} shows the reflexive loop.
 The daemon runs at a configurable rate (default 1~Hz) and executes four
@@ -396,14 +399,21 @@ phases per cycle:
 \begin{enumerate}
   \item \textbf{Sense:} Collect RTT/jitter via ICMP probes, interface
     byte/packet counters via \texttt{/proc/net/dev}, qdisc statistics
-    via NETLINK\_ROUTE, and flow statistics from
-    \texttt{/proc/net/nf\_conntrack}.
+    via NETLINK\_ROUTE, flow statistics from
+    \texttt{/proc/net/nf\_conntrack}, passive DNS responses from the
+    local resolver, and per-flow smoothed TCP~RTT from the BPF map.
   \item \textbf{Infer:} Apply EWMA smoothing to raw metrics; run the
-    six-class per-device persona engine; update the system-wide persona
-    via majority vote.
-  \item \textbf{Act:} If the persona changed, update CAKE AQM target latency
-    and apply per-device DSCP mangle rules. If congestion is detected, adjust
-    the WAN bandwidth cap subject to cooldown constraints.
+    six-class per-device persona engine and update the system-wide
+    persona via majority vote; run the three-signal weighted voter
+    over each active 5-tuple to assign a flow-level service class.
+  \item \textbf{Act:} If the persona changed, update CAKE AQM target
+    latency and apply per-device DSCP mangle rules. For each
+    newly stable flow, push a CONNMARK so the nftables mangle
+    POSTROUTING chain restores its DSCP on egress.
+    If a flow's RTT exceeds its service target for two ticks,
+    demote it one tier; re-promote symmetrically after recovery.
+    If congestion is detected, adjust the WAN bandwidth cap
+    subject to cooldown constraints.
   \item \textbf{Stabilize:} Record actuation outcomes in the feedback ring;
     evaluate ring for step-size adaptation; update the sliding baseline.
 \end{enumerate}
@@ -416,10 +426,10 @@ phases per cycle:
               text width=3.2cm, align=center, font=\footnotesize},
   arr/.style={-{Latex[length=2.5mm,width=1.8mm]}, thick}
 ]
-\node[blk, fill=blue!12]   (sense)  {Sense\\{\tiny eBPF/Netlink/ICMP/conntrack}};
-\node[blk, fill=green!12,  below=of sense]  (infer)  {Infer\\{\tiny 6-persona engine + EWMA}};
-\node[blk, fill=orange!12, below=of infer]  (act)    {Act\\{\tiny CAKE + DSCP + IFB}};
-\node[blk, fill=red!12,    below=of act]    (stab)   {Stabilize\\{\tiny baseline + feedback ring}};
+\node[blk, fill=blue!12]   (sense)  {Sense\\{\tiny ICMP/Netlink/conntrack/DNS/BPF-RTT}};
+\node[blk, fill=green!12,  below=of sense]  (infer)  {Infer\\{\tiny 6-persona + 12-service voter}};
+\node[blk, fill=orange!12, below=of infer]  (act)    {Act\\{\tiny CAKE + DSCP + CONNMARK + IFB}};
+\node[blk, fill=red!12,    below=of act]    (stab)   {Stabilize\\{\tiny baseline + feedback ring + RTT demote}};
 
 \draw[arr] (sense.south) -- node[right,font=\tiny]{metrics}  (infer.north);
 \draw[arr] (infer.south) -- node[right,font=\tiny]{persona}  (act.north);
@@ -902,9 +912,9 @@ P1: Research \& Baseline &
 \midrule
 P2: Architecture \& Design &
   Dec 2025 &
-  Formal control loop specification (EWMA, hysteresis thresholds, k-of-m
-  majority vote); API surface design (ubus, UCI schema); module decomposition
-  into 12 source files; eBPF telemetry architecture; CAKE diffserv4
+  Formal control loop specification (EWMA, hysteresis thresholds, $k$-of-$m$
+  majority vote); API surface design (ubus, UCI schema); initial
+  module decomposition; eBPF telemetry architecture; CAKE diffserv4
   integration strategy. \\
 \midrule
 P3: Core Implementation &
@@ -1248,11 +1258,14 @@ preserves interactive latency.
 \subsection{Resource Overhead}
 
 Table~\ref{tab:resources} summarizes the resource footprint measured in the
-QEMU environment and projected for the target hardware.
-CPU overhead at 1~Hz (excluding the startup baseline calibration) is below 2\%.
-RAM usage includes the 256-entry flow table, per-device table, action ring,
-and EWMA state.
-The IFB and iptables rules add negligible kernel-side memory.
+QEMU environment and confirmed on the target hardware
+(Section~\ref{subsec:hardware}).
+CPU overhead at 1--2~Hz (excluding the startup baseline calibration) stays
+below 2\% on a single Cortex-A53 core.
+RAM usage includes the 256-entry conntrack LRU, per-device table,
+per-flow service table, DNS snoop cache, action ring, and EWMA state.
+The IFB, iptables, nftables mangle chain, and BPF map add negligible
+kernel-side memory.
 
 \begin{table}[t]
 \caption{MycoFlow Resource Budget}
@@ -1261,19 +1274,21 @@ The IFB and iptables rules add negligible kernel-side memory.
 \small
 \begin{tabular}{lll}
 \toprule
-\textbf{Resource} & \textbf{Budget} & \textbf{Actual} \\
+\textbf{Resource} & \textbf{Budget} & \textbf{Actual (AX3000T)} \\
 \midrule
-CPU (1~Hz loop)      & $<$20\%   & $<$2\% (QEMU est.) \\
-RAM (daemon)         & $<$64~MB  & $\approx$4~MB \\
+CPU (1--2~Hz loop)    & $<$20\%   & $<$2\% \\
+RAM (daemon RSS)     & $<$64~MB  & $\approx$4--5~MB \\
 Flash writes         & 0~B       & 0~B \\
-Package size (IPK)   & —         & $<$200~KB \\
+Package size (IPK)   & ---       & $<$200~KB \\
 Startup latency      & $<$10~s   & $\approx$6~s (5 baseline samples) \\
 Persona reaction time& $<$5~s    & $\approx$2.5~s (2.5~cycles at 1~Hz) \\
+Flow stability commit& $<$2~s    & $\approx$1~s (2 ticks at 2~Hz) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Hardware Evaluation on Xiaomi AX3000T}
+\label{subsec:hardware}
 
 The daemon, LuCI package, and the v3 flow-aware stack are deployed on
 the author's live home router
@@ -1399,23 +1414,34 @@ future work will explore sub-second sensing with eBPF ring buffers.
 \label{sec:conclusion}
 
 We have presented MycoFlow, a bio-inspired reflexive QoS daemon for OpenWrt
-routers that automatically classifies per-device traffic, steers it into
-appropriate CAKE priority tins via DSCP marking, and adapts the WAN bandwidth
-cap through a feedback-driven hysteresis controller.
+routers that classifies traffic on two complementary levels---a six-class
+per-device persona engine and a twelve-class per-flow service taxonomy
+driven by a three-signal weighted voter---steers it into appropriate CAKE
+priority tins via DSCP marking (iptables for devices, CONNMARK\,+\,nftables
+for flows), monitors per-flow TCP~RTT through a passive BPF observer, and
+adapts the WAN bandwidth cap through a feedback-driven hysteresis
+controller.
 
-Two controlled QEMU experiments demonstrate the system's effectiveness:
+Three controlled experiments demonstrate the system's effectiveness:
 a 154$\times$ in-tin delay advantage for gaming traffic over bulk traffic
-when per-device classification is correct, and a 38\% reduction in gaming
-latency under a five-client mixed-persona workload compared to CAKE-alone.
-The daemon runs within a $<$2\% CPU budget and writes zero bytes to flash,
-preserving NAND endurance on constrained hardware.
+when per-device classification is correct;
+a 38\% reduction in gaming latency under a five-client mixed-persona
+workload compared to CAKE-alone;
+and correct per-flow service separation when a single source IP
+simultaneously runs game, VoIP, bulk, and torrent traffic---a failure
+mode that any per-device scheme cannot resolve.
+The daemon runs within a $<$2\% CPU budget on a live
+Xiaomi~AX3000T deployment and writes zero bytes to flash, preserving
+NAND endurance on constrained hardware.
 
-The bio-inspired design philosophy—local sensing, adaptive redistribution,
-hysteresis-guided stability, and continuous baseline recalibration—proved
+The bio-inspired design philosophy---local sensing, adaptive redistribution,
+hysteresis-guided stability, and continuous baseline recalibration---proved
 well-suited to the embedded QoS domain.
 Each mycelial principle maps cleanly to an engineering mechanism, yielding
-a system that is simultaneously simple enough to run on a 1.3~GHz dual-core
-router and sophisticated enough to handle six distinct traffic classes.
+a system that is simultaneously simple enough to run on a 1.3~GHz
+dual-core router and sophisticated enough to separate
+individual 5-tuples into distinct service classes with RTT-driven
+self-correction.
 
 \textbf{Future directions} include:
 cooperative ``mycelium maps'' allowing neighbor routers to exchange
@@ -1514,12 +1540,6 @@ A.~Adamatzky et~al.,
 Y.~Fukasawa, M.~Savoury, and L.~Boddy,
 ``Foraging strategies of fungal mycelial networks,''
 \emph{Frontiers in Cell and Developmental Biology}, 2023.
-
-\bibitem{mcconnell2004}
-S.~McConnell,
-\emph{Code Complete}, 2nd~ed.
-Redmond, WA: Microsoft Press, 2004, ch.~27 (How Program Size Affects
-Construction).
 
 \bibitem{dorigo1996ant}
 M.~Dorigo, V.~Maniezzo, and A.~Colorni,
