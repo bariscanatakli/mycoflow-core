@@ -7,7 +7,16 @@
       "Bash(./test_mangle)",
       "Bash(./test_classifier)",
       "Bash(./test_profile)",
-      "Bash(bash -n scripts/multi-app-bench.sh)"
+      "Bash(bash -n scripts/multi-app-bench.sh)",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@10.10.1.1 'uname -a; cat /etc/openwrt_release 2>/dev/null | head -3; mycoflowd --version 2>&1 | head -1 || true')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'uci show mycoflow | head -30; echo \"---\"; ls /usr/share/luci/menu.d/ | grep -i myco; ls /www/luci-static/resources/view/ 2>/dev/null | grep -i myco')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'cat /tmp/myco_state.json 2>/dev/null | head -50; echo \"---\"; md5sum /usr/bin/mycoflowd 2>/dev/null')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'stat -c \"%y %n\" /usr/bin/mycoflowd /www/luci-static/resources/view/mycoflow.js 2>/dev/null; echo \"---\"; grep -c \"Active Flows\" /www/luci-static/resources/view/mycoflow.js 2>/dev/null; echo \"---\"; grep -c \"SERVICE_STYLES\" /www/luci-static/resources/view/mycoflow.js 2>/dev/null')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'stat /usr/bin/mycoflowd /www/luci-static/resources/view/mycoflow.js 2>&1 | grep -E \"Modify|File:\"')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'ls -l /usr/bin/mycoflowd /www/luci-static/resources/view/mycoflow.js /etc/config/mycoflow /etc/init.d/mycoflowd 2>&1')",
+      "Bash(build/src/test_persona)",
+      "Bash(build/src/test_device)",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'md5sum /usr/bin/mycoflowd')"
     ]
   }
 }

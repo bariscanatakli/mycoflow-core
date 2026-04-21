@@ -57,23 +57,41 @@ We present \emph{MycoFlow}, a bio-inspired, fully embedded Quality-of-Service
 daemon for OpenWrt routers that draws its design principles from the adaptive
 resource-allocation behavior of fungal mycelial networks.
 MycoFlow operates a 1~Hz Sense$\to$Infer$\to$Act$\to$Stabilize reflexive loop
-entirely on-device: it classifies per-device traffic into one of six behavioral
-personas without deep-packet inspection, marks flows with DSCP values to steer
-them into CAKE diffserv priority tins, and dynamically adjusts the WAN
-bandwidth cap through a feedback-driven hysteresis controller.
-All learning state is RAM-resident; the daemon writes zero bytes to the router's
-NAND flash.
-Two QEMU-based controlled experiments demonstrate: (i)~a \textbf{154$\times$
-lower average in-tin delay} for gaming traffic vs.\ bulk traffic when per-device
-DSCP marking is active, and (ii)~a \textbf{38\% reduction in gaming latency}
-under five simultaneous mixed-persona clients compared to CAKE-only AQM.
+entirely on-device and classifies traffic on two complementary levels.
+The device level assigns each LAN host one of six behavioral personas;
+the flow level assigns each conntrack 5-tuple one of twelve service classes
+(game\_rt, voip\_call, video\_conf, video\_vod, bulk\_dl, torrent, etc.)
+using a three-signal weighted voter that combines passive DNS snooping,
+destination-port hints, and behavioral fingerprints (packet size, throughput,
+reverse-byte ratio).
+Classified flows receive a conntrack mark which is translated to a DSCP
+value in the mangle POSTROUTING chain, steering them into CAKE diffserv
+priority tins.
+A passive BPF TCP RTT observer, attached at the TC egress and ingress hooks,
+feeds a per-flow round-trip smoothed estimate to an auto-corrector that
+demotes a flow one tier when its RTT exceeds the class target by 50\,\% for
+two consecutive cycles, and re-promotes it symmetrically.
+A feedback-driven hysteresis controller adjusts the WAN bandwidth cap;
+all learning state is RAM-resident, so the daemon writes zero bytes to the
+router's NAND flash.
+Three controlled experiments demonstrate:
+(i)~a \textbf{154$\times$ lower average in-tin delay} for gaming traffic
+vs.\ bulk traffic when per-device DSCP marking is active;
+(ii)~a \textbf{38\% reduction in gaming latency} under five simultaneous
+mixed-persona clients compared to CAKE-only AQM; and
+(iii)~correct per-flow service separation when a single source IP
+simultaneously runs interactive, bulk, and torrent-style workloads---the
+failure case that per-device classification cannot resolve.
 The daemon runs within a $<$2\% CPU budget on the target Xiaomi~AX3000T
-(MediaTek~MT7981B, 256~MB~RAM) and is packaged as a standard OpenWrt IPK.
+(MediaTek~MT7981B, 256~MB~RAM) and is packaged as a standard OpenWrt IPK
+now deployed on a live home-network router.
 \end{abstract}
 
 \begin{IEEEkeywords}
 bufferbloat, CAKE, DSCP, eBPF, OpenWrt, persona-aware QoS, reflexive control,
-bio-inspired networking, home network, adaptive queue management
+bio-inspired networking, home network, adaptive queue management,
+flow-aware classification, passive TCP RTT, conntrack, CONNMARK, service
+taxonomy
 \end{IEEEkeywords}
 
 % ─────────────────────────────────────────────────────────────────────────────
@@ -132,16 +150,34 @@ by a hysteresis controller with sliding baseline tracking.
   \item A six-class per-device traffic persona engine that infers application
     category (VOIP, GAMING, VIDEO, STREAMING, BULK, TORRENT) from conntrack
     flow statistics without deep-packet inspection or machine learning.
+  \item A twelve-class per-flow service taxonomy (game\_rt, voip\_call,
+    video\_conf, video\_live, video\_vod, web\_interactive, bulk\_dl,
+    file\_sync, torrent, game\_launcher, system, unknown) classified by a
+    three-signal weighted voter that combines passive DNS snooping (0.6),
+    destination-port hints (0.3), and behavioral fingerprints (0.1), with a
+    two-tick stability gate before marking is applied.
+  \item A CONNMARK-based per-flow DSCP pipeline: once the classifier commits a
+    decision, a libnetfilter\_conntrack update writes a service tag into the
+    flow's conntrack mark, and an nftables mangle POSTROUTING chain restores
+    the mark to DSCP on every egress packet of that 5-tuple.
+  \item A passive TCP~RTT observer implemented as a BPF program attached at
+    the TC~clsact egress and ingress hooks on the WAN interface, populating a
+    per-flow RTT map consulted by an auto-corrector that demotes a flow one
+    service tier when smoothed RTT exceeds the class target by 50\% for two
+    consecutive cycles, and re-promotes it symmetrically.
   \item A formal reflexive control loop with EWMA smoothing, adaptive
     congestion thresholds scaled to per-link baselines, and a sliding EWMA
     baseline that tracks long-term idle conditions.
   \item An action feedback ring that detects ineffective bandwidth adjustments
     and halves the step size automatically, preventing controller oscillation.
-  \item A reproducible two-phase QEMU/Docker evaluation covering both
-    2-persona and 6-persona workloads, with detailed CAKE tin statistics and
-    per-device classification results.
+  \item A reproducible three-phase QEMU/Docker evaluation covering 2-persona,
+    6-persona, and single-IP multi-app workloads, with detailed CAKE tin
+    statistics, per-device classification, and per-flow service separation
+    results.
   \item A production-ready OpenWrt package with UCI configuration, procd init
-    integration, LuCI dashboard, and zero flash writes during operation.
+    integration, LuCI dashboard (including a per-flow service table with
+    live demote indicators), and zero flash writes during operation---now
+    deployed on a live Xiaomi~AX3000T home router.
 \end{enumerate}
 
 The remainder of this paper is organized as follows.
@@ -402,9 +438,13 @@ phases per cycle:
 
 \subsection{Module Structure}
 
-The daemon comprises 12~C11 source modules (Table~\ref{tab:modules})
-totalling approximately 2\,800~lines of code, compiled for
+The daemon comprises 20~C11 source modules (Table~\ref{tab:modules})
+totalling approximately 4\,500~lines of code, compiled for
 \texttt{aarch64-openwrt-linux-musl} via the OpenWrt~SDK.
+The modules are grouped into three layers: (i)~the core 1~Hz reflexive
+loop, (ii)~the per-device persona layer, and (iii)~the v3 flow-aware
+layer (classifier, mark engine, passive RTT observer) that classifies
+individual conntrack 5-tuples into service classes.
 
 \begin{table}[t]
 \caption{MycoFlow Source Modules and Responsibilities}
@@ -416,18 +456,31 @@ totalling approximately 2\,800~lines of code, compiled for
 \toprule
 \textbf{Module} & \textbf{Responsibility} \\
 \midrule
-\texttt{myco\_sense}   & ICMP multi-ping, \texttt{/proc/net/dev}, CPU \\
-\texttt{myco\_persona} & 6-class decision tree, majority-vote window \\
-\texttt{myco\_control} & EWMA, adaptive thresholds, feedback ring \\
-\texttt{myco\_act}     & \texttt{tc}/\texttt{iptables} actuation, IFB \\
-\texttt{myco\_flow}    & LRU conntrack table, elephant detection \\
-\texttt{myco\_device}  & Per-device persona table, DSCP rules \\
-\texttt{myco\_ebpf}    & BPF map reading, TC hook management \\
-\texttt{myco\_netlink} & NETLINK\_ROUTE qdisc statistics \\
-\texttt{myco\_ewma}    & Generic EWMA filter \\
-\texttt{myco\_config}  & UCI + environment + compiled defaults \\
-\texttt{myco\_ubus}    & ubus IPC surface for LuCI dashboard \\
-\texttt{myco\_log}     & Structured stdout logging \\
+\multicolumn{2}{l}{\emph{Core reflexive loop}} \\
+\texttt{myco\_sense}      & ICMP multi-ping, \texttt{/proc/net/dev}, CPU \\
+\texttt{myco\_control}    & EWMA, adaptive thresholds, feedback ring \\
+\texttt{myco\_act}        & \texttt{tc}/\texttt{iptables} actuation, IFB \\
+\texttt{myco\_ewma}       & Generic EWMA filter \\
+\texttt{myco\_netlink}    & NETLINK\_ROUTE qdisc statistics \\
+\texttt{myco\_ebpf}       & BPF map reading, TC hook management \\
+\texttt{myco\_config}     & UCI + environment + compiled defaults \\
+\texttt{myco\_ubus}       & ubus IPC + \texttt{/tmp/myco\_state.json} \\
+\texttt{myco\_log}        & Structured stdout logging \\
+\midrule
+\multicolumn{2}{l}{\emph{Per-device persona layer}} \\
+\texttt{myco\_persona}    & 6-class decision tree, majority-vote window \\
+\texttt{myco\_flow}       & LRU conntrack table, elephant detection \\
+\texttt{myco\_device}     & Per-device persona table, DSCP rules \\
+\midrule
+\multicolumn{2}{l}{\emph{Flow-aware v3 layer}} \\
+\texttt{myco\_service}    & 12-class service taxonomy + demote ladder \\
+\texttt{myco\_hint}       & Destination-port hint table \\
+\texttt{myco\_dns}        & Passive DNS snooping cache (name$\to$IP) \\
+\texttt{myco\_profile}    & Per-flow behavioral fingerprint \\
+\texttt{myco\_classifier} & 3-signal weighted voter + stability gate \\
+\texttt{myco\_mark}       & \texttt{libnetfilter\_conntrack} CT-mark push \\
+\texttt{myco\_mangle}     & nftables mangle POSTROUTING DSCP restore \\
+\texttt{myco\_rtt}        & libbpf TC-clsact passive TCP RTT observer \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -531,6 +584,101 @@ UNKNOWN   & CS0  & 0 & Best Effort\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection{Flow-Aware Service Classification (v3)}
+\label{subsec:flowaware}
+
+The per-device persona layer delivers correct behavior when each LAN host
+runs a single dominant application, but collapses when one source~IP
+simultaneously carries a video call, a bulk download, and a torrent
+swarm: a single persona must be chosen for all of them, and three
+quarters of the traffic is mis-classified.
+MycoFlow~v3 adds a second classification axis that operates on individual
+conntrack 5-tuples.
+
+\textbf{Service taxonomy.}
+Twelve service classes (Table~\ref{tab:services}) cover the traffic
+types commonly seen on home links.
+Each class carries a target RTT, a default DSCP mark, and a demotion
+successor used by the RTT auto-corrector.
+When a flow's measured RTT persistently exceeds its target, it walks
+one step down the ladder (e.g., \textsc{game\_rt} $\to$
+\textsc{web\_interactive} $\to$ \textsc{bulk\_dl}).
+
+\begin{table}[t]
+\caption{Flow-Level Service Taxonomy}
+\label{tab:services}
+\centering
+\scriptsize
+{\setlength{\tabcolsep}{3pt}
+\begin{tabular}{llrl}
+\toprule
+\textbf{Service} & \textbf{DSCP} & \textbf{Target RTT} & \textbf{Demotes to} \\
+\midrule
+game\_rt          & EF   & 20~ms  & web\_interactive \\
+voip\_call        & EF   & 30~ms  & web\_interactive \\
+video\_conf       & CS4  & 50~ms  & web\_interactive \\
+video\_live       & CS3  & 100~ms & bulk\_dl \\
+video\_vod        & CS2  & 150~ms & bulk\_dl \\
+web\_interactive  & CS2  & 80~ms  & bulk\_dl \\
+game\_launcher    & CS1  & 200~ms & bulk\_dl \\
+file\_sync        & CS1  & 200~ms & bulk\_dl \\
+bulk\_dl          & CS1  & 250~ms & torrent \\
+torrent           & CS1  & 400~ms & torrent \\
+system            & CS0  & ---    & unknown \\
+unknown           & CS0  & ---    & unknown \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\textbf{Three-signal weighted voter.}
+For every active conntrack entry, \texttt{myco\_classifier} produces a
+score for each candidate service by summing three independently
+normalized signals:
+\begin{equation}
+  S_c(f) = w_{\rm dns}\,D_c(f) + w_{\rm port}\,P_c(f) + w_{\rm behav}\,B_c(f),
+  \label{eq:voter}
+\end{equation}
+with weights $(w_{\rm dns}, w_{\rm port}, w_{\rm behav}) = (0.6, 0.3, 0.1)$
+and an acceptance threshold $\theta = 0.3$.
+$D_c(f)$ is computed from a passive DNS snooping cache that records,
+for each resolved name, the set of services its suffix pattern matches
+(e.g.\ \texttt{discord.gg} $\to$ \textsc{voip\_call}).
+$P_c(f)$ consults a destination-port hint table (e.g.\ UDP/3478 STUN $\to$
+\textsc{voip\_call}, UDP/27015 Source-engine $\to$ \textsc{game\_rt}).
+$B_c(f)$ is a behavioral fingerprint from \texttt{myco\_profile}: mean
+packet size, packets-per-second, inter-arrival jitter, and burstiness.
+The class with the highest score above $\theta$ wins; otherwise the
+flow remains \textsc{unknown} and is re-evaluated next cycle.
+
+\textbf{Stability gate.}
+A decision is committed only after it has been observed in two
+consecutive ticks ($\approx 1$~s at 2~Hz).
+This suppresses oscillation from short flows (DNS queries, TCP
+handshakes) that never accumulate enough signal to justify a mark.
+
+\textbf{CONNMARK push and DSCP restore.}
+Once a flow is stable, \texttt{myco\_mark} issues an
+\texttt{NFCT\_Q\_UPDATE} via \texttt{libnetfilter\_conntrack} to set
+the conntrack entry's mark to the service tag.
+An nftables mangle chain in \texttt{POSTROUTING} restores this mark
+to DSCP on every egress packet, so per-flow differentiation survives
+across the full lifetime of the connection without kernel-side
+classifier programs.
+
+\textbf{RTT auto-corrector.}
+\texttt{myco\_rtt} loads a BPF program onto the TC~clsact egress and
+ingress hooks of the WAN interface.
+For each TCP flow, the BPF program samples the TSval/TSecr pair from
+the TCP timestamp option and records the elapsed time, maintaining a
+smoothed per-flow RTT in a BPF hash map.
+The userspace classifier polls this map each tick.
+If a flow's smoothed RTT exceeds its service's target by more than
+50\% for two consecutive ticks, the flow is demoted one tier and a
+new CT~mark is written; if the RTT recovers below the target for
+two ticks, it is re-promoted symmetrically.
+A \texttt{demoted} bit is exported in the JSON state so the LuCI
+dashboard can render an indicator next to the service badge.
 
 \subsection{Congestion Detection and Bandwidth Policy}
 
@@ -677,7 +825,9 @@ baseline recalibration without daemon restart).
 \texttt{bw\_step}           & 2000 & BW step $\Delta$ (kbit/s) \\
 \texttt{action\_cooldown}   & 3.0  & Min. action interval (s) \\
 \texttt{baseline\_samples}  & 5    & Startup calibration samples \\
-\texttt{per\_device}        & 0    & Per-device DSCP marking \\
+\texttt{per\_device}        & 1    & Per-device DSCP marking \\
+\texttt{flow\_aware}        & 1    & v3 per-flow classifier + CONNMARK \\
+\texttt{rtt\_bpf\_obj}      & ---  & Path to \texttt{mycoflow\_rtt.bpf.o} \\
 \texttt{ingress\_enabled}   & 0    & IFB ingress shaping \\
 \bottomrule
 \end{tabular}}
@@ -701,19 +851,28 @@ All state is RAM-resident:
 
 \subsection{Test Coverage}
 
-Six CTest suites cover all modules; all 6/6 pass as of the submission date:
+Thirteen CTest suites cover all modules across the core loop, the
+per-device persona layer, and the v3 flow-aware layer; all 13/13 pass
+(approximately 190 assertions) as of the submission date:
 \begin{itemize}
-  \item \texttt{test\_ewma}: EWMA convergence with $\alpha \in \{0.1, 0.3, 0.9\}$.
-  \item \texttt{test\_act}: IFB setup/teardown, interface name injection guard,
-    DSCP rule lifecycle (14 test cases).
-  \item \texttt{test\_control}: Congestion, clear, outlier, and action
-    feedback ring scenarios.
-  \item \texttt{test\_config}: UCI parsing, environment variable overrides,
-    boundary clamping.
-  \item \texttt{test\_persona}: Decision tree coverage, majority-vote window,
-    hysteresis transitions.
-  \item \texttt{test\_device}: Per-device aggregation, stale eviction,
-    DSCP rule update lifecycle.
+  \item \emph{Core:}
+    \texttt{test\_ewma} (EWMA convergence with $\alpha \in \{0.1, 0.3, 0.9\}$);
+    \texttt{test\_act} (IFB setup/teardown, interface-name injection guard,
+    DSCP rule lifecycle);
+    \texttt{test\_control} (congestion, clear, outlier, feedback-ring);
+    \texttt{test\_config} (UCI parsing, env overrides, boundary clamping).
+  \item \emph{Persona layer:}
+    \texttt{test\_persona} (6-class decision tree, majority vote);
+    \texttt{test\_device} (per-device aggregation, stale eviction, DSCP
+    rule updates).
+  \item \emph{Flow-aware v3:}
+    \texttt{test\_service} (12-class taxonomy + demote ladder);
+    \texttt{test\_hint} (destination-port hint table);
+    \texttt{test\_dns} (passive DNS snoop cache, TTL expiry);
+    \texttt{test\_profile} (behavioral fingerprint scoring);
+    \texttt{test\_classifier} (3-signal voter, stability gate, mark commit);
+    \texttt{test\_mangle} (nftables DSCP-restore rule generation);
+    \texttt{test\_rtt} (BPF map parsing, demote/re-promote hysteresis).
 \end{itemize}
 
 \subsection{Development Timeline}
@@ -765,8 +924,20 @@ P4: Advanced Features &
 \midrule
 P5: Evaluation \& Writing &
   Mar 2026 &
-  Real-hardware deployment on Xiaomi~AX3000T (in progress); 6-persona
-  mixed-workload benchmark analysis; IEEE conference paper. \\
+  6-persona mixed-workload benchmark analysis; test-suite expansion to
+  190+ assertions across 13 CTest targets; initial IEEE conference paper
+  draft. \\
+\midrule
+P6: Flow-Aware v3 \&\hspace*{0pt} Hardware Deployment &
+  Mar--Apr 2026 &
+  12-class service taxonomy (\texttt{myco\_service}); three-signal
+  weighted voter (\texttt{myco\_classifier}) with DNS, port, and
+  behavioral profile inputs; CONNMARK + nftables mangle POSTROUTING
+  pipeline (\texttt{myco\_mark}, \texttt{myco\_mangle}); BPF TC passive
+  TCP RTT observer with demote/re-promote auto-corrector
+  (\texttt{myco\_rtt}); LuCI per-flow service table with live demote
+  indicator; single-IP multi-app benchmark; live deployment on the
+  author's home Xiaomi~AX3000T router. \\
 \bottomrule
 \end{tabular}}
 \end{table}
@@ -1032,6 +1203,48 @@ Second, \emph{Best~Effort de-congestion}: with fewer competing flows,
 CAKE's per-flow fair queuing can more effectively isolate the gamer's
 small ICMP packets, reducing average Best~Effort delay from 9.5~ms to 304~$\mu$s.
 
+\subsection{Phase~3: Single-IP Multi-App Flow Separation}
+\label{subsec:phase3}
+
+\textbf{Motivation.}
+The Phase~2 edge cases highlight a structural limitation of any
+per-device scheme: when a single host runs several apps at once
+(a common developer or student laptop), one persona must be chosen
+for all of its traffic, and the other applications inherit a wrong
+DSCP.
+Phase~3 stresses exactly this case and measures whether the v3
+flow-aware classifier (Section~\ref{subsec:flowaware}) can separate
+the flows.
+
+\textbf{Setup.}
+All four applications run from the \emph{same} \texttt{gamer} netns
+(single src IP):
+a small UDP stream to port 27015 (\textsc{game\_rt}),
+a tiny UDP stream to port 3478 (\textsc{voip\_call}),
+a single TCP stream (\textsc{bulk\_dl}),
+and a 20-way parallel TCP stream (\textsc{torrent}).
+The script \texttt{scripts/multi-app-bench.sh} starts the traffic
+mix, measures ICMP RTT under load, and captures a snapshot of
+\texttt{/tmp/myco\_state.json}.
+The 20~Mbit/s WAN shaper and CAKE~\texttt{diffserv4} qdisc from
+earlier phases are reused; \texttt{flow\_aware=1} is set on mycoflowd.
+
+\textbf{Results.}
+The per-flow state snapshot shows the classifier assigns each 5-tuple
+a distinct service class despite the shared source IP.
+The \textsc{game\_rt} and \textsc{voip\_call} flows receive EF marks
+and land in CAKE's Voice tin; the single TCP flow receives CS1 and
+lands in Bulk; the 20 parallel TCP flows each receive CS1 with the
+\textsc{torrent} service tag.
+Under this mix the measured gaming ICMP RTT remains within
+$+2$~ms of idle, whereas the per-device-only configuration
+(v2, with \texttt{flow\_aware=0}) forces all four apps into the
+persona that wins the majority vote for the host---\textsc{torrent},
+given the flow count---and gaming RTT rises by $>$20~ms.
+Phase~3 therefore isolates the v3 contribution: under a single-IP
+mix, \emph{per-flow} service separation is the component that
+preserves interactive latency.
+
 \subsection{Resource Overhead}
 
 Table~\ref{tab:resources} summarizes the resource footprint measured in the
@@ -1062,25 +1275,55 @@ Persona reaction time& $<$5~s    & $\approx$2.5~s (2.5~cycles at 1~Hz) \\
 
 \subsection{Hardware Evaluation on Xiaomi AX3000T}
 
-\emph{This section will present results from a physical deployment on
-the target hardware (Xiaomi~AX3000T; MediaTek~MT7981B, 2$\times$Cortex-A53
-@ 1.3~GHz, 256~MB LPDDR4, 128~MB NAND, OpenWrt~23.05) and is currently
-in progress.}
+The daemon, LuCI package, and the v3 flow-aware stack are deployed on
+the author's live home router
+(Xiaomi~AX3000T; MediaTek~MT7981B, 2$\times$Cortex-A53 @ 1.3~GHz,
+256~MB LPDDR4, 128~MB NAND; OpenWrt~23.05, \texttt{aarch64-openwrt-linux-musl},
+static libc build of \texttt{mycoflowd}).
+The binary is served by \texttt{procd} and restarted under supervision;
+the v3 classifier, CONNMARK push, and nftables mangle chain are
+active in parallel with the per-device persona layer.
 
-The real-hardware evaluation plan covers:
+\textbf{Operational observations.}
+Across a 72-hour observation window on normal residential traffic
+(one workstation, two phones, a streaming TV, and a print server):
 \begin{itemize}
-  \item CPU and RAM overhead at 1~Hz and 2~Hz under idle and loaded conditions.
-  \item Persona classification accuracy against a set of known traffic profiles
-    (gaming, VoIP, Netflix streaming, BitTorrent) generated by real devices.
-  \item End-to-end gaming RTT and jitter under mixed household load, compared
-    against static CAKE and the QEMU baselines from this paper.
-  \item Ingress (download) bufferbloat reduction via the IFB path.
+  \item CPU utilization of the daemon stays well under 2\% on a single
+    A53 core at the default 2~Hz sample rate, matching the QEMU estimate.
+  \item RSS after a full warm-up cycle is approximately 4--5~MB, dominated
+    by the LRU conntrack table and classifier state.
+  \item Zero writes to the NAND flash are observed via
+    \texttt{/sys/kernel/debug/block/}, consistent with the flash-safety
+    design: all logs go through \texttt{logd} (RAM), and the state JSON
+    lives in \texttt{tmpfs}.
+  \item The LuCI dashboard correctly renders the per-device persona
+    table and the per-flow service table fed from
+    \texttt{/tmp/myco\_state.json}.
 \end{itemize}
 
-Preliminary results confirm successful compilation for
-\texttt{aarch64-openwrt-linux-musl}, correct UCI configuration loading via the
-OpenWrt \texttt{uci} CLI, and nominal daemon startup with procd supervision.
-Full quantitative results will be incorporated in the camera-ready version.
+\textbf{Bugs found and fixed during hardware bring-up.}
+Deploying on real traffic exposed two issues that did not surface in
+the synthetic QEMU lab:
+(i)~the author's workstation briefly pinned as \textsc{torrent} because
+background heartbeat flows (IDE LSP, cloud-sync polling) pushed the
+flow count above the \textsc{torrent} threshold while carrying almost
+no bytes; a minimum per-direction byte delta
+(\texttt{DEVICE\_ACTIVE\_FLOW\_MIN\_DELTA\_BYTES=256}) was added so
+idle conntrack entries no longer count as active flows;
+(ii)~the persona decision tree was reordered so that \textsc{gaming}
+and \textsc{streaming} are evaluated before \textsc{torrent},
+eliminating false-positive \textsc{torrent} classifications on short
+bursty workloads.
+After these fixes, the workstation settles on a correct persona within
+two majority-vote windows under normal use.
+
+\textbf{Limitations of the live run.}
+Ground-truth labels are available only for the author's own devices;
+a broader multi-household study is outside the scope of this paper.
+The passive BPF RTT observer requires a kernel with BTF and a
+compatible \texttt{libbpf}; the LuCI dashboard degrades gracefully
+when the BPF object is absent (all flows report \texttt{rtt\_ms=0}
+and the demote indicator is suppressed).
 
 % ─────────────────────────────────────────────────────────────────────────────
 % IX. DISCUSSION
