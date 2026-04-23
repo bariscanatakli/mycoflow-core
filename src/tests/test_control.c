@@ -79,7 +79,7 @@ static char *test_is_outlier() {
     mu_assert("error, high RTT not flagged", is_outlier(&metrics, &baseline, &cfg) == 1);
     metrics.rtt_ms = 12.0;
 
-    metrics.jitter_ms = 12.0; /* 6× baseline */
+    metrics.jitter_ms = 18.0; /* 9× baseline, satisfies > 8× threshold */
     mu_assert("error, high jitter not flagged", is_outlier(&metrics, &baseline, &cfg) == 1);
 
     return 0;

@@ -133,6 +133,7 @@ int control_decide(control_state_t *state,
         state->outlier_streak = 0;
     }
 
+
     if (state->safe_mode) {
         if (!outlier && state->recovery_streak >= SAFE_MODE_EXIT_STREAK) {
             state->safe_mode = 0;
