@@ -383,15 +383,22 @@ int main(void) {
 
         /* Sliding baseline: drift toward current conditions every N cycles.
          * Keeps the reference point fresh without full recalibration.
-         * Only updates rtt_ms and jitter_ms (probe-based fields).
-         * IMPORTANT: Do NOT update baseline while in safe mode — the EWMA
-         * filter keeps jitter elevated for many cycles after a spike, and
-         * feeding that into the baseline would lock the outlier detector
-         * permanently (baseline drifts up alongside EWMA, so the ratio
-         * never drops below the outlier threshold). */
+         *
+         * IMPORTANT: Do NOT update baseline while in safe mode OR immediately
+         * after clearing it. The EWMA filter keeps jitter elevated for many
+         * cycles after a spike (smoothing "tail"). We wait for 5 stable
+         * cycles after safe-mode exit to allow the signal to clean up. */
+        static int clean_streak = 0;
+        if (control_state.safe_mode) {
+            clean_streak = 0;
+        } else {
+            clean_streak++;
+        }
+
         if (cfg.baseline_update_interval > 0 &&
             (loop_cycle % cfg.baseline_update_interval) == 0 &&
-            !control_state.safe_mode) {
+            !control_state.safe_mode &&
+            clean_streak > 5) {
             sense_update_baseline_sliding(&baseline, &metrics, cfg.baseline_decay);
             log_msg(LOG_DEBUG, "main", "baseline updated: rtt=%.2fms jitter=%.2fms",
                     baseline.rtt_ms, baseline.jitter_ms);

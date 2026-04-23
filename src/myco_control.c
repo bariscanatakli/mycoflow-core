@@ -20,10 +20,14 @@ int is_outlier(const metrics_t *metrics, const metrics_t *baseline, const myco_c
     if (metrics->cpu_pct > cfg->max_cpu_pct) {
         return 1;
     }
-    if (metrics->rtt_ms > baseline->rtt_ms * 5.0 && baseline->rtt_ms > 0.1) {
+    /* RTT outlier: 5x multiplier with 50ms absolute floor to avoid noise on fast lines */
+    if (metrics->rtt_ms > baseline->rtt_ms * 5.0 && metrics->rtt_ms > 50.0) {
         return 1;
     }
-    if (metrics->jitter_ms > baseline->jitter_ms * 8.0 && baseline->jitter_ms > 0.1) {
+    /* Jitter outlier: 12x multiplier with 15ms floor.
+     * EWMA smoothing makes jitter outliers very persistent, so we need
+     * a generous gap to avoid "trapping" the recovery process. */
+    if (metrics->jitter_ms > baseline->jitter_ms * 12.0 && metrics->jitter_ms > 15.0) {
         return 1;
     }
     return 0;
@@ -141,6 +145,8 @@ int control_decide(control_state_t *state,
             log_msg(LOG_INFO, "control",
                     "safe-mode cleared after %d clean cycles",
                     SAFE_MODE_EXIT_STREAK);
+            snprintf(reason, reason_len, "safe-mode: cleared");
+            return 1; /* Return 1 to force immediate actuation/baseline resume */
         } else {
             *desired = state->last_stable;
             if (outlier) {
