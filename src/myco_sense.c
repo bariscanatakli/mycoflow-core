@@ -31,6 +31,28 @@ static unsigned long long g_prev_cpu_total = 0;
 static unsigned long long g_prev_cpu_idle = 0;
 static int g_seeded = 0;
 
+/* Fallback for PPP/tunnel interfaces that have no AF_PACKET entry */
+static int read_netdev_sysfs(const char *iface,
+                              unsigned long long *rx_bytes, unsigned long long *tx_bytes,
+                              unsigned long long *rx_pkts, unsigned long long *tx_pkts) {
+    char path[256];
+    struct { const char *stat; unsigned long long *dst; } fields[] = {
+        { "rx_bytes",   rx_bytes },
+        { "tx_bytes",   tx_bytes },
+        { "rx_packets", rx_pkts  },
+        { "tx_packets", tx_pkts  },
+    };
+    for (int i = 0; i < 4; i++) {
+        snprintf(path, sizeof(path), "/sys/class/net/%s/statistics/%s", iface, fields[i].stat);
+        FILE *fp = fopen(path, "r");
+        if (!fp) return -1;
+        int ok = (fscanf(fp, "%llu", fields[i].dst) == 1);
+        fclose(fp);
+        if (!ok) return -1;
+    }
+    return 0;
+}
+
 static int read_netdev(const char *iface, unsigned long long *rx_bytes, unsigned long long *tx_bytes,
                        unsigned long long *rx_pkts, unsigned long long *tx_pkts) {
     struct ifaddrs *ifaddr, *ifa;
@@ -53,7 +75,9 @@ static int read_netdev(const char *iface, unsigned long long *rx_bytes, unsigned
         }
     }
     freeifaddrs(ifaddr);
-    return -1;
+
+    /* PPP/tunnel interfaces (e.g. pppoe-wan) have no AF_PACKET entry */
+    return read_netdev_sysfs(iface, rx_bytes, tx_bytes, rx_pkts, tx_pkts);
 }
 
 static double read_cpu_pct(void) {

@@ -113,11 +113,13 @@ static persona_t decide_persona(const metrics_t *metrics, persona_t hint) {
         return PERSONA_BULK;
     }
 
-    /* Rule 4 — VOIP: tiny codec packets, very low rate.
-     * Strong behavioral signal — no hint needed. */
+    /* Rule 4 — VOIP: tiny codec packets, active low rate.
+     * Lower bound 20 kbps: G.729 (lowest real codec) produces ~24–40 kbps
+     * on the wire. Devices below 20 kbps are idle or mDNS/keepalive — not
+     * real VOIP traffic. Strong behavioral signal — no hint needed. */
     if (metrics->avg_pkt_size > 0.0 &&
         metrics->avg_pkt_size < 120.0 &&
-        bw_bps < 200000.0) {
+        bw_bps >= 20000.0 && bw_bps < 200000.0) {
         return PERSONA_VOIP;
     }
 

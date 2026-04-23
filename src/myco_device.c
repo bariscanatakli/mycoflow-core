@@ -295,11 +295,22 @@ persona_t device_table_dominant_persona(const device_table_t *dt) {
     }
 
     /* Lower enum = higher latency priority (VOIP=1, GAMING=2, ...).
-     * Find the lowest non-zero persona among active devices with traffic. */
+     * Find the lowest non-zero persona among devices with measurable traffic.
+     * Guards:
+     *   - bandwidth < 5 kbps: stale conntrack entries or idle IoT/mDNS nodes
+     *   - 127.x.x.x / 0.0.0.0: loopback and broadcast — not real LAN clients */
+    const uint32_t LOOPBACK_PREFIX = htonl(0x7F000000);
+    const uint32_t LOOPBACK_MASK   = htonl(0xFF000000);
     persona_t best = PERSONA_UNKNOWN;
     for (int i = 0; i < MAX_DEVICES; i++) {
         const device_entry_t *dev = &dt->devices[i];
         if (!dev->active || dev->flow_count == 0) {
+            continue;
+        }
+        if (dev->bandwidth_bps < 20000.0) {
+            continue;
+        }
+        if (dev->ip == 0 || (dev->ip & LOOPBACK_MASK) == LOOPBACK_PREFIX) {
             continue;
         }
         persona_t p = dev->persona;
