@@ -1,0 +1,12 @@
+persona,precision,recall,f1,support
+bulk_dl,0.07,0.152,0.096,17333
+file_sync,0.015,0.154,0.027,49632
+game_launcher,0.0,0.0,0.0,1385
+game_rt,0.005,0.23,0.01,1471
+system,0.477,0.909,0.625,487270
+torrent,0.31,0.176,0.224,70830
+video_conf,0.001,0.016,0.003,6593
+video_live,0.143,0.063,0.088,56362
+video_vod,0.0,0.0,0.0,4128
+voip_call,0.013,0.01,0.011,40417
+web_interactive,0.948,0.337,0.497,1704377

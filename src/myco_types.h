@@ -143,6 +143,8 @@ typedef struct {
     policy_t      last_stable;
     int           safe_mode;
     int           stable_cycles;
+    int           outlier_streak;
+    int           recovery_streak;
     /* Action feedback ring */
     action_record_t ring[ACTION_RING_SIZE];
     int             ring_head;   /* next write index */

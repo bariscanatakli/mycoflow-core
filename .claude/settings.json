@@ -18,7 +18,18 @@
       "Bash(build/src/test_device)",
       "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'md5sum /usr/bin/mycoflowd')",
       "Bash(pdflatex -interaction=nonstopmode -halt-on-error ieee_paper.tex)",
-      "Bash(pdfinfo ieee_paper.pdf)"
+      "Bash(pdfinfo ieee_paper.pdf)",
+      "WebFetch(domain:arxiv.org)",
+      "Bash(/home/baris/mycoflow-core/venv/bin/pip install *)",
+      "Bash(/home/baris/mycoflow-core/venv/bin/python3 -c ' *)",
+      "Bash(venv/bin/python3 scripts/dataset/unicauca_explore.py)",
+      "Bash(venv/bin/python3 scripts/dataset/mycoflow_validate.py)",
+      "Bash(kill %1)",
+      "Bash(venv/bin/python3 scripts/dataset/mycoflow_validate_dns.py)",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 \"echo OK && pgrep mycoflowd && cat /tmp/myco_state.json | python3 -c 'import sys,json; s=json.load\\(sys.stdin\\); print\\(\\\\\"flows:\\\\\",len\\(s.get\\(\\\\\"flows\\\\\",[]\\)\\)\\); print\\(\\\\\"devices:\\\\\",len\\(s.get\\(\\\\\"devices\\\\\",[]\\)\\)\\)'\")",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 \"echo ROUTER_OK && cat /proc/net/nf_conntrack | wc -l && ls /usr/bin/mycoflowd && cat /etc/config/mycoflow\")",
+      "Bash(venv/bin/python3 -c ' *)",
+      "Bash(venv/bin/python3 -)"
     ]
   }
 }

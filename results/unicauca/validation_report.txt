@@ -1,0 +1,37 @@
+MycoFlow Classifier Validation vs Unicauca Dataset
+====================================================
+
+Total flows evaluated: 2,439,798
+Overall accuracy:      42.82%
+
+                 precision    recall  f1-score   support
+
+        bulk_dl      0.070     0.152     0.096     17333
+      file_sync      0.015     0.154     0.027     49632
+  game_launcher      0.000     0.000     0.000      1385
+        game_rt      0.005     0.230     0.010      1471
+         system      0.477     0.909     0.625    487270
+        torrent      0.310     0.176     0.224     70830
+     video_conf      0.001     0.016     0.003      6593
+     video_live      0.143     0.063     0.088     56362
+      video_vod      0.000     0.000     0.000      4128
+      voip_call      0.013     0.010     0.011     40417
+web_interactive      0.948     0.337     0.497   1704377
+
+      micro avg      0.448     0.428     0.438   2439798
+      macro avg      0.180     0.186     0.144   2439798
+   weighted avg      0.771     0.428     0.482   2439798
+
+Persona distribution (ground truth):
+gt_persona
+web_interactive    1704377
+system              487270
+torrent              70830
+video_live           56362
+file_sync            49632
+voip_call            40417
+bulk_dl              17333
+video_conf            6593
+video_vod             4128
+game_rt               1471
+game_launcher         1385

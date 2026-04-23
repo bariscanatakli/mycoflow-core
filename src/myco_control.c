@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#define SAFE_MODE_ENTER_STREAK 3
+#define SAFE_MODE_EXIT_STREAK  5
+
 int is_outlier(const metrics_t *metrics, const metrics_t *baseline, const myco_config_t *cfg) {
     if (!metrics || !baseline || !cfg) {
         return 0;
@@ -20,7 +23,7 @@ int is_outlier(const metrics_t *metrics, const metrics_t *baseline, const myco_c
     if (metrics->rtt_ms > baseline->rtt_ms * 5.0 && baseline->rtt_ms > 0.1) {
         return 1;
     }
-    if (metrics->jitter_ms > baseline->jitter_ms * 5.0 && baseline->jitter_ms > 0.1) {
+    if (metrics->jitter_ms > baseline->jitter_ms * 8.0 && baseline->jitter_ms > 0.1) {
         return 1;
     }
     return 0;
@@ -93,6 +96,8 @@ void control_init(control_state_t *state, int initial_bw) {
     state->last_stable = state->current;
     state->safe_mode = 0;
     state->stable_cycles = 0;
+    state->outlier_streak = 0;
+    state->recovery_streak = 0;
     state->ring_head = 0;
     state->step_adapted = 0;
     for (int i = 0; i < ACTION_RING_SIZE; i++) {
@@ -119,11 +124,46 @@ int control_decide(control_state_t *state,
     /* Fill pending action feedback records and adapt step if needed */
     ring_fill_and_evaluate(state, cfg, now, metrics->rtt_ms);
 
-    if (is_outlier(metrics, baseline, cfg)) {
-        state->safe_mode = 1;
-        *desired = state->last_stable;
-        snprintf(reason, reason_len, "safe-mode: outlier");
-        return (state->current.bandwidth_kbit != desired->bandwidth_kbit);
+    int outlier = is_outlier(metrics, baseline, cfg);
+    if (outlier) {
+        state->outlier_streak++;
+        state->recovery_streak = 0;
+    } else {
+        state->recovery_streak++;
+        state->outlier_streak = 0;
+    }
+
+    if (state->safe_mode) {
+        if (!outlier && state->recovery_streak >= SAFE_MODE_EXIT_STREAK) {
+            state->safe_mode = 0;
+            state->recovery_streak = 0;
+            log_msg(LOG_INFO, "control",
+                    "safe-mode cleared after %d clean cycles",
+                    SAFE_MODE_EXIT_STREAK);
+        } else {
+            *desired = state->last_stable;
+            if (outlier) {
+                snprintf(reason, reason_len, "safe-mode: outlier");
+            } else {
+                snprintf(reason, reason_len, "safe-mode: recovering (%d/%d)",
+                         state->recovery_streak, SAFE_MODE_EXIT_STREAK);
+            }
+            return (state->current.bandwidth_kbit != desired->bandwidth_kbit);
+        }
+    }
+
+    if (outlier) {
+        if (state->outlier_streak >= SAFE_MODE_ENTER_STREAK) {
+            state->safe_mode = 1;
+            *desired = state->last_stable;
+            snprintf(reason, reason_len, "safe-mode: outlier-streak");
+            log_msg(LOG_WARN, "control",
+                    "outlier streak %d reached, entering safe mode",
+                    SAFE_MODE_ENTER_STREAK);
+            return (state->current.bandwidth_kbit != desired->bandwidth_kbit);
+        }
+        snprintf(reason, reason_len, "outlier-observed: hold");
+        return 0;
     }
 
     double rtt_delta     = metrics->rtt_ms    - baseline->rtt_ms;
@@ -224,6 +264,8 @@ void control_on_action_result(control_state_t *state, int success) {
     if (!success) {
         log_msg(LOG_WARN, "control", "actuation failed, entering safe mode");
         state->safe_mode = 1;
+        state->outlier_streak = 0;
+        state->recovery_streak = 0;
         state->current = state->last_stable;
         state->stable_cycles = 0;
     }

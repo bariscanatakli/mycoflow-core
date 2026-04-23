@@ -13,6 +13,14 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <ifaddrs.h>
+#include <linux/if_link.h>
+#include <sys/socket.h>
+#include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <netdb.h>
+#include <poll.h>
+#include <fcntl.h>
 
 static unsigned long long g_prev_rx = 0;
 static unsigned long long g_prev_tx = 0;
@@ -25,34 +33,26 @@ static int g_seeded = 0;
 
 static int read_netdev(const char *iface, unsigned long long *rx_bytes, unsigned long long *tx_bytes,
                        unsigned long long *rx_pkts, unsigned long long *tx_pkts) {
-    FILE *fp = fopen("/proc/net/dev", "r");
-    if (!fp) {
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == -1) {
         return -1;
     }
 
-    char line[512];
-    int line_no = 0;
-    while (fgets(line, sizeof(line), fp)) {
-        line_no++;
-        if (line_no <= 2) {
-            continue;
-        }
-        char name[64];
-        unsigned long long rb = 0, rp = 0, tb = 0, tp = 0;
-        /* /proc/net/dev format: iface: rx_bytes rx_packets ... tx_bytes tx_packets ... */
-        if (sscanf(line, " %63[^:]: %llu %llu %*u %*u %*u %*u %*u %*u %llu %llu",
-                   name, &rb, &rp, &tb, &tp) == 5) {
-            if (strcmp(name, iface) == 0) {
-                *rx_bytes = rb;
-                *rx_pkts  = rp;
-                *tx_bytes = tb;
-                *tx_pkts  = tp;
-                fclose(fp);
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL) continue;
+        if (ifa->ifa_addr->sa_family == AF_PACKET && ifa->ifa_data != NULL) {
+            if (strcmp(ifa->ifa_name, iface) == 0) {
+                struct rtnl_link_stats *stats = (struct rtnl_link_stats *)ifa->ifa_data;
+                *rx_bytes = stats->rx_bytes;
+                *tx_bytes = stats->tx_bytes;
+                *rx_pkts  = stats->rx_packets;
+                *tx_pkts  = stats->tx_packets;
+                freeifaddrs(ifaddr);
                 return 0;
             }
         }
     }
-    fclose(fp);
+    freeifaddrs(ifaddr);
     return -1;
 }
 
@@ -111,43 +111,100 @@ static double dummy_rtt(void) {
     return base + spike;
 }
 
+static uint16_t icmp_checksum(void *b, int len) {
+    uint16_t *buf = b;
+    unsigned int sum = 0;
+    uint16_t result;
+    for (sum = 0; len > 1; len -= 2) sum += *buf++;
+    if (len == 1) sum += *(unsigned char *)buf;
+    sum = (sum >> 16) + (sum & 0xFFFF);
+    sum += (sum >> 16);
+    result = ~sum;
+    return result;
+}
+
 /* Multi-ping probe: send N packets, compute median RTT, jitter (stddev),
  * and loss%. Returns median RTT in ms, or -1.0 on failure.
  * Writes jitter_out and loss_pct_out (may be NULL). */
 static double probe_multi_ping(const char *iface, const char *host,
                                int count, double *jitter_out, double *loss_pct_out) {
-    if (!iface || !host || count < 1) {
-        return -1.0;
-    }
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "ping -c %d -W 1 -I %s %s 2>/dev/null", count, iface, host);
-    FILE *fp = popen(cmd, "r");
-    if (!fp) {
+    if (!host || count < 1) {
         return -1.0;
     }
 
-    double rtts[8];  /* support up to 8 pings */
-    int n = 0;
-    char line[512];
-    int transmitted = 0, received = 0;
+    struct addrinfo hints = {0}, *res;
+    hints.ai_family = AF_INET;
+    if (getaddrinfo(host, NULL, &hints, &res) != 0) {
+        return -1.0;
+    }
 
-    while (fgets(line, sizeof(line), fp) && n < count) {
-        /* Parse individual RTT lines: "64 bytes from ... time=X.X ms" */
-        char *pos = strstr(line, "time=");
-        if (pos) {
-            double value = 0.0;
-            if (sscanf(pos, "time=%lf", &value) == 1 && n < 8) {
-                rtts[n++] = value;
+    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+    if (sock < 0) {
+        freeaddrinfo(res);
+        return -1.0;
+    }
+
+    if (iface) {
+        setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, iface, strlen(iface));
+    }
+
+    int flags = fcntl(sock, F_GETFL, 0);
+    fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+
+    double rtts[8];
+    int n_success = 0;
+    uint16_t seq = 1;
+    uint16_t pid = getpid() & 0xFFFF;
+
+    for (int i = 0; i < count && i < 8; i++) {
+        struct icmphdr icmp_hdr;
+        memset(&icmp_hdr, 0, sizeof(icmp_hdr));
+        icmp_hdr.type = ICMP_ECHO;
+        icmp_hdr.un.echo.id = htons(pid);
+        icmp_hdr.un.echo.sequence = htons(seq++);
+        icmp_hdr.checksum = icmp_checksum(&icmp_hdr, sizeof(icmp_hdr));
+
+        struct timespec t_send;
+        clock_gettime(CLOCK_MONOTONIC, &t_send);
+
+        if (sendto(sock, &icmp_hdr, sizeof(icmp_hdr), 0, res->ai_addr, res->ai_addrlen) <= 0) {
+            usleep(100000); /* 100ms pause if tx failed */
+            continue;
+        }
+
+        struct pollfd pfd;
+        pfd.fd = sock;
+        pfd.events = POLLIN;
+
+        /* Wait up to 1 second for reply */
+        if (poll(&pfd, 1, 1000) > 0) {
+            char recv_buf[1024];
+            struct sockaddr_in r_addr;
+            socklen_t r_len = sizeof(r_addr);
+            int bytes = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*)&r_addr, &r_len);
+            
+            if (bytes > 0) {
+                struct timespec t_recv;
+                clock_gettime(CLOCK_MONOTONIC, &t_recv);
+                
+                struct iphdr *ip = (struct iphdr *)recv_buf;
+                int ip_hlen = ip->ihl * 4;
+                if (bytes >= ip_hlen + (int)sizeof(struct icmphdr)) {
+                    struct icmphdr *ricmp = (struct icmphdr *)(recv_buf + ip_hlen);
+                    if (ricmp->type == ICMP_ECHOREPLY && ntohs(ricmp->un.echo.id) == pid) {
+                        double rtt = (t_recv.tv_sec - t_send.tv_sec) * 1000.0 + 
+                                     (t_recv.tv_nsec - t_send.tv_nsec) / 1000000.0;
+                        rtts[n_success++] = rtt;
+                    }
+                }
             }
         }
-        /* Parse summary: "N packets transmitted, M received" */
-        if (strstr(line, "packets transmitted")) {
-            sscanf(line, "%d packets transmitted, %d received", &transmitted, &received);
-        }
     }
-    pclose(fp);
 
-    if (n == 0) {
+    close(sock);
+    freeaddrinfo(res);
+
+    if (n_success == 0) {
         if (loss_pct_out) {
             *loss_pct_out = 100.0;
         }
@@ -156,28 +213,24 @@ static double probe_multi_ping(const char *iface, const char *host,
 
     /* Compute mean RTT */
     double sum = 0.0;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n_success; i++) {
         sum += rtts[i];
     }
-    double mean = sum / (double)n;
+    double mean = sum / (double)n_success;
 
     /* Compute jitter as standard deviation */
     if (jitter_out) {
         double var = 0.0;
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n_success; i++) {
             double d = rtts[i] - mean;
             var += d * d;
         }
-        *jitter_out = (n > 1) ? sqrt(var / (double)(n - 1)) : 0.0;
+        *jitter_out = (n_success > 1) ? sqrt(var / (double)(n_success - 1)) : 0.0;
     }
 
     /* Packet loss */
     if (loss_pct_out) {
-        if (transmitted > 0) {
-            *loss_pct_out = (double)(transmitted - received) * 100.0 / (double)transmitted;
-        } else {
-            *loss_pct_out = (n < count) ? 100.0 * (count - n) / count : 0.0;
-        }
+        *loss_pct_out = (double)(count - n_success) * 100.0 / (double)count;
     }
 
     return mean;

@@ -1,0 +1,50 @@
+MycoFlow Classifier Validation — DNS Signal Ablation Study
+============================================================
+Dataset: Unicauca April-June 2019 Network Flows
+Total flows: 2,704,839  |  Evaluable: 2,440,955
+
+Mode A — Port-hint + Behavioral (no DNS)
+  Overall Accuracy: 42.98%
+
+                 precision    recall  f1-score   support
+
+        bulk_dl      0.075     0.158     0.102     16500
+      file_sync      0.016     0.164     0.029     50465
+  game_launcher      0.000     0.000     0.000      1380
+        game_rt      0.004     0.228     0.009      1476
+         system      0.478     0.914     0.628    486601
+        torrent      0.310     0.175     0.224     70830
+     video_conf      0.001     0.016     0.003      6593
+     video_live      0.150     0.065     0.090     59724
+      video_vod      0.000     0.000     0.000      4127
+      voip_call      0.018     0.010     0.012     40417
+web_interactive      0.948     0.339     0.499   1702842
+
+      micro avg      0.450     0.430     0.440   2440955
+      macro avg      0.182     0.188     0.145   2440955
+   weighted avg      0.771     0.430     0.483   2440955
+
+
+Mode B — Port-hint + Behavioral + DNS snooping
+  Overall Accuracy: 83.54%
+
+                 precision    recall  f1-score   support
+
+        bulk_dl      0.454     0.679     0.544     16500
+      file_sync      0.194     0.868     0.317     50465
+  game_launcher      1.000     1.000     1.000      1380
+        game_rt      0.036     1.000     0.070      1476
+         system      0.880     0.938     0.908    486601
+        torrent      0.720     0.175     0.282     70830
+     video_conf      0.298     1.000     0.459      6593
+     video_live      0.836     0.948     0.889     59724
+      video_vod      1.000     0.999     0.999      4127
+      voip_call      0.692     0.999     0.818     40417
+web_interactive      0.990     0.825     0.900   1702842
+
+      micro avg      0.850     0.835     0.842   2440955
+      macro avg      0.645     0.857     0.653   2440955
+   weighted avg      0.929     0.835     0.866   2440955
+
+
+DNS Signal Contribution: +40.56 percentage points

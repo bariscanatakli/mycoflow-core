@@ -23,3 +23,7 @@ cmake_install.cmake
 Makefile
 "mycelium_report (1).pdf:Zone.Identifier"
 results/*.json
+
+# Python and Archive
+venv/
+archive/

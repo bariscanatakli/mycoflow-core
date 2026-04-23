@@ -144,6 +144,76 @@ int flow_table_active_count(const flow_table_t *ft) {
 
 /* ── Conntrack population ───────────────────────────────────── */
 
+#ifdef HAVE_LIBNFCT
+
+#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+
+struct ct_dump_cb_data {
+    flow_table_t *ft;
+    double now;
+    int parsed;
+};
+
+static int ct_dump_cb(enum nf_conntrack_msg_type type, struct nf_conntrack *ct, void *data) {
+    struct ct_dump_cb_data *cb_data = (struct ct_dump_cb_data *)data;
+    
+    uint8_t l4_proto = nfct_get_attr_u8(ct, ATTR_L4PROTO);
+    if (l4_proto != IPPROTO_TCP && l4_proto != IPPROTO_UDP) {
+        return NFCT_CB_CONTINUE;
+    }
+
+    uint8_t l3_proto = nfct_get_attr_u8(ct, ATTR_L3PROTO);
+    if (l3_proto != AF_INET) {
+        return NFCT_CB_CONTINUE;
+    }
+
+    flow_key_t key;
+    memset(&key, 0, sizeof(key));
+    key.src_ip = nfct_get_attr_u32(ct, ATTR_IPV4_SRC);
+    key.dst_ip = nfct_get_attr_u32(ct, ATTR_IPV4_DST);
+    key.src_port = ntohs(nfct_get_attr_u16(ct, ATTR_PORT_SRC));
+    key.dst_port = ntohs(nfct_get_attr_u16(ct, ATTR_PORT_DST));
+    key.protocol = l4_proto;
+
+    uint64_t tx_bytes = nfct_get_attr_u64(ct, ATTR_ORIG_COUNTER_BYTES);
+    uint64_t tx_pkts  = nfct_get_attr_u64(ct, ATTR_ORIG_COUNTER_PACKETS);
+    uint64_t rx_bytes = nfct_get_attr_u64(ct, ATTR_REPL_COUNTER_BYTES);
+    uint64_t rx_pkts  = nfct_get_attr_u64(ct, ATTR_REPL_COUNTER_PACKETS);
+
+    flow_table_update(cb_data->ft, &key, tx_pkts, rx_pkts, tx_bytes, rx_bytes, cb_data->now);
+    cb_data->parsed++;
+
+    return NFCT_CB_CONTINUE;
+}
+
+int flow_table_populate_conntrack(flow_table_t *ft, double now) {
+    if (!ft) return -1;
+
+    struct nfct_handle *h = nfct_open(CONNTRACK, 0);
+    if (!h) {
+        return -1;
+    }
+
+    struct ct_dump_cb_data cb_data = {
+        .ft = ft,
+        .now = now,
+        .parsed = 0
+    };
+
+    nfct_callback_register(h, NFCT_T_ALL, ct_dump_cb, &cb_data);
+    
+    int ret = nfct_query(h, NFCT_Q_DUMP, NULL);
+    nfct_close(h);
+    
+    if (ret == -1) {
+        return -1;
+    }
+    
+    return cb_data.parsed;
+}
+
+#else /* ! HAVE_LIBNFCT */
+
 /*
  * Parse /proc/net/nf_conntrack to populate flow table.
  * Format: ipv4  2 tcp  6 300 ESTABLISHED src=... dst=... sport=... dport=...
@@ -227,6 +297,8 @@ int flow_table_populate_conntrack(flow_table_t *ft, double now) {
     fclose(fp);
     return parsed;
 }
+
+#endif /* HAVE_LIBNFCT */
 
 /* ── Elephant flow detection ────────────────────────────────── */
 
