@@ -182,10 +182,12 @@ int control_decide(control_state_t *state,
     double thresh_rtt    = clamp_double(baseline->rtt_ms    * cfg->rtt_margin_factor, 8.0, 60.0);
     double thresh_jitter = clamp_double(baseline->jitter_ms * cfg->rtt_margin_factor, 4.0, 30.0);
 
-    /* qdisc_backlog > 0 is a direct kernel-side bufferbloat indicator —
-     * faster and more reliable than the RTT probe alone.
-     * probe_loss_pct > 2% means CAKE is already dropping packets. */
-    int backlog_congested = (metrics->qdisc_backlog > 0);
+    /* qdisc_backlog represents packets currently held in CAKE's shaping queue.
+     * A small queue is healthy and necessary for TCP to saturate the link.
+     * We should only trigger a congestion throttle if the queue grows excessively
+     * large (e.g. > 100 packets), meaning CAKE is severely overwhelmed, or if
+     * probe_loss_pct > 2% meaning CAKE is dropping packets severely. */
+    int backlog_congested = (metrics->qdisc_backlog > 100);
     int loss_congested    = (metrics->probe_loss_pct > 2.0);
     int congested = (rtt_delta > thresh_rtt) || (jitter_delta > thresh_jitter) ||
                     backlog_congested || loss_congested;
@@ -239,10 +241,11 @@ int control_decide(control_state_t *state,
      * CAKE cap tracks egress adaptation rather than staying frozen at startup. */
     if (desired->ingress_bw_kbit > 0) {
         int delta = desired->bandwidth_kbit - state->current.bandwidth_kbit;
+        double max_ingress = (cfg->ingress_bandwidth_kbit > 0) ? (double)cfg->ingress_bandwidth_kbit : (double)cfg->max_bandwidth_kbit;
         desired->ingress_bw_kbit = (int)clamp_double(
             (double)(desired->ingress_bw_kbit + delta),
             (double)cfg->min_bandwidth_kbit,
-            (double)cfg->max_bandwidth_kbit);
+            max_ingress);
     }
 
     if (desired->bandwidth_kbit == state->current.bandwidth_kbit) {

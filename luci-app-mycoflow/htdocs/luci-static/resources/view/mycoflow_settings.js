@@ -29,6 +29,7 @@ return view.extend({
 
     o = s.option(form.Flag, "no_tc", _("Disable Traffic Control (Dry Run)"), 
       _("Run in dry-run mode without modifying iptables or CAKE disciplines."));
+    o.rmempty = false;
 
     // Bandwidth
     s = m.section(form.NamedSection, "core", "mycoflow", _("Bandwidth & Policy"));
@@ -42,6 +43,18 @@ return view.extend({
     o.datatype = "uinteger";
 
     o = s.option(form.Value, "bandwidth_step_kbit", _("Bandwidth Step (kbit)"), _("Amount of bandwidth change per cycle."));
+    o.datatype = "uinteger";
+
+    o = s.option(form.Flag, "ingress_enabled", _("Enable Download QoS (Ingress)"), _("Enable traffic shaping on incoming download traffic via IFB."));
+    o.rmempty = false;
+
+    o = s.option(form.Value, "ingress_iface", _("Ingress Interface"), _("Virtual IFB interface used to mirror download traffic."));
+    o.depends("ingress_enabled", "1");
+    o.placeholder = "ifb0";
+    o.rmempty = false;
+
+    o = s.option(form.Value, "ingress_bandwidth_kbit", _("Max Download Bandwidth (kbit)"), _("Upper limit for download speed. Leave 0 or empty to dynamically match upload speed."));
+    o.depends("ingress_enabled", "1");
     o.datatype = "uinteger";
 
     // Tuning & Advanced

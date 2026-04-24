@@ -15,3 +15,8 @@ config mycoflow 'core'
 	option dummy_metrics '0'
 	option ebpf_enabled '0'
 	option ebpf_obj '/usr/lib/mycoflow/mycoflow.bpf.o'
+
+	# Ingress (Download) Defaults
+	option ingress_enabled '0'
+	option ingress_iface 'ifb0'
+	option ingress_bandwidth_kbit '0'

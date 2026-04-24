@@ -70,7 +70,31 @@
       "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'md5sum /usr/bin/mycoflowd && ps | grep mycoflowd | grep -v grep')",
       "Bash(sshpass -p 'sukranflat7' scp -O -o StrictHostKeyChecking=no /home/baris/mycoflow-core/build-aarch64/src/mycoflowd root@10.10.1.1:/usr/bin/mycoflowd.new)",
       "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'mv /usr/bin/mycoflowd.new /usr/bin/mycoflowd && /etc/init.d/mycoflowd restart && sleep 7 && logread | grep -E \"dominant_persona|loop:|persona changed\" | tail -15')",
-      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'mv /usr/bin/mycoflowd.new /usr/bin/mycoflowd && /etc/init.d/mycoflowd restart && sleep 6 && logread | grep \"loop:\" | tail -6')"
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'mv /usr/bin/mycoflowd.new /usr/bin/mycoflowd && /etc/init.d/mycoflowd restart && sleep 6 && logread | grep \"loop:\" | tail -6')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'uci show mycoflow.core; which conntrack; conntrack --help 2>&1 | head -3')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'ls /proc/sys/net/netfilter/ | grep -i flush; ls /proc/net/nf_conntrack 2>&1 | head -3; cat /proc/sys/net/netfilter/nf_conntrack_count 2>/dev/null')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'echo \"FLUSH\" > /proc/net/nf_conntrack 2>&1; cat /proc/sys/net/netfilter/nf_conntrack_count')",
+      "Bash(awk -F',' 'NR==2 {print $14, $15}' /home/baris/mycoflow-core/archive/Unicauca-dataset-April-June-2019-Network-flows.csv)",
+      "Bash(ip route *)",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'grep -oE \"dst=10\\\\.10\\\\.1\\\\.1 .*dport=22\" /proc/net/nf_conntrack | grep -oE \"src=[^ ]+\" | head -1')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'cat /proc/net/nf_conntrack | grep \"dport=22\" | head -2')",
+      "Read(//mnt/wsl/**)",
+      "Bash(nslookup stun.l.google.com)",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'grep \"src=10.10.1.172 .*dport=53\" /proc/net/nf_conntrack | head -3')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'grep \"dst=142.250.185.14\" /proc/net/nf_conntrack 2>&1 | head -3')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'which nc socat curl wget dd; echo \"---\"; ls /usr/bin/ | grep -iE \"python|iperf|nc\\\\b\"')",
+      "Bash(sshpass -p sukranflat7 ssh -o StrictHostKeyChecking=no root@10.10.1.1 'for p in 443 27015 6881 5060 8801; do timeout 3 nc -w 2 -z 1.1.1.1 $p 2>&1 && echo \"1.1.1.1:$p OK\"; done; echo \"---UDP---\"; for p in 53 27015 19302; do echo \"send UDP to 8.8.8.8:$p\"; echo \"probe\" | timeout 2 nc -u -w 1 8.8.8.8 $p; done')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'nc --help 2>&1 | head -15')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'cat /proc/net/nf_conntrack | grep \"src=10.10.1.172 dst=1.1.1.1 dport=443\" | head -2')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep -i \"dns\\\\|cache\" | tail -10')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep -i \"dns\" | tail -10')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep -iE \"dns|sniff\" | head -20; echo \"---\"; logread | head -40')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 '/etc/init.d/mycoflowd restart && sleep 3 && logread | grep -E \"mycoflowd.*\\(DNS|dns|started\\)\" | head -15')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep -E \"dns.*parse|dns.*records|dns:\" | tail -10')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep \"dns\" | tail -5')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep -iE \"dns|parsed\" | tail -20')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'grep \"10.10.1.172 dst=18\" /proc/net/nf_conntrack')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'which tcpdump; opkg list-installed 2>/dev/null | grep -iE \"tcpdump|dnsmasq|pcap\"')"
     ]
   }
 }
