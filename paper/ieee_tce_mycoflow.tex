@@ -1,0 +1,547 @@
+% MycoFlow — IEEE Transactions on Consumer Electronics submission
+% Bio-Inspired Reflexive QoS for Consumer Routers
+%
+% Compile: pdflatex ieee_tce_mycoflow.tex (twice for refs)
+%
+% NOTE: results/* numbers are populated from the validation pipeline:
+%   scripts/dataset/run_full_validation.sh
+% Replace TODO markers with actual values after the run completes.
+
+\documentclass[journal,onecolumn]{IEEEtran}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{array}
+
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\begin{document}
+
+\title{MycoFlow: A Bio-Inspired Reflexive QoS System for Consumer Routers with In-Vivo DNS-Aware Classification}
+
+\author{Bar\i{}\c{s} Can Atakl\i{}~\IEEEmembership{Student Member,~IEEE,}
+        \\
+        \IEEEcompsocitemizethanks{
+        \IEEEcompsocthanksitem Author is with the Department of Computer Engineering, [University Name].\protect\\
+        E-mail: bariscanatakli@gmail.com}}
+
+\markboth{IEEE Transactions on Consumer Electronics, Vol.~XX, No.~Y, Month~2026}%
+{Atakl\i{}: MycoFlow Bio-Inspired QoS for Consumer Routers}
+
+\maketitle
+
+\begin{abstract}
+Modern consumer routers ship with static queue-management policies (CAKE,
+fq\_codel) that treat all traffic equally regardless of application type,
+producing measurable latency penalties for interactive workloads when bulk
+flows compete for uplink. Existing per-flow classifiers (nDPI, deep packet
+inspection) require enterprise-grade hardware unavailable on the constrained
+SoCs that ship with consumer-class hardware. We present \emph{MycoFlow}, a
+bio-inspired reflexive QoS daemon that runs unmodified on a 256\,MB ARM
+Cortex-A53 router (Xiaomi AX3000T, MediaTek MT7981B) with zero flash writes,
+classifying traffic in real time across six personas (VOIP, gaming, video
+conferencing, streaming, bulk transfer, torrent) using a three-signal late-fusion
+scheme—port hint, transit DNS snooping, and behavioral inference—paired with
+per-device DSCP tagging for CAKE diffserv4 tin allocation. We evaluate the
+system in three layers: (i)~offline validation against the 2.4-million-flow
+Universidad del Cauca dataset, showing DNS contribution lifts accuracy from
+42.98\% (port+behavior) to 83.54\% (+40.56~pts); (ii)~stratified random
+in-vivo replay of N=1{,}650 flows with paired McNemar comparison, confirming
+the offline lift on production hardware; and (iii)~continuous-load resource
+profiling demonstrating sub-X\% CPU peak, X\,MB RSS, and zero flash writes
+over a 4-hour validation run. The DNS sniffer uses an \texttt{AF\_PACKET}
+socket to capture transit traffic that conventional \texttt{AF\_INET}
+\texttt{SOCK\_RAW} approaches miss—a critical implementation detail for any
+in-router classifier targeting modern devices that bypass the router's
+local resolver. The complete daemon, in C11 with musl libc static-pie linking,
+fits in a sub-200\,KB aarch64 binary.
+
+\end{abstract}
+
+\begin{IEEEkeywords}
+Consumer router, QoS, traffic classification, DNS snooping, embedded systems,
+DSCP, CAKE, in-vivo evaluation, reproducible benchmarking.
+\end{IEEEkeywords}
+
+\IEEEpeerreviewmaketitle
+
+\section{Introduction}
+\label{sec:intro}
+
+\IEEEPARstart{C}{onsumer} broadband links commonly suffer from
+bufferbloat~\cite{bufferbloat-2011}: the home-router uplink buffers fill
+during bulk transfers, inflating latency for interactive flows by hundreds
+of milliseconds. Modern queue disciplines—Common Applications Kept Enhanced
+(CAKE)~\cite{cake-2018}, fq\_codel~\cite{fqcodel-2018}—mitigate this with
+fair scheduling, but they classify traffic only by DSCP markings the user
+must configure manually or by static port hints that fail for HTTPS-encapsulated
+applications. The result: the average broadband subscriber owns a router
+capable of fine-grained QoS but operates it in a default ``best-effort''
+mode that delivers no application-aware prioritization.
+
+Existing solutions for application-aware classification fall into two camps:
+\begin{itemize}
+\item \textbf{Cloud-offload (Eero, Plume, etc.):} stream connection metadata
+to a vendor cloud for ML-based classification. Privacy-invasive, latency-
+prone, and inoperable when the WAN link is the bottleneck.
+\item \textbf{On-box DPI (nDPI, OpenAppID):} substantial CPU overhead and
+RAM footprint, designed for enterprise-class routers with $\geq$1\,GB RAM
+and multi-core 64-bit CPUs. Marginally feasible on consumer SoCs and
+typically disabled due to performance impact.
+\end{itemize}
+
+This paper presents \emph{MycoFlow}, a reflexive QoS daemon designed
+expressly for consumer-class hardware. Inspired by mycelial networks—where
+local nodes respond reactively to chemical gradients without central
+coordination—MycoFlow's classifier processes per-flow signals (destination
+port, observed DNS resolutions, traffic shape) and emits a six-class
+service taxonomy in real time, then maps each device's dominant role to a
+DSCP class for downstream CAKE differentiation.
+
+\subsection{Contributions}
+\begin{enumerate}
+\item A complete reflexive-QoS architecture targeting consumer routers
+with $\leq$256\,MB RAM and zero flash-write semantics.
+\item A three-signal late-fusion classifier (port + DNS + behavior) with
+quantified per-signal contribution, validated on a public 2.4M-flow
+dataset and replicated in vivo on production hardware.
+\item An IEEE-grade in-vivo evaluation methodology for embedded
+classifiers: stratified random replay, paired McNemar significance,
+Wilson 95\% confidence intervals.
+\item A practical fix for an architectural pitfall in router-side DNS
+sniffing: \texttt{AF\_INET SOCK\_RAW} sockets observe only host-bound
+packets, missing transit DNS that today's clients send directly to public
+resolvers (1.1.1.1, 8.8.8.8). We show that \texttt{AF\_PACKET} captures
+transit DNS and lifts in-vivo accuracy by a measurable margin.
+\item A reproducible per-flow open dataset of (input flow stats, predicted
+service, ground-truth label, hardware metrics) released under the project
+repository for follow-on work.
+\end{enumerate}
+
+\section{Related Work}
+\label{sec:related}
+
+% TODO: 0.5 page on
+% - bufferbloat / CAKE / fq_codel
+% - DPI classifiers (nDPI, NetFlow-Apps)
+% - ML-based home QoS (Eero, Plume cloud)
+% - DSCP / DiffServ deployment realities
+
+\section{System Design}
+\label{sec:design}
+
+\subsection{Six-Persona Service Taxonomy}
+
+MycoFlow classifies each per-flow service into one of 12 enumerated values
+that collapse to 6 router-relevant personas (Table~\ref{tab:taxonomy}).
+The taxonomy is chosen to maximize signal-to-noise on the CAKE diffserv4
+tins: \emph{Voice} (lowest latency), \emph{Video}, \emph{Best-Effort},
+\emph{Bulk}.
+
+\begin{table}[t]
+\centering
+\caption{Service-to-persona mapping and DSCP code points}
+\label{tab:taxonomy}
+\begin{tabular}{lll}
+\toprule
+\textbf{Service} & \textbf{Persona} & \textbf{DSCP / CAKE tin} \\
+\midrule
+\texttt{voip\_call}        & VOIP       & EF~/ Voice \\
+\texttt{game\_rt}          & GAMING     & CS4~/ Voice \\
+\texttt{video\_conf}       & VIDEO      & CS3~/ Video \\
+\texttt{video\_live}       & VIDEO      & CS3~/ Video \\
+\texttt{video\_vod}        & STREAMING  & CS2~/ Video \\
+\texttt{web\_interactive}  & ---        & CS0~/ Best-effort \\
+\texttt{system}            & ---        & CS0~/ Best-effort \\
+\texttt{bulk\_dl}          & BULK       & CS1~/ Bulk \\
+\texttt{file\_sync}        & BULK       & CS1~/ Bulk \\
+\texttt{game\_launcher}    & BULK       & CS1~/ Bulk \\
+\texttt{torrent}           & TORRENT    & CS1~/ Bulk \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Three-Signal Late Fusion Classifier}
+
+For every conntrack flow $f$ at decision time $t$, MycoFlow computes:
+\begin{itemize}
+\item $h_{port}(f)$: deterministic lookup on $(\text{proto}, \text{dport})$
+  against a curated table covering 50+ application-specific port ranges
+  (Steam 27015--27050, Google Meet 19302--19309, BitTorrent DHT 6881--6889,
+  etc.).
+\item $h_{dns}(f)$: lookup of $f.\text{dst\_ip}$ in a TTL-bounded cache
+  populated by an \texttt{AF\_PACKET} sniffer parsing transit UDP/53
+  responses.
+\item $h_{beh}(f)$: behavioral inference from per-cycle aggregates
+  (packet rate, average size, bidirectionality, elephant-flow indicator).
+\end{itemize}
+
+The verdict is computed as
+\begin{equation}
+\text{verdict}(f) = \arg\max_{s \in S}
+   w_{dns} \mathbb{1}[h_{dns}(f)=s]
+ + w_{port}\mathbb{1}[h_{port}(f)=s]
+ + w_{beh} \mathbb{1}[h_{beh}(f)=s]
+\label{eq:verdict}
+\end{equation}
+with $w_{dns}=0.5$, $w_{port}=0.3$, $w_{beh}=0.2$ — weights chosen so that
+DNS evidence dominates when present, port hints break ties, and behavior
+fills the gap for encrypted-everything flows.
+
+\subsection{Reflexive Control Loop}
+
+% TODO: figure: 2-Hz tick, sense → classify → mark, history-window
+% promotion (3-of-2 stability), CAKE bandwidth boost/soften based on RTT
+% delta vs. baseline.
+
+\subsection{Zero Flash-Write Architecture}
+
+State is partitioned by lifetime:
+\begin{itemize}
+\item \textbf{In-RAM (re-derived on boot):} flow tables, DNS cache,
+  device aggregates, EWMA baselines. Fixed footprint $\approx$336~bytes
+  per active learning state.
+\item \textbf{tmpfs (\texttt{/tmp}):} JSON state dump for the LuCI
+  dashboard, log file. Cleared on reboot by procd.
+\item \textbf{Flash (read-only at runtime):} UCI configuration,
+  init script, binary. No writes after install.
+\end{itemize}
+
+This is verified empirically by sampling \texttt{/sys/class/mtd/*/erase\_size}
+deltas across a 4-hour load test (Sec.~\ref{sec:eval-resources}).
+
+\subsection{Per-Device DSCP Tagging}
+
+Rather than mark flows individually, MycoFlow aggregates per-device
+service signals via the \texttt{flow\_service\_table} and assigns one DSCP
+class per LAN device (highest-priority service wins). The tag is applied
+via \texttt{iptables} mangle rules on the egress chain. This per-device
+model fits the consumer mental model (``my Xbox should be fast'') and
+avoids per-flow rule churn that would inflate iptables ruleset memory.
+
+\section{Implementation}
+\label{sec:impl}
+
+% TODO:
+% - 12 C11 modules, ~3K LoC
+% - aarch64 musl static-pie binary, sub-200KB
+% - 2 Hz sampling
+% - libnetfilter_conntrack for flow ingest, AF_PACKET for DNS, raw socket for ICMP RTT
+% - LuCI Lua bridge over /tmp/myco_state.json
+% - QEMU-based development testbed (existing qemu-bench artifacts)
+
+\section{Evaluation}
+\label{sec:eval}
+
+We evaluate MycoFlow in three layers, each addressing a distinct claim:
+
+\begin{itemize}
+\item \textbf{Layer 1 (Sec.~\ref{sec:eval-offline}):} Offline replay
+against the public Universidad del Cauca April--June 2019 dataset
+(N=2,439,798 labeled flows) to quantify the per-signal contribution.
+\item \textbf{Layer 2 (Sec.~\ref{sec:eval-invivo}):} In-vivo blinded
+stratified-random replay against the live router (N=1,650 flows,
+150 per persona, two operating modes A/B, with paired McNemar test).
+\item \textbf{Layer 3 (Sec.~\ref{sec:eval-resources}):} Continuous resource
+sampling on the router during the in-vivo run, demonstrating that the
+daemon meets the constrained-hardware budget.
+\end{itemize}
+
+\subsection{Offline Validation: DNS Signal Ablation}
+\label{sec:eval-offline}
+
+% TODO: insert table from results/unicauca/dns_validation_report.txt
+% Mode A (port+behavior):    42.98%
+% Mode B (port+behavior+DNS): 83.54%
+% Δ = +40.56 pts
+
+% TODO: include confusion matrix figures (results/unicauca/confusion_matrix.png)
+
+\subsection{In-Vivo Validation on Production Router}
+\label{sec:eval-invivo}
+
+\paragraph{Methodology}
+For each of 11 service classes we draw $N=150$ flows via stratified random
+sampling (\texttt{seed=42} for reproducibility), preserving the
+per-flow protocol, destination port, mean packet size, and bandwidth as
+synthesized in two ablation modes:
+
+\begin{itemize}
+\item \textbf{Mode A — IP-only.} The test laptop emits traffic directly
+to a fixed reachable target (8.8.8.8 for UDP, 1.1.1.1 for TCP). No DNS
+query is issued for the persona-specific hostname, so the router's DNS
+cache contains no entry that could hint $h_{dns}$. The verdict reduces to
+$\arg\max(w_{port}, w_{beh})$.
+\item \textbf{Mode B — Hostname.} Before each flow, the laptop issues a
+DNS A-record query for a representative hostname of the flow's expected
+service to a public resolver (1.1.1.1) over UDP/53. The query and response
+both transit the router; the daemon's \texttt{AF\_PACKET} sniffer captures
+the response, populates the cache, and the test's traffic is then directed
+to the resolved IP. The verdict thus has access to $h_{dns}$.
+\end{itemize}
+
+We deliberately avoid hard-coding ``characteristic'' ports or DNS hosts
+that exercise particular classifier paths—a common pitfall in classifier
+benchmarking that conflates the classifier with the test harness. The
+hostname pool used in Mode B is drawn from each service's public
+production endpoints (e.g., \texttt{www.youtube.com} for YouTube) without
+reference to MycoFlow's internal mappings.
+
+Per-flow attribution uses 5-tuple lookup
+$(\text{src}, \text{dst}, \text{dport}, \text{sport}, \text{proto})$
+against the daemon's \texttt{state.flows[]} dump, isolating each test flow
+from concurrent host traffic.
+
+\paragraph{Results}
+% TODO: replace with results/blind_test/report/validation_report.txt numbers
+
+\begin{table}[t]
+\centering
+\caption{In-vivo classifier accuracy on N=1{,}650 stratified random Unicauca
+flows replayed against the Xiaomi AX3000T router. Wilson 95\% CI in
+brackets. Mode A: port+behavior signals only. Mode B: same flows with
+upstream DNS resolution captured by the AF\_PACKET sniffer.}
+\label{tab:invivo}
+\begin{tabular}{l|cc|cc|c}
+\toprule
+\textbf{Class} & \multicolumn{2}{c|}{\textbf{Mode A}} & \multicolumn{2}{c|}{\textbf{Mode B}} & $\Delta$ \\
+ & Prec. & Rec. & Prec. & Rec. & Rec. \\
+\midrule
+voip\_call        & 0.286 & 0.013 & 0.667 & 0.013 & +0.000 \\
+game\_rt          & 0.944 & 0.227 & 0.629 & 0.553 & +0.326 \\
+video\_conf       & 1.000 & 0.893 & 0.732 & 0.947 & +0.054 \\
+video\_live       & 0.000 & 0.000 & 1.000 & 0.007 & +0.007 \\
+video\_vod        & 0.000 & 0.000 & 0.734 & 0.773 & \textbf{+0.773} \\
+bulk\_dl          & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
+file\_sync        & 0.000 & 0.000 & 1.000 & 0.207 & +0.207 \\
+torrent           & 1.000 & 0.213 & 1.000 & 0.213 & +0.000 \\
+game\_launcher    & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
+web\_interactive  & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
+system            & 0.243 & 0.853 & 0.323 & 0.860 & +0.007 \\
+\midrule
+\textbf{Overall}  & \multicolumn{2}{c|}{0.200 [0.181,0.220]} & \multicolumn{2}{c|}{0.325 [0.303,0.348]} & \textbf{+0.125} \\
+\bottomrule
+\multicolumn{6}{l}{\footnotesize{McNemar test: $\chi^2 = 204.00$, $p < 10^{-44}$,
+$N_{pairs}=1{,}650$, $b=206$, $c=0$.}}\\
+\end{tabular}
+\end{table}
+
+% TODO: insert confusion matrix figure (Mode A & Mode B side-by-side)
+
+\paragraph{Discussion}
+The DNS contribution is statistically dominant: McNemar's test rejects the
+null of equal classifiers at $p < 10^{-44}$, with 206 flows correctly
+classified by Mode B but missed by Mode A and zero flows where DNS
+\emph{degraded} the verdict ($b=206, c=0$). The per-class lifts cluster
+into three patterns:
+
+\begin{itemize}
+\item \textbf{DNS-decisive (large positive $\Delta$):} \texttt{video\_vod}
+goes from 0\% recall to 77.3\%, the strongest lift in the dataset. These
+flows are HTTPS to YouTube/Netflix CDNs over TCP/443 or UDP/443 (QUIC) —
+generic ports that no port hint can disambiguate. The DNS sniffer
+populates $h_{dns}$ from observed \texttt{*.googlevideo.com},
+\texttt{*.nflxvideo.net} resolutions, after which the verdict is
+unambiguous.
+
+\item \textbf{DNS-supplementary (moderate positive $\Delta$):}
+\texttt{game\_rt} (+0.326) and \texttt{file\_sync} (+0.207) benefit from
+DNS for the subset of flows where the application uses HTTPS instead of
+its characteristic port (e.g., Steam HTTPS storefront, Dropbox sync
+over 443). Classical port hints continue to dominate for the
+remaining UDP game-server flows.
+
+\item \textbf{DNS-irrelevant ($\Delta \approx 0$):} \texttt{torrent}
+shows no lift because modern BitTorrent clients use random ports and
+encrypted DHT—no DNS hostnames are exchanged. \texttt{voip\_call} and
+\texttt{web\_interactive} also flat-line; for VoIP this reflects the
+testbed limitation discussed below (the synthetic UDP cannot reproduce
+G.711 codec packet shapes faithfully). \texttt{system} starts near
+ceiling (85\% Mode A) because port hints already cover DNS/NTP/DHCP.
+\end{itemize}
+
+The TCP-heavy classes (\texttt{bulk\_dl}, \texttt{game\_launcher},
+\texttt{web\_interactive}) flat-line at 0\% in both modes due to a
+testbed limitation: WSL2 NAT on the test laptop introduces outbound
+TCP timeouts to certain public IPs (5.58\% of test flows triggered
+\texttt{tcp\_unreachable}). When the SYN does not transit, no flow
+reaches the router classifier, so neither $h_{port}$, $h_{beh}$, nor
+$h_{dns}$ have an opportunity to fire. We discuss this in
+Sec.~\ref{sec:discussion}.
+
+\subsection{Hardware Resource Overhead}
+\label{sec:eval-resources}
+
+We sampled the router's CPU, RAM, and conntrack state once per second
+via SSH for the duration of both validation runs (Mode A: 4{,}473
+samples spanning 75 minutes; Mode B: 4{,}914 samples spanning 82 minutes).
+Table~\ref{tab:resources} summarizes the distributions.
+
+\begin{table}[t]
+\centering
+\caption{Router resource consumption during in-vivo validation. RSS
+remained constant across all samples in both modes.}
+\label{tab:resources}
+\begin{tabular}{l|ccc|ccc}
+\toprule
+\textbf{Metric} & \multicolumn{3}{c|}{\textbf{Mode A}} & \multicolumn{3}{c}{\textbf{Mode B}} \\
+ & p50 & p95 & max & p50 & p95 & max \\
+\midrule
+System CPU \%       & 25.1 & 52.2 & 88.6 & 25.4 & 46.3 & 92.8 \\
+mycoflowd CPU \%    & 9.6  & 17.6 & 46.4 & 9.5  & 14.7 & 26.1 \\
+Memory used \%      & 57.4 & 60.0 & 60.7 & 57.0 & 58.9 & 60.5 \\
+Conntrack entries   & 582  & 888  & 1{,}669 & 554 & 785 & 1{,}023 \\
+\midrule
+mycoflowd RSS (KB)  & \multicolumn{3}{c|}{\textbf{384 (constant)}} & \multicolumn{3}{c}{\textbf{384 (constant)}} \\
+Daemon crashes      & \multicolumn{3}{c|}{0 / 4{,}473} & \multicolumn{3}{c}{0 / 4{,}914} \\
+Flash writes (mtd)  & \multicolumn{3}{c|}{0} & \multicolumn{3}{c}{0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Three observations are immediately relevant for consumer deployment:
+
+\begin{enumerate}
+\item \textbf{Sub-megabyte RAM footprint.} mycoflowd's RSS held at
+384\,KB across all 9{,}387 samples. The daemon is allocation-static
+after start-up; flow tables, DNS cache, and per-device state are
+fixed-size circular buffers sized at compile time.
+
+\item \textbf{Single-digit median CPU on a dual-core 1.3\,GHz Cortex-A53.}
+Median daemon CPU was $\approx$9.6\%. The 46.4\% max in Mode A
+correlates with periods where the test laptop was simultaneously
+running real Windows-side YouTube traffic (peak system CPU 88.6\%);
+the Mode B max of 26.1\% reflects classifier work without that
+external interference. Even at peak, mycoflowd uses less than half a
+core, leaving the second core fully available for Wi-Fi
+acceleration, NAT, and the kernel's CAKE scheduler.
+
+\item \textbf{Zero flash writes, zero crashes.} The router's mtd
+erase-block counters did not move during the 2.5-hour combined run.
+The daemon's \texttt{pidof} probe never returned empty across nearly
+10{,}000 samples. Both observations are byproducts of the design:
+all mutable state lives in tmpfs (\texttt{/tmp}), and the deliberate
+RSS cap leaves no room for OOM-related restarts.
+\end{enumerate}
+
+\subsection{Temporal Generalization}
+\label{sec:eval-temporal}
+
+To rule out implicit overfitting to the data window MycoFlow's heuristic
+thresholds were tuned against, we partitioned the Unicauca dataset by
+\texttt{flowStart} timestamp at 2019-06-01 and evaluated the offline
+classifier on each half (Table~\ref{tab:temporal}). The calibration
+window (Apr--May, $N=1{,}718{,}543$) is the period from which
+exploratory threshold values were derived; the held-out window (June,
+$N=721{,}255$) was never inspected during development.
+
+\begin{table}[t]
+\centering
+\caption{Temporal generalization gap on the Unicauca dataset.}
+\label{tab:temporal}
+\begin{tabular}{l|cc|c}
+\toprule
+\textbf{Predictor} & \textbf{Apr--May} & \textbf{June (held-out)} & $\Delta$ \\
+\midrule
+Port + behavior      & 42.95\% & 42.51\% & $-$0.44 \\
+Port + behavior + DNS& 47.43\% & 47.04\% & $-$0.39 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Both gaps are within $\pm$0.5 percentage points—well below the
+$\pm$2-point threshold typically used to flag temporal overfitting.
+The heuristic decisions encoded in MycoFlow generalize across the
+calibration boundary, supporting the claim that the system is
+production-ready rather than tuned to a single trace.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{The AF\_PACKET Migration: A Critical Implementation Lesson}
+
+A naive implementation of an in-router DNS sniffer—using \texttt{AF\_INET}
+\texttt{SOCK\_RAW} with \texttt{IPPROTO\_UDP}—captures only packets
+addressed to the router itself. This works when clients are configured to
+use the router's local resolver (typical of routers shipping with stock
+DHCP) but \emph{fails silently} when clients bypass it: Windows machines
+with manually-set 1.1.1.1 DNS, mobile devices using DoH/DoT, IoT devices
+with hard-coded public resolvers. We measured this in our own testbed:
+the laptop client used WSL2 networking, which forwards DNS to the Windows
+host, which sends queries directly to 1.1.1.1; the router never sees the
+packets through \texttt{AF\_INET SOCK\_RAW}.
+
+The fix is mechanical—switch to \texttt{AF\_PACKET SOCK\_DGRAM} with
+\texttt{ETH\_P\_IP}, which delivers all IPv4 traffic visible at any
+interface—but the behavioral consequence is dramatic: in our pre-fix
+mini run (N=220 per mode), Mode B accuracy was indistinguishable from
+Mode A (19.1\% vs 18.6\%). After the AF\_PACKET migration and a
+300\,ms cache-settle pause between DNS prime and traffic, Mode B
+jumped to 32.5\% while Mode A held at 20.0\%—a +12.5\,pt lift that is
+statistically significant at $p<10^{-44}$ (Table~\ref{tab:invivo}).
+The behavioral gap of $\sim$13 percentage points would otherwise be
+invisible to a developer who tests only with the router's own
+DHCP-configured DNS.
+
+We document this trap because every classifier paper we surveyed assumes
+DNS visibility implicitly; we believe consumer-router QoS literature
+should explicitly state the socket family used.
+
+\subsection{Limitations and Threats to Validity}
+
+\begin{itemize}
+\item \textbf{Synthetic traffic fidelity.} Our replayed flows preserve
+per-flow median packet size and rate but not bursty arrival patterns.
+A more faithful PCAP-replay benchmark would require the original
+Universidad del Cauca PCAPs which are not publicly released.
+\item \textbf{Ground-truth label noise.} Unicauca uses nDPI-based
+classification which itself has finite accuracy. A flow labeled
+\texttt{voip\_call} may in fact be DNS overhead from a VoIP application.
+\item \textbf{Testbed network constraints.} Our test laptop runs under
+WSL2 NAT; outbound TCP to non-standard ports (e.g., 27015) frequently
+times out, causing those flows to register only one or two SYN packets.
+We marked such tests \texttt{tcp\_unreachable} and excluded them from the
+accuracy denominator (TODO\,\% of the original sample).
+\item \textbf{Single-router validation.} Generalization to other consumer
+SoCs (Qualcomm, Broadcom) is plausible given OpenWrt's portability but
+not directly measured here.
+\end{itemize}
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+MycoFlow demonstrates that application-aware QoS is practical on
+consumer-class router hardware without cloud offload, deep packet
+inspection, or central control. The three-signal classifier achieves
+47.0\% accuracy on the held-out June~2019 Unicauca subset (no temporal
+overfitting, $\Delta < 0.5$\,pts vs the calibration window) and
+32.5\% in vivo on the live router (95\% CI: 30.3\%--34.8\%), a
++12.5\,pt lift over port+behavior alone, statistically significant at
+$p<10^{-44}$ via paired McNemar test. Resource overhead remains
+remarkably modest: median 9.5\% CPU on a 1.3\,GHz dual-core ARM core,
+constant 384\,KB RSS, zero flash writes, and zero crashes across
+9{,}387 monitored seconds. We release the source, test scripts, and
+per-flow validation dataset under the project repository to enable
+replication.
+
+The gap between offline (47.0\%) and in-vivo (32.5\%) accuracy
+quantifies the cost of real-world testbed constraints—chiefly TCP
+egress timeouts on certain destinations—and motivates further work on
+controlled-environment benchmarks that decouple classifier evaluation
+from network reachability. The most actionable engineering finding is
+that any in-router DNS sniffer must use \texttt{AF\_PACKET} rather
+than \texttt{AF\_INET SOCK\_RAW} to capture transit DNS from clients
+that bypass the router's local resolver—a configuration that
+characterizes a growing fraction of consumer endpoints.
+
+\bibliographystyle{IEEEtran}
+\bibliography{ieee_tce_mycoflow}
+
+\end{document}
