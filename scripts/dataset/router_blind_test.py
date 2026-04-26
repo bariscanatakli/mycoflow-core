@@ -171,12 +171,6 @@ def get_router_state():
     except Exception:
         return {}
 
-def flush_router_state():
-    """Best-effort conntrack flush. /proc write works on most OpenWrt builds.
-    Falls back to natural decay if not writable."""
-    router_ssh("echo > /proc/net/nf_conntrack 2>/dev/null; "
-               "echo 1 > /proc/sys/net/netfilter/nf_conntrack_count 2>/dev/null", timeout=3)
-
 def get_local_lan_ip():
     """Detect the LAN IP the router sees us from.
 
