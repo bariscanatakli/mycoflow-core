@@ -188,8 +188,22 @@ static void apply_uci_overrides(myco_config_t *cfg) {
         cfg->no_tc = atoi(val);
     }
     if (uci_get_option("metric_file", val, sizeof(val))) {
-        strncpy(cfg->metric_file, val, sizeof(cfg->metric_file) - 1);
-        cfg->metric_file[sizeof(cfg->metric_file) - 1] = '\0';
+        /* Refuse paths that would write to flash. The "zero flash writes"
+         * guarantee is a load-bearing property of the design (preserves
+         * router NAND lifetime); a user typo here would silently break it.
+         * tmpfs paths only: /tmp, /var (often a symlink to /tmp on
+         * OpenWrt), and explicit /dev/shm. */
+        if (strncmp(val, "/tmp/", 5) != 0 &&
+            strncmp(val, "/var/", 5) != 0 &&
+            strncmp(val, "/dev/shm/", 9) != 0) {
+            log_msg(LOG_WARN, "config",
+                "metric_file '%s' is not on tmpfs — refusing to honor "
+                "(would cause flash writes). Use /tmp/ instead.", val);
+            cfg->metric_file[0] = '\0';
+        } else {
+            strncpy(cfg->metric_file, val, sizeof(cfg->metric_file) - 1);
+            cfg->metric_file[sizeof(cfg->metric_file) - 1] = '\0';
+        }
     }
     if (uci_get_option("probe_host", val, sizeof(val))) {
         strncpy(cfg->probe_host, val, sizeof(cfg->probe_host) - 1);
@@ -338,8 +352,17 @@ static void apply_env_overrides(myco_config_t *cfg) {
     cfg->no_tc = parse_env_int("MYCOFLOW_NO_TC", cfg->no_tc);
     const char *metric_file = getenv("MYCOFLOW_METRIC_FILE");
     if (metric_file && *metric_file) {
-        strncpy(cfg->metric_file, metric_file, sizeof(cfg->metric_file) - 1);
-        cfg->metric_file[sizeof(cfg->metric_file) - 1] = '\0';
+        /* Same tmpfs guard as the UCI path (see above). */
+        if (strncmp(metric_file, "/tmp/", 5) != 0 &&
+            strncmp(metric_file, "/var/", 5) != 0 &&
+            strncmp(metric_file, "/dev/shm/", 9) != 0) {
+            log_msg(LOG_WARN, "config",
+                "MYCOFLOW_METRIC_FILE '%s' is not on tmpfs — refusing.",
+                metric_file);
+        } else {
+            strncpy(cfg->metric_file, metric_file, sizeof(cfg->metric_file) - 1);
+            cfg->metric_file[sizeof(cfg->metric_file) - 1] = '\0';
+        }
     }
     const char *probe_host = getenv("MYCOFLOW_PROBE_HOST");
     if (probe_host && *probe_host) {
