@@ -1,0 +1,20 @@
+========================================================================
+Temporal Split Validation — Heuristic Generalization Check
+========================================================================
+Calibration window : flows < 2019-06-01  (used during dev)
+Held-out window    : flows ≥ 2019-06-01  (never seen)
+Predictor variants : port+behavioral  /  port+behavioral+DNS
+
+Window                   Predictor                         N      Acc                 95% CI
+------------------------------------------------------------------------------------------
+calibration_AprMay_port  behavior                  1,718,543   42.95%       [42.88%, 43.03%]
+calibration_AprMay_port_behavior dns                       1,718,543   47.43%       [47.35%, 47.50%]
+held_out_Jun_port        behavior                    721,255   42.51%       [42.39%, 42.62%]
+held_out_Jun_port_behavior dns                         721,255   47.04%       [46.92%, 47.16%]
+
+Generalization gap  (calibration → held-out)
+  port+behavioral      : 42.95% → 42.51%  (Δ = +0.44 pts)
+  port+behavioral+DNS  : 47.43% → 47.04%  (Δ = +0.39 pts)
+
+Interpretation: gaps within ±2 pts → no significant overfitting.
+Larger gaps → heuristic thresholds tuned to specific period.

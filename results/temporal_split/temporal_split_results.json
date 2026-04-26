@@ -1,0 +1,546 @@
+[
+  {
+    "label": "calibration_AprMay_port_behavior",
+    "n": 1718543,
+    "correct": 738152,
+    "accuracy": 0.429521984611383,
+    "ci_lo": 0.4287820470214556,
+    "ci_hi": 0.43026223729117274,
+    "matrix": {
+      "system": {
+        "system": 309230,
+        "unknown": 5658,
+        "voip_call": 3849,
+        "video_conf": 7260,
+        "game_rt": 5370,
+        "bulk_dl": 151,
+        "file_sync": 111,
+        "web_interactive": 672,
+        "torrent": 40,
+        "video_live": 34
+      },
+      "web_interactive": {
+        "video_live": 14576,
+        "file_sync": 342466,
+        "bulk_dl": 20192,
+        "web_interactive": 410217,
+        "system": 304567,
+        "unknown": 62445,
+        "torrent": 18993,
+        "video_conf": 34184,
+        "game_rt": 3153,
+        "voip_call": 4208
+      },
+      "bulk_dl": {
+        "web_interactive": 1282,
+        "unknown": 1111,
+        "system": 3864,
+        "file_sync": 3277,
+        "bulk_dl": 1946,
+        "video_live": 561,
+        "torrent": 19,
+        "video_conf": 223
+      },
+      "file_sync": {
+        "web_interactive": 8074,
+        "unknown": 1217,
+        "file_sync": 5447,
+        "system": 18675,
+        "video_live": 287,
+        "torrent": 356,
+        "bulk_dl": 338,
+        "video_conf": 570,
+        "voip_call": 1
+      },
+      "video_live": {
+        "file_sync": 8324,
+        "system": 11605,
+        "unknown": 5909,
+        "bulk_dl": 5500,
+        "web_interactive": 4668,
+        "torrent": 485,
+        "video_live": 2684,
+        "voip_call": 17,
+        "video_conf": 2185,
+        "game_rt": 3
+      },
+      "video_vod": {
+        "video_live": 39,
+        "file_sync": 1473,
+        "system": 1220,
+        "web_interactive": 347,
+        "torrent": 82,
+        "unknown": 45,
+        "bulk_dl": 30
+      },
+      "voip_call": {
+        "game_rt": 19000,
+        "file_sync": 4988,
+        "system": 4682,
+        "web_interactive": 1651,
+        "unknown": 339,
+        "video_live": 49,
+        "bulk_dl": 22,
+        "torrent": 68,
+        "voip_call": 291,
+        "video_conf": 44
+      },
+      "torrent": {
+        "game_rt": 18799,
+        "web_interactive": 4071,
+        "torrent": 8104,
+        "file_sync": 159,
+        "bulk_dl": 43,
+        "video_conf": 7917,
+        "voip_call": 559,
+        "unknown": 160,
+        "video_live": 27,
+        "system": 5
+      },
+      "game_rt": {
+        "system": 677,
+        "web_interactive": 10,
+        "game_rt": 200,
+        "file_sync": 6,
+        "video_conf": 1,
+        "voip_call": 1,
+        "torrent": 1
+      },
+      "game_launcher": {
+        "file_sync": 305,
+        "web_interactive": 189,
+        "video_live": 174,
+        "bulk_dl": 394,
+        "unknown": 15,
+        "torrent": 1
+      },
+      "video_conf": {
+        "game_rt": 236,
+        "voip_call": 6067,
+        "video_conf": 33,
+        "web_interactive": 4,
+        "system": 4,
+        "file_sync": 4,
+        "bulk_dl": 1,
+        "unknown": 1,
+        "video_live": 1
+      }
+    },
+    "classes": [
+      "bulk_dl",
+      "file_sync",
+      "game_launcher",
+      "game_rt",
+      "system",
+      "torrent",
+      "unknown",
+      "video_conf",
+      "video_live",
+      "video_vod",
+      "voip_call",
+      "web_interactive"
+    ]
+  },
+  {
+    "label": "calibration_AprMay_port_behavior_dns",
+    "n": 1718543,
+    "correct": 815052,
+    "accuracy": 0.47426919198414,
+    "ci_lo": 0.47352268118303137,
+    "ci_hi": 0.475015817821359,
+    "matrix": {
+      "system": {
+        "system": 314888,
+        "voip_call": 3849,
+        "video_conf": 7260,
+        "game_rt": 5370,
+        "bulk_dl": 151,
+        "file_sync": 111,
+        "web_interactive": 672,
+        "torrent": 40,
+        "video_live": 34
+      },
+      "web_interactive": {
+        "video_live": 14576,
+        "file_sync": 342466,
+        "bulk_dl": 20192,
+        "web_interactive": 472662,
+        "system": 304567,
+        "torrent": 18993,
+        "video_conf": 34184,
+        "game_rt": 3153,
+        "voip_call": 4208
+      },
+      "bulk_dl": {
+        "web_interactive": 1282,
+        "bulk_dl": 3057,
+        "system": 3864,
+        "file_sync": 3277,
+        "video_live": 561,
+        "torrent": 19,
+        "video_conf": 223
+      },
+      "file_sync": {
+        "web_interactive": 8074,
+        "file_sync": 6664,
+        "system": 18675,
+        "video_live": 287,
+        "torrent": 356,
+        "bulk_dl": 338,
+        "video_conf": 570,
+        "voip_call": 1
+      },
+      "video_live": {
+        "file_sync": 8324,
+        "system": 11605,
+        "video_live": 8593,
+        "bulk_dl": 5500,
+        "web_interactive": 4668,
+        "torrent": 485,
+        "voip_call": 17,
+        "video_conf": 2185,
+        "game_rt": 3
+      },
+      "video_vod": {
+        "video_live": 39,
+        "file_sync": 1473,
+        "system": 1220,
+        "web_interactive": 347,
+        "torrent": 82,
+        "video_vod": 45,
+        "bulk_dl": 30
+      },
+      "voip_call": {
+        "game_rt": 19000,
+        "file_sync": 4988,
+        "system": 4682,
+        "web_interactive": 1651,
+        "voip_call": 630,
+        "video_live": 49,
+        "bulk_dl": 22,
+        "torrent": 68,
+        "video_conf": 44
+      },
+      "torrent": {
+        "game_rt": 18799,
+        "web_interactive": 4071,
+        "torrent": 8264,
+        "file_sync": 159,
+        "bulk_dl": 43,
+        "video_conf": 7917,
+        "voip_call": 559,
+        "video_live": 27,
+        "system": 5
+      },
+      "game_rt": {
+        "system": 677,
+        "web_interactive": 10,
+        "game_rt": 200,
+        "file_sync": 6,
+        "video_conf": 1,
+        "voip_call": 1,
+        "torrent": 1
+      },
+      "game_launcher": {
+        "file_sync": 305,
+        "web_interactive": 189,
+        "video_live": 174,
+        "bulk_dl": 394,
+        "game_launcher": 15,
+        "torrent": 1
+      },
+      "video_conf": {
+        "game_rt": 236,
+        "voip_call": 6067,
+        "video_conf": 34,
+        "web_interactive": 4,
+        "system": 4,
+        "file_sync": 4,
+        "bulk_dl": 1,
+        "video_live": 1
+      }
+    },
+    "classes": [
+      "bulk_dl",
+      "file_sync",
+      "game_launcher",
+      "game_rt",
+      "system",
+      "torrent",
+      "video_conf",
+      "video_live",
+      "video_vod",
+      "voip_call",
+      "web_interactive"
+    ]
+  },
+  {
+    "label": "held_out_Jun_port_behavior",
+    "n": 721255,
+    "correct": 306595,
+    "accuracy": 0.42508544134876014,
+    "ci_lo": 0.423944933238457,
+    "ci_hi": 0.4262267474853804,
+    "matrix": {
+      "system": {
+        "system": 133805,
+        "video_conf": 2780,
+        "unknown": 2010,
+        "voip_call": 14977,
+        "game_rt": 725,
+        "web_interactive": 408,
+        "bulk_dl": 56,
+        "file_sync": 100,
+        "torrent": 29,
+        "video_live": 5
+      },
+      "web_interactive": {
+        "web_interactive": 164369,
+        "bulk_dl": 5927,
+        "file_sync": 140688,
+        "video_live": 5356,
+        "unknown": 27556,
+        "torrent": 7196,
+        "system": 125146,
+        "video_conf": 12428,
+        "game_rt": 508,
+        "voip_call": 202
+      },
+      "voip_call": {
+        "file_sync": 2356,
+        "web_interactive": 680,
+        "system": 1154,
+        "torrent": 20,
+        "unknown": 203,
+        "video_live": 26,
+        "video_conf": 735,
+        "game_rt": 3984,
+        "bulk_dl": 21,
+        "voip_call": 104
+      },
+      "video_live": {
+        "video_live": 892,
+        "unknown": 1965,
+        "web_interactive": 1212,
+        "file_sync": 3474,
+        "bulk_dl": 2312,
+        "system": 4541,
+        "torrent": 166,
+        "video_conf": 413,
+        "game_rt": 3,
+        "voip_call": 4
+      },
+      "bulk_dl": {
+        "web_interactive": 500,
+        "system": 1779,
+        "unknown": 566,
+        "file_sync": 1219,
+        "video_live": 219,
+        "bulk_dl": 692,
+        "torrent": 8,
+        "video_conf": 67
+      },
+      "file_sync": {
+        "system": 7585,
+        "file_sync": 2188,
+        "unknown": 276,
+        "web_interactive": 4261,
+        "torrent": 128,
+        "bulk_dl": 101,
+        "video_live": 92,
+        "video_conf": 36
+      },
+      "video_vod": {
+        "unknown": 23,
+        "system": 399,
+        "file_sync": 368,
+        "web_interactive": 69,
+        "torrent": 22,
+        "video_live": 7,
+        "bulk_dl": 4
+      },
+      "torrent": {
+        "game_rt": 17521,
+        "web_interactive": 3296,
+        "torrent": 4332,
+        "file_sync": 121,
+        "bulk_dl": 40,
+        "system": 6,
+        "video_live": 18,
+        "video_conf": 4839,
+        "voip_call": 740,
+        "unknown": 73
+      },
+      "game_launcher": {
+        "unknown": 9,
+        "file_sync": 220,
+        "web_interactive": 69,
+        "video_live": 8,
+        "bulk_dl": 1
+      },
+      "game_rt": {
+        "system": 427,
+        "web_interactive": 2,
+        "file_sync": 4,
+        "game_rt": 139,
+        "torrent": 2,
+        "voip_call": 1
+      },
+      "video_conf": {
+        "video_conf": 74,
+        "voip_call": 145,
+        "file_sync": 1,
+        "web_interactive": 2,
+        "system": 1,
+        "unknown": 2,
+        "video_live": 1,
+        "game_rt": 15,
+        "bulk_dl": 1
+      }
+    },
+    "classes": [
+      "bulk_dl",
+      "file_sync",
+      "game_launcher",
+      "game_rt",
+      "system",
+      "torrent",
+      "unknown",
+      "video_conf",
+      "video_live",
+      "video_vod",
+      "voip_call",
+      "web_interactive"
+    ]
+  },
+  {
+    "label": "held_out_Jun_port_behavior_dns",
+    "n": 721255,
+    "correct": 339278,
+    "accuracy": 0.4703995119617888,
+    "ci_lo": 0.4692477607577992,
+    "ci_hi": 0.4715515784845747,
+    "matrix": {
+      "system": {
+        "system": 135815,
+        "video_conf": 2780,
+        "voip_call": 14977,
+        "game_rt": 725,
+        "web_interactive": 408,
+        "bulk_dl": 56,
+        "file_sync": 100,
+        "torrent": 29,
+        "video_live": 5
+      },
+      "web_interactive": {
+        "web_interactive": 191925,
+        "bulk_dl": 5927,
+        "file_sync": 140688,
+        "video_live": 5356,
+        "torrent": 7196,
+        "system": 125146,
+        "video_conf": 12428,
+        "game_rt": 508,
+        "voip_call": 202
+      },
+      "voip_call": {
+        "file_sync": 2356,
+        "web_interactive": 680,
+        "system": 1154,
+        "torrent": 20,
+        "voip_call": 307,
+        "video_live": 26,
+        "video_conf": 735,
+        "game_rt": 3984,
+        "bulk_dl": 21
+      },
+      "video_live": {
+        "video_live": 2857,
+        "web_interactive": 1212,
+        "file_sync": 3474,
+        "bulk_dl": 2312,
+        "system": 4541,
+        "torrent": 166,
+        "video_conf": 413,
+        "game_rt": 3,
+        "voip_call": 4
+      },
+      "bulk_dl": {
+        "web_interactive": 500,
+        "system": 1779,
+        "bulk_dl": 1258,
+        "file_sync": 1219,
+        "video_live": 219,
+        "torrent": 8,
+        "video_conf": 67
+      },
+      "file_sync": {
+        "system": 7585,
+        "file_sync": 2464,
+        "web_interactive": 4261,
+        "torrent": 128,
+        "bulk_dl": 101,
+        "video_live": 92,
+        "video_conf": 36
+      },
+      "video_vod": {
+        "video_vod": 23,
+        "system": 399,
+        "file_sync": 368,
+        "web_interactive": 69,
+        "torrent": 22,
+        "video_live": 7,
+        "bulk_dl": 4
+      },
+      "torrent": {
+        "game_rt": 17521,
+        "web_interactive": 3296,
+        "torrent": 4405,
+        "file_sync": 121,
+        "bulk_dl": 40,
+        "system": 6,
+        "video_live": 18,
+        "video_conf": 4839,
+        "voip_call": 740
+      },
+      "game_launcher": {
+        "game_launcher": 9,
+        "file_sync": 220,
+        "web_interactive": 69,
+        "video_live": 8,
+        "bulk_dl": 1
+      },
+      "game_rt": {
+        "system": 427,
+        "web_interactive": 2,
+        "file_sync": 4,
+        "game_rt": 139,
+        "torrent": 2,
+        "voip_call": 1
+      },
+      "video_conf": {
+        "video_conf": 76,
+        "voip_call": 145,
+        "file_sync": 1,
+        "web_interactive": 2,
+        "system": 1,
+        "video_live": 1,
+        "game_rt": 15,
+        "bulk_dl": 1
+      }
+    },
+    "classes": [
+      "bulk_dl",
+      "file_sync",
+      "game_launcher",
+      "game_rt",
+      "system",
+      "torrent",
+      "video_conf",
+      "video_live",
+      "video_vod",
+      "voip_call",
+      "web_interactive"
+    ]
+  }
+]
