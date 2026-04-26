@@ -29,6 +29,8 @@
 #include <sys/select.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
+#include <linux/if_packet.h>
+#include <linux/if_ether.h>
 #include <time.h>
 
 /* ── Domain suffix → persona table ───────────────────────────── */
@@ -633,8 +635,15 @@ int dns_parse_response(dns_cache_t *cache, const uint8_t *pkt, size_t pkt_len) {
 /* ── Sniffer thread ──────────────────────────────────────────── */
 
 /*
- * Background thread: opens a raw socket filtered on UDP port 53,
- * captures DNS responses, and populates the cache.
+ * Background thread: opens an AF_PACKET socket to capture *all* IPv4
+ * traffic seen on any interface — including transit (forwarded) traffic
+ * the router routes between LAN and WAN. AF_INET SOCK_RAW only delivers
+ * host-bound packets, so it misses DNS responses for clients that
+ * resolve directly via upstream (e.g. devices configured with 1.1.1.1).
+ *
+ * SOCK_DGRAM mode strips the link-layer header so packets start at IP.
+ * We deduplicate by ignoring PACKET_OUTGOING — the kernel can deliver
+ * the same forwarded frame twice (once on ingress, once on egress).
  *
  * Uses select() with 1-second timeout to check g_stop periodically.
  * Requires CAP_NET_RAW or root.
@@ -645,16 +654,20 @@ void *dns_sniff_thread(void *arg) {
         return NULL;
     }
 
-    /* Open raw socket for UDP packets */
-    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+    /* AF_PACKET captures every IPv4 packet seen on the host's interfaces,
+     * including forwarded/transit traffic. ETH_P_IP filters to IPv4 only
+     * at the kernel level (cheap). */
+    int sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
     if (sock < 0) {
-        log_msg(LOG_WARN, "dns", "failed to open raw socket (need CAP_NET_RAW), DNS snooping disabled");
+        log_msg(LOG_WARN, "dns", "failed to open AF_PACKET socket (need CAP_NET_RAW), DNS snooping disabled");
         return NULL;
     }
 
-    log_msg(LOG_INFO, "dns", "DNS sniffer thread started");
+    log_msg(LOG_INFO, "dns", "DNS sniffer thread started (AF_PACKET, captures transit DNS)");
 
-    uint8_t buf[2048];  /* max DNS response over UDP is ~512-4096 bytes */
+    uint8_t buf[2048];
+    struct sockaddr_ll src_addr;
+    socklen_t addr_len;
 
     while (!g_stop) {
         fd_set fds;
@@ -667,15 +680,23 @@ void *dns_sniff_thread(void *arg) {
 
         int ret = select(sock + 1, &fds, NULL, NULL, &tv);
         if (ret <= 0) {
-            continue;  /* timeout or error — check g_stop and retry */
+            continue;
         }
 
-        ssize_t n = recv(sock, buf, sizeof(buf), 0);
+        addr_len = sizeof(src_addr);
+        ssize_t n = recvfrom(sock, buf, sizeof(buf), 0,
+                             (struct sockaddr *)&src_addr, &addr_len);
         if (n < (ssize_t)(sizeof(struct iphdr) + sizeof(struct udphdr))) {
-            continue;  /* too short */
+            continue;
         }
 
-        /* Parse IP header */
+        /* PACKET_OUTGOING means the kernel is showing us a frame we already
+         * saw on the way in (or one we generated locally). Skip to dedupe. */
+        if (src_addr.sll_pkttype == PACKET_OUTGOING) {
+            continue;
+        }
+
+        /* Parse IP header (cooked AF_PACKET starts at L3) */
         struct iphdr *iph = (struct iphdr *)buf;
         if (iph->protocol != IPPROTO_UDP) {
             continue;
@@ -686,16 +707,12 @@ void *dns_sniff_thread(void *arg) {
             continue;
         }
 
-        /* Parse UDP header */
         struct udphdr *udph = (struct udphdr *)(buf + ip_hlen);
         uint16_t src_port = ntohs(udph->source);
-
-        /* We only want DNS responses: source port 53 */
         if (src_port != 53) {
             continue;
         }
 
-        /* DNS payload starts after IP + UDP headers */
         size_t dns_offset = ip_hlen + sizeof(struct udphdr);
         if (dns_offset >= (size_t)n) {
             continue;
