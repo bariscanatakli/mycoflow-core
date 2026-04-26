@@ -26,12 +26,17 @@ import argparse, json, os, random, socket, subprocess, sys, threading, time
 from pathlib import Path
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-ROUTER_IP   = "10.10.1.1"
-ROUTER_USER = "root"
-ROUTER_PASS = "sukranflat7"
+ROUTER_IP   = os.environ.get("MYCOFLOW_ROUTER_IP", "10.10.1.1")
+ROUTER_USER = os.environ.get("MYCOFLOW_ROUTER_USER", "root")
+ROUTER_PASS = os.environ.get("MYCOFLOW_ROUTER_PASS", "sukranflat7")
 SSH_OPTS    = ["-o", "StrictHostKeyChecking=no",
                "-o", "ConnectTimeout=5",
-               "-o", "LogLevel=ERROR"]
+               "-o", "LogLevel=ERROR",
+               "-o", "BatchMode=yes" if os.environ.get("MYCOFLOW_SSH_KEYAUTH") else "BatchMode=no"]
+# When MYCOFLOW_SSH_KEYAUTH=1, skip sshpass and rely on the host's SSH agent /
+# ~/.ssh keys. Lets us run from a box (Ubuntu testbed) where sshpass isn't
+# installed and an SSH key has been pushed to the router's authorized_keys.
+USE_KEYAUTH = bool(os.environ.get("MYCOFLOW_SSH_KEYAUTH"))
 
 REPO_ROOT   = Path(__file__).resolve().parent.parent.parent
 DEFAULT_CSV = REPO_ROOT / "archive" / "Unicauca-dataset-April-June-2019-Network-flows.csv"
@@ -150,16 +155,23 @@ SERVICE_HOSTNAMES = {
 # are flagged as "tcp_unreachable" in results and excluded from accuracy math.
 UDP_TARGET = "8.8.8.8"
 TCP_TARGET = "1.1.1.1"
-TCP_REACHABLE_PORTS = {53, 80, 443, 8080, 8443}   # pragmatic whitelist
+# Reachable-port whitelist used in Mode A fallback. Set MYCOFLOW_TCP_OPEN=1 on
+# a clean LAN-attached testbed (Ubuntu server, etc.) where outbound TCP to
+# arbitrary ports actually works — drops the whitelist so the test harness
+# stops conservatively flagging tcp_unreachable for ports like 27015 or 6881.
+TCP_REACHABLE_PORTS = (None
+                       if os.environ.get("MYCOFLOW_TCP_OPEN")
+                       else {53, 80, 443, 8080, 8443})
 
 # ── SSH helpers ────────────────────────────────────────────────────────────────
 def router_ssh(cmd, timeout=10):
+    if USE_KEYAUTH:
+        argv = ["ssh"] + SSH_OPTS + [f"{ROUTER_USER}@{ROUTER_IP}", cmd]
+    else:
+        argv = ["sshpass", "-p", ROUTER_PASS, "ssh"] + SSH_OPTS + \
+               [f"{ROUTER_USER}@{ROUTER_IP}", cmd]
     try:
-        result = subprocess.run(
-            ["sshpass", "-p", ROUTER_PASS, "ssh"] + SSH_OPTS +
-            [f"{ROUTER_USER}@{ROUTER_IP}", cmd],
-            capture_output=True, text=True, timeout=timeout
-        )
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
         return result.stdout, result.stderr, result.returncode
     except subprocess.TimeoutExpired:
         return "", "timeout", -1
@@ -421,7 +433,9 @@ def replay_one_flow(row, mode, lan_ip):
         dst_ip = dns_resolved_ip
     elif proto == 17:
         dst_ip = UDP_TARGET
-    elif dst_port in TCP_REACHABLE_PORTS:
+    elif TCP_REACHABLE_PORTS is None or dst_port in TCP_REACHABLE_PORTS:
+        # Either testbed is open (TCP_REACHABLE_PORTS=None) or the port is
+        # in the constrained-network whitelist. Use the TCP fallback target.
         dst_ip = TCP_TARGET
     else:
         tcp_unreachable = True
@@ -548,9 +562,9 @@ def main():
     if not args.output:
         args.output = str(RESULTS_DIR / f"mode_{args.mode}_n{args.n_per_persona}_seed{args.seed}.jsonl")
 
-    # Sanity checks
-    if subprocess.run(["which", "sshpass"], capture_output=True).returncode != 0:
-        sys.exit("[!] sshpass missing — apt install sshpass")
+    # Sanity checks: only require sshpass on the password-auth path.
+    if not USE_KEYAUTH and subprocess.run(["which", "sshpass"], capture_output=True).returncode != 0:
+        sys.exit("[!] sshpass missing — apt install sshpass (or set MYCOFLOW_SSH_KEYAUTH=1 for key-based)")
     _, _, rc = router_ssh("echo ping", timeout=5)
     if rc != 0:
         sys.exit(f"[!] cannot reach router {ROUTER_IP}")

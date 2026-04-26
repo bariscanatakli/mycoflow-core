@@ -20,9 +20,10 @@ Usage:
 import argparse, json, os, signal, subprocess, sys, time
 from pathlib import Path
 
-ROUTER_IP   = "10.10.1.1"
-ROUTER_USER = "root"
-ROUTER_PASS = "sukranflat7"
+ROUTER_IP   = os.environ.get("MYCOFLOW_ROUTER_IP",   "10.10.1.1")
+ROUTER_USER = os.environ.get("MYCOFLOW_ROUTER_USER", "root")
+ROUTER_PASS = os.environ.get("MYCOFLOW_ROUTER_PASS", "sukranflat7")
+USE_KEYAUTH = bool(os.environ.get("MYCOFLOW_SSH_KEYAUTH"))
 SSH_OPTS    = ["-o", "StrictHostKeyChecking=no",
                "-o", "ConnectTimeout=3",
                "-o", "LogLevel=ERROR",
@@ -68,12 +69,13 @@ echo "PROC_RSS_KB=$PROC_RSS"
 
 def probe_router():
     """Send single SSH command, parse KEY=VAL output."""
+    if USE_KEYAUTH:
+        argv = ["ssh"] + SSH_OPTS + [f"{ROUTER_USER}@{ROUTER_IP}", PROBE_CMD]
+    else:
+        argv = ["sshpass", "-p", ROUTER_PASS, "ssh"] + SSH_OPTS + \
+               [f"{ROUTER_USER}@{ROUTER_IP}", PROBE_CMD]
     try:
-        result = subprocess.run(
-            ["sshpass", "-p", ROUTER_PASS, "ssh"] + SSH_OPTS +
-            [f"{ROUTER_USER}@{ROUTER_IP}", PROBE_CMD],
-            capture_output=True, text=True, timeout=8
-        )
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=8)
     except subprocess.TimeoutExpired:
         return {"ts": time.time(), "error": "ssh-timeout"}
 
