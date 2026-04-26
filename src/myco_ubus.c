@@ -10,8 +10,10 @@
 #include "myco_device.h"
 #include "myco_classifier.h"
 #include "myco_service.h"
+#include "myco_log.h"
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -33,6 +35,10 @@ static int g_per_device_enabled = 0;
 /* Per-flow service table pointer — set by main when flow_aware is enabled. */
 static const flow_service_table_t *g_flow_table = NULL;
 static int g_flow_aware_enabled = 0;
+
+/* Control-channel mutation targets — registered by main once at startup. */
+static control_state_t      *g_control_state = NULL;
+static const myco_config_t  *g_control_cfg   = NULL;
 
 #ifdef HAVE_UBUS
 #include <libubox/blobmsg_json.h>
@@ -130,6 +136,133 @@ void myco_set_flow_table(const void *fst, int enabled) {
     g_flow_aware_enabled = enabled;
 }
 
+void myco_set_control_handles(void *control_state, const void *cfg) {
+    g_control_state = (control_state_t *)control_state;
+    g_control_cfg   = (const myco_config_t *)cfg;
+}
+
+/* ── Control-file fallback for static (no-ubus) builds ────────────────────
+ *
+ * LuCI writes a small JSON to /tmp/myco_control.json; we read it once per
+ * loop cycle, apply the requested mutations, and unlink the file so each
+ * command is consumed exactly once.
+ *
+ * Parser is deliberately minimal — string scan with strstr() — to avoid
+ * pulling in a JSON library on the constrained target. The fields are
+ * single-line shallow keys; no nesting, no escaping. */
+
+static int parse_str_field(const char *buf, const char *key, char *out, size_t outlen) {
+    char needle[64];
+    snprintf(needle, sizeof(needle), "\"%s\"", key);
+    const char *p = strstr(buf, needle);
+    if (!p) return 0;
+    p = strchr(p + strlen(needle), ':');
+    if (!p) return 0;
+    p++;
+    while (*p == ' ' || *p == '\t' || *p == '\n') p++;
+    if (*p != '"') return 0;
+    p++;
+    const char *end = strchr(p, '"');
+    if (!end) return 0;
+    size_t n = (size_t)(end - p);
+    if (n >= outlen) n = outlen - 1;
+    memcpy(out, p, n);
+    out[n] = '\0';
+    return 1;
+}
+
+static int parse_int_field(const char *buf, const char *key, long *out) {
+    char needle[64];
+    snprintf(needle, sizeof(needle), "\"%s\"", key);
+    const char *p = strstr(buf, needle);
+    if (!p) return 0;
+    p = strchr(p + strlen(needle), ':');
+    if (!p) return 0;
+    p++;
+    while (*p == ' ' || *p == '\t' || *p == '\n') p++;
+    char *end = NULL;
+    long v = strtol(p, &end, 10);
+    if (end == p) return 0;
+    *out = v;
+    return 1;
+}
+
+static persona_t persona_from_control_str(const char *s) {
+    if (!s) return PERSONA_UNKNOWN;
+    if (strcasecmp(s, "voip")      == 0) return PERSONA_VOIP;
+    if (strcasecmp(s, "gaming")    == 0 ||
+        strcasecmp(s, "interactive") == 0) return PERSONA_GAMING;
+    if (strcasecmp(s, "video")     == 0) return PERSONA_VIDEO;
+    if (strcasecmp(s, "streaming") == 0) return PERSONA_STREAMING;
+    if (strcasecmp(s, "bulk")      == 0) return PERSONA_BULK;
+    if (strcasecmp(s, "torrent")   == 0) return PERSONA_TORRENT;
+    return PERSONA_UNKNOWN;
+}
+
+void myco_apply_control_file(void) {
+    const char *path = "/tmp/myco_control.json";
+    FILE *f = fopen(path, "r");
+    if (!f) return;  /* common case — no pending command */
+
+    char buf[1024];
+    size_t n = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+    /* Always unlink so a malformed file is not retried forever. */
+    unlink(path);
+    if (n == 0) return;
+    buf[n] = '\0';
+
+    /* persona_override: "voip" / "gaming" / ... / "clear" */
+    char persona_str[32] = {0};
+    if (parse_str_field(buf, "persona_override", persona_str, sizeof(persona_str))) {
+        pthread_mutex_lock(&g_state_mutex);
+        if (strcasecmp(persona_str, "clear") == 0 ||
+            strcasecmp(persona_str, "none")  == 0 ||
+            persona_str[0] == '\0') {
+            g_persona_override_active = 0;
+            g_persona_override = PERSONA_UNKNOWN;
+            log_msg(LOG_INFO, "ctl", "persona override cleared");
+        } else {
+            persona_t p = persona_from_control_str(persona_str);
+            if (p != PERSONA_UNKNOWN) {
+                g_persona_override = p;
+                g_persona_override_active = 1;
+                log_msg(LOG_INFO, "ctl", "persona override set: %s", persona_name(p));
+            } else {
+                log_msg(LOG_WARN, "ctl", "ignoring unknown persona '%s'", persona_str);
+            }
+        }
+        pthread_mutex_unlock(&g_state_mutex);
+    }
+
+    /* Bandwidth mutations require control_state + cfg registered. */
+    if (!g_control_state || !g_control_cfg) {
+        return;
+    }
+    long v = 0;
+    int  bw_min = g_control_cfg->min_bandwidth_kbit;
+    int  bw_max = g_control_cfg->max_bandwidth_kbit;
+    if (bw_min <= 0) bw_min = 1000;
+    if (bw_max <= 0) bw_max = 1000000;
+
+    int new_bw = -1;
+    if (parse_int_field(buf, "policy_set_kbit", &v)) {
+        new_bw = (int)v;
+    } else if (parse_int_field(buf, "policy_boost_kbit", &v)) {
+        new_bw = g_control_state->current.bandwidth_kbit + (int)v;
+    } else if (parse_int_field(buf, "policy_throttle_kbit", &v)) {
+        new_bw = g_control_state->current.bandwidth_kbit - (int)v;
+    }
+    if (new_bw > 0) {
+        if (new_bw < bw_min) new_bw = bw_min;
+        if (new_bw > bw_max) new_bw = bw_max;
+        pthread_mutex_lock(&g_state_mutex);
+        g_control_state->current.bandwidth_kbit = new_bw;
+        pthread_mutex_unlock(&g_state_mutex);
+        log_msg(LOG_INFO, "ctl", "bandwidth manually set: %d kbit", new_bw);
+    }
+}
+
 /* Visitor state for the flow-array emitter. */
 typedef struct {
     FILE *f;
@@ -211,6 +344,10 @@ void myco_dump_json(void) {
             }
             char ip_str[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &dev->ip, ip_str, sizeof(ip_str));
+            /* Bandwidth: bytes accumulate over the sample interval (0.5s at
+             * sample_hz=2). Multiply by 8 for bits, then by 1/interval for
+             * per-second rate. Previously used /1.0 which under-reported by 2x. */
+            const double SAMPLE_INTERVAL_S = 0.5;
             fprintf(f, "%s\n\t\t{\"ip\":\"%s\",\"persona\":\"%s\",\"flows\":%d,\"udp\":%d,\"tcp\":%d,\"udp_avg_pkt\":%d,\"bytes\":%llu,\"avg_pkt\":%d,\"elephant\":%d,\"rx_bps\":%.0f,\"tx_bps\":%.0f,\"override\":%s}",
                     first ? "" : ",",
                     ip_str, persona_name(dev->persona),
@@ -221,8 +358,8 @@ void myco_dump_json(void) {
                     (unsigned long long)dev->total_bytes,
                     (int)dev->avg_pkt_size,
                     dev->elephant_flow,
-                    dev->rx_bytes * 8.0 / 1.0,
-                    dev->tx_bytes * 8.0 / 1.0,
+                    dev->rx_bytes * 8.0 / SAMPLE_INTERVAL_S,
+                    dev->tx_bytes * 8.0 / SAMPLE_INTERVAL_S,
                     dev->override_active ? "true" : "false");
             first = 0;
         }

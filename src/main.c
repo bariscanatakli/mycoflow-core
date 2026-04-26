@@ -112,6 +112,7 @@ int main(void) {
     device_table_t device_table;
     device_table_init(&device_table);
     myco_set_device_table(&device_table, cfg.per_device_enabled);
+    myco_set_control_handles(&control_state, &cfg);
 
     /* DNS snooping: passive cache for IP→domain→persona mapping.
      * Started unconditionally — the cache feeds hints into per-device
@@ -190,6 +191,10 @@ int main(void) {
     /* ── Reflexive loop: Sense → Infer → Act → Stabilize ────── */
 
     while (!g_stop) {
+        /* Drain any pending control commands written by LuCI (no-ubus path).
+         * Cheap when the file does not exist (one stat() per cycle). */
+        myco_apply_control_file();
+
         if (g_reload) {
             g_reload = 0;
             if (config_reload(&cfg) == 0) {
