@@ -199,9 +199,15 @@ def get_local_lan_ip():
         s.close()
 
 # ── Traffic generators (lifted from router_live_test.py) ──────────────────────
-def send_udp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration):
+def send_udp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration, src_port=0):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(0.5)
+    if src_port:
+        try:
+            sock.bind(("", src_port))
+        except OSError:
+            pass  # port may be in use; fall back to ephemeral
+    actual_sport = sock.getsockname()[1]
     payload  = random.randbytes(max(1, pkt_size - 28))
     pps      = max(1, int(bw_bps // (pkt_size * 8)))
     interval = 1.0 / pps
@@ -219,13 +225,20 @@ def send_udp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration):
         pass
     finally:
         sock.close()
-    return sent
+    return sent, actual_sport
 
-def send_tcp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration):
+def send_tcp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration, src_port=0):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(3)
+    if src_port:
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(("", src_port))
+        except OSError:
+            pass
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(3)
         sock.connect((dst_ip, dst_port))
+        actual_sport = sock.getsockname()[1]
         chunk    = b'X' * max(1, pkt_size)
         interval = (pkt_size * 8) / bw_bps if bw_bps > 0 else 0.01
         end      = time.time() + duration
@@ -239,9 +252,14 @@ def send_tcp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration):
             if interval > 0:
                 time.sleep(interval)
         sock.close()
-        return sent
+        return sent, actual_sport
     except Exception:
-        return 0
+        try:
+            actual_sport = sock.getsockname()[1]
+        except Exception:
+            actual_sport = 0
+        sock.close()
+        return 0, actual_sport
 
 # ── DNS prime (Mode B only) ───────────────────────────────────────────────────
 # The daemon's DNS sniffer uses AF_INET SOCK_RAW which only captures packets
@@ -295,8 +313,10 @@ def _parse_dns_answer_a(pkt):
     return None
 
 def maybe_dns_prime(hostname):
-    """Send a DNS query directly to the router (10.10.1.1:53) and parse the
-    A record. This ensures the router's DNS sniffer sees the response.
+    """Send a DNS query directly to a public upstream (1.1.1.1) so the
+    response transits through the router. The daemon's AF_PACKET sniffer
+    captures transit DNS, populating the IP→service cache before our
+    test traffic begins.
 
     Returns the resolved IP, or None on failure."""
     if not hostname:
@@ -307,18 +327,41 @@ def maybe_dns_prime(hostname):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(2)
     try:
-        sock.sendto(pkt, (ROUTER_IP, 53))
+        sock.sendto(pkt, ("1.1.1.1", 53))
         resp, _ = sock.recvfrom(2048)
         return _parse_dns_answer_a(resp)
     except Exception:
-        return None
+        # Fallback to router's resolver if upstream is blocked
+        try:
+            sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock2.settimeout(2)
+            sock2.sendto(pkt, (ROUTER_IP, 53))
+            resp, _ = sock2.recvfrom(2048)
+            sock2.close()
+            return _parse_dns_answer_a(resp)
+        except Exception:
+            return None
     finally:
         sock.close()
 
 # ── Sampling ──────────────────────────────────────────────────────────────────
 def load_and_sample(csv_path, n_per_persona, seed):
+    """If a pre-sampled small CSV exists (from prepare_blind_sample.py),
+    load that. Otherwise parse the full 1.2 GB Unicauca CSV in memory."""
     import pandas as pd
-    print(f"[load] reading {csv_path} (~1.2 GB) …", flush=True)
+    presampled = os.path.join(
+        os.path.dirname(csv_path) if os.path.dirname(csv_path) else ".",
+        f"blind_sample_n{n_per_persona}_seed{seed}.csv")
+    if os.path.exists(presampled):
+        print(f"[load] using pre-sampled file: {presampled}", flush=True)
+        out = pd.read_csv(presampled)
+        print(f"[load] {len(out):,} flows × {out['_gt_persona'].nunique()} personas (fast path)",
+              flush=True)
+        return out
+
+    print(f"[load] reading {csv_path} (~1.2 GB) — slow path, takes 30-60s …", flush=True)
+    print(f"[hint] run prepare_blind_sample.py once to skip this on future runs.",
+          flush=True)
     df = pd.read_csv(csv_path, low_memory=False)
     print(f"[load] {len(df):,} rows total", flush=True)
 
@@ -336,7 +379,8 @@ def load_and_sample(csv_path, n_per_persona, seed):
     df["flowDuration"]   = df["flowDuration"].fillna(1).clip(lower=1e-6)
     df["_bw_bps"] = df["octetTotalCount"] * 8.0 / df["flowDuration"]
 
-    print(f"[sample] stratified random N={n_per_persona} per persona, seed={seed} …", flush=True)
+    print(f"[sample] stratified random N={n_per_persona} per persona, seed={seed} …",
+          flush=True)
     samples = []
     for persona, grp in df.groupby("_persona"):
         n = min(n_per_persona, len(grp))
@@ -344,7 +388,8 @@ def load_and_sample(csv_path, n_per_persona, seed):
         sub["_gt_persona"] = persona
         samples.append(sub)
     out = pd.concat(samples, ignore_index=True)
-    print(f"[sample] {len(out):,} flows selected across {out['_gt_persona'].nunique()} personas", flush=True)
+    print(f"[sample] {len(out):,} flows selected across {out['_gt_persona'].nunique()} personas",
+          flush=True)
     return out
 
 # ── Per-flow test ─────────────────────────────────────────────────────────────
@@ -388,20 +433,29 @@ def replay_one_flow(row, mode, lan_ip):
         tcp_unreachable = True
         dst_ip = TCP_TARGET
 
+    # Give the AF_PACKET DNS sniffer a moment to parse the response and
+    # insert the IP→service mapping into the cache before traffic begins.
+    # Without this, the first classifier_tick cycles see dns_hint=UNKNOWN
+    # and the flow is skipped (line: don't track idle unknowns).
+    if mode == "B" and dns_resolved_ip:
+        time.sleep(0.3)
+
     # Send traffic in a background thread so we can read state mid-flight.
     # Flows must be ACTIVE when state is read (short TCP connections get
     # evicted from the classifier flow table after close).
+    # Capture actual source port for 5-tuple state.flows lookup.
     t_start = time.time()
-    stop_flag = threading.Event()
-    sent_counter = {"n": 0}
+    sent_counter = {"n": 0, "sport": 0}
     def traffic_worker():
         duration = FLOW_PRE_READ_S + FLOW_POST_READ_S
         if tcp_unreachable:
             return
         if proto == 17:
-            sent_counter["n"] = send_udp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration)
+            n, sp = send_udp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration)
         else:
-            sent_counter["n"] = send_tcp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration)
+            n, sp = send_tcp_stream(dst_ip, dst_port, pkt_size, bw_bps, duration)
+        sent_counter["n"] = n
+        sent_counter["sport"] = sp
 
     th = threading.Thread(target=traffic_worker, daemon=True)
     th.start()
@@ -414,24 +468,31 @@ def replay_one_flow(row, mode, lan_ip):
     # Let traffic complete naturally
     th.join(timeout=FLOW_POST_READ_S + 1.0)
     sent = sent_counter["n"]
+    actual_sport = sent_counter["sport"]
     t_traffic_end = time.time()
 
-    # Per-flow attribution — match the synthetic flow in state.flows[]
+    # Per-flow attribution — match by 5-tuple to isolate from concurrent
+    # host traffic. If actual_sport unknown (TCP connect failed), fall back
+    # to 4-tuple matching with preference for non-unknown services.
     predicted       = "unknown"
     matched_entries = 0
     flow_match      = None
     for f in state_after.get("flows", []):
-        if (f.get("src") == lan_ip and
-            f.get("dst") == dst_ip and
-            int(f.get("dport", 0)) == dst_port and
-            int(f.get("proto", 0)) == proto):
-            matched_entries += 1
-            # If multiple matches, take the one with a non-unknown classification
-            if f.get("service") and f.get("service") != "unknown":
-                flow_match = f
-                break
-            elif flow_match is None:
-                flow_match = f
+        if not (f.get("src") == lan_ip and
+                f.get("dst") == dst_ip and
+                int(f.get("dport", 0)) == dst_port and
+                int(f.get("proto", 0)) == proto):
+            continue
+        matched_entries += 1
+        # 5-tuple exact match wins
+        if actual_sport and int(f.get("sport", 0)) == actual_sport:
+            flow_match = f
+            break
+        # Fallback: prefer flows with a definitive (non-unknown) service
+        if flow_match is None or (
+            flow_match.get("service") in (None, "unknown") and
+            f.get("service") not in (None, "unknown")):
+            flow_match = f
 
     if flow_match:
         predicted = flow_match.get("service", "unknown")
