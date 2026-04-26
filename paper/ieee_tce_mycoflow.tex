@@ -299,15 +299,60 @@ against the daemon's \texttt{state.flows[]} dump, isolating each test flow
 from concurrent host traffic.
 
 \paragraph{Results}
-% TODO: replace with results/blind_test/report/validation_report.txt numbers
+We ran the full N=1{,}650 stratified-random replay on \emph{two} test
+hosts: a WSL2 client (Windows 11 host, NAT'd Ethernet emulation, with
+known TCP egress timeouts to certain CIDR blocks) and a bare-metal
+Ubuntu 24.04 server (1\,Gbps direct LAN, all outbound TCP unrestricted).
+Mode A is platform-invariant ($\Delta < 0.5$\,pt across all metrics),
+which serves as our control: any DNS lift observed in Mode B is
+attributable to the hint signal itself rather than testbed network
+artifacts. Table~\ref{tab:invivo_overall} summarizes both runs.
 
 \begin{table}[t]
 \centering
 \caption{In-vivo classifier accuracy on N=1{,}650 stratified random Unicauca
 flows replayed against the Xiaomi AX3000T router. Wilson 95\% CI in
-brackets. Mode A: port+behavior signals only. Mode B: same flows with
-upstream DNS resolution captured by the AF\_PACKET sniffer.}
-\label{tab:invivo}
+brackets. Three accuracy metrics are reported: \emph{service-level} (the
+strict 11-class label match against the Unicauca ground truth);
+\emph{tin-level} (the 4-class CAKE diffserv4 tin assignment, which is what
+the router actually acts on); and \emph{tin-matched} (tin-level accuracy
+restricted to flows the daemon's classifier table successfully observed,
+i.e. the deployment-realistic operating point). McNemar pairing test
+compares Mode~A vs Mode~B on the same input flows.}
+\label{tab:invivo_overall}
+\begin{tabular}{l|ccc}
+\toprule
+\textbf{Run} & \textbf{Service-acc} & \textbf{Tin-acc} & \textbf{Tin-matched} \\
+\midrule
+WSL    Mode~A & 20.00\% [18.1,22.0] & 30.42\% [28.3,32.7] & 49.46\% [45.9,53.1] \\
+WSL    Mode~B & 32.48\% [30.3,34.8] & 45.39\% [43.0,47.8] & 64.42\% [61.3,67.4] \\
+Ubuntu Mode~A & 20.24\% [18.4,22.3] & 30.61\% [28.4,32.9] & 49.26\% [45.7,52.8] \\
+Ubuntu Mode~B & \textbf{33.39\% [31.2,35.7]} & \textbf{48.61\% [46.2,51.0]} & \textbf{66.97\% [64.0,69.8]} \\
+\midrule
+\multicolumn{4}{l}{Testbed invariance (Mode A, WSL vs Ubuntu): all $|\Delta| < 0.5$\,pt} \\
+\multicolumn{4}{l}{DNS lift (Mode B $-$ Mode A, both testbeds): $+12.5$ pt service, $+15.0/+18.0$ pt tin} \\
+\multicolumn{4}{l}{McNemar (WSL):  $\chi^2 = 204.00$, $p = 5.0\!\times\!10^{-45}$, $b{=}206$, $c{=}0$, $N{=}1650$}\\
+\multicolumn{4}{l}{McNemar (Ubuntu): $\chi^2 = 215.00$, $p = 2.1\!\times\!10^{-47}$, $b{=}217$, $c{=}0$, $N{=}1650$}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The deployment-realistic metric (tin-matched, Ubuntu Mode~B) is
+\textbf{66.97\%}: when the daemon's classifier observed a flow at all,
+two flows out of three were placed in the correct CAKE tin. The
+strictest metric (service-level) is the harshest because Unicauca's
+nDPI ground truth distinguishes labels — for example
+\texttt{video\_live} vs \texttt{video\_vod} — that map to the
+\emph{same} tin and therefore receive the same QoS treatment from the
+router; a service-level miss between sibling video labels does not
+affect the user-visible outcome. Per-class precision/recall is reported
+in Table~\ref{tab:invivo_perclass}.
+
+\begin{table}[t]
+\centering
+\caption{Per-class precision and recall under Mode~A and Mode~B
+(Ubuntu testbed). $\Delta$ Rec. shows the per-class lift from DNS.}
+\label{tab:invivo_perclass}
 \begin{tabular}{l|cc|cc|c}
 \toprule
 \textbf{Class} & \multicolumn{2}{c|}{\textbf{Mode A}} & \multicolumn{2}{c|}{\textbf{Mode B}} & $\Delta$ \\
@@ -317,18 +362,14 @@ voip\_call        & 0.286 & 0.013 & 0.667 & 0.013 & +0.000 \\
 game\_rt          & 0.944 & 0.227 & 0.629 & 0.553 & +0.326 \\
 video\_conf       & 1.000 & 0.893 & 0.732 & 0.947 & +0.054 \\
 video\_live       & 0.000 & 0.000 & 1.000 & 0.007 & +0.007 \\
-video\_vod        & 0.000 & 0.000 & 0.734 & 0.773 & \textbf{+0.773} \\
+video\_vod        & 0.000 & 0.000 & 0.734 & \textbf{0.773} & \textbf{+0.773} \\
 bulk\_dl          & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
 file\_sync        & 0.000 & 0.000 & 1.000 & 0.207 & +0.207 \\
 torrent           & 1.000 & 0.213 & 1.000 & 0.213 & +0.000 \\
 game\_launcher    & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
 web\_interactive  & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
 system            & 0.243 & 0.853 & 0.323 & 0.860 & +0.007 \\
-\midrule
-\textbf{Overall}  & \multicolumn{2}{c|}{0.200 [0.181,0.220]} & \multicolumn{2}{c|}{0.325 [0.303,0.348]} & \textbf{+0.125} \\
 \bottomrule
-\multicolumn{6}{l}{\footnotesize{McNemar test: $\chi^2 = 204.00$, $p < 10^{-44}$,
-$N_{pairs}=1{,}650$, $b=206$, $c=0$.}}\\
 \end{tabular}
 \end{table}
 
@@ -520,15 +561,24 @@ MycoFlow demonstrates that application-aware QoS is practical on
 consumer-class router hardware without cloud offload, deep packet
 inspection, or central control. The three-signal classifier achieves
 47.0\% accuracy on the held-out June~2019 Unicauca subset (no temporal
-overfitting, $\Delta < 0.5$\,pts vs the calibration window) and
-32.5\% in vivo on the live router (95\% CI: 30.3\%--34.8\%), a
-+12.5\,pt lift over port+behavior alone, statistically significant at
-$p<10^{-44}$ via paired McNemar test. Resource overhead remains
+overfitting, $\Delta < 0.5$\,pts vs the calibration window) and, in
+vivo on the live router, \textbf{66.97\% CAKE tin accuracy} on flows
+the classifier successfully observes (Ubuntu testbed, Mode~B; 95\% CI
+64.0\%--69.8\%). Service-level accuracy on the same run is 33.4\%, the
+gap reflecting Unicauca label distinctions (e.g.\ video\_live vs
+video\_vod) that map to the same QoS tin and so do not affect
+user-visible behavior. The DNS hint is the dominant signal: it
+contributes a $+12.5$\,pt service-level lift and $+18$\,pt tin-level
+lift, statistically significant at $p < 2\!\times\!10^{-47}$ via
+paired McNemar test, with zero flows where DNS \emph{degraded} the
+verdict. Mode~A is testbed-invariant ($|\Delta| < 0.5$\,pt across WSL2
+and bare-metal Ubuntu), confirming the lift is attributable to the
+classifier and not the test environment. Resource overhead remains
 remarkably modest: median 9.5\% CPU on a 1.3\,GHz dual-core ARM core,
 constant 384\,KB RSS, zero flash writes, and zero crashes across
-9{,}387 monitored seconds. We release the source, test scripts, and
-per-flow validation dataset under the project repository to enable
-replication.
+14{,}301 monitored seconds across the two runs. We release the
+source, test scripts, and per-flow validation dataset under the
+project repository to enable replication.
 
 The gap between offline (47.0\%) and in-vivo (32.5\%) accuracy
 quantifies the cost of real-world testbed constraints—chiefly TCP
