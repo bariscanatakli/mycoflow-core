@@ -116,7 +116,14 @@
       "Bash(sshpass -p 'sukranflat7' scp -O -o StrictHostKeyChecking=no /home/baris/mycoflow-core/luci-app-mycoflow/htdocs/luci-static/resources/view/mycoflow.js root@10.10.1.1:/www/luci-static/resources/view/mycoflow.js)",
       "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'wc -l /www/luci-static/resources/view/mycoflow.js')",
       "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'echo \"{\\\\\"persona_override\\\\\":\\\\\"voip\\\\\"}\" > /tmp/myco_control.json && sleep 2 && grep -E \"ctl|persona_override\" /tmp/myco_state.json | head -5; echo \"---logs---\"; logread | grep \"ctl:\" | tail -5')",
-      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'echo \"{\\\\\"persona_override\\\\\":\\\\\"clear\\\\\"}\" > /tmp/myco_control.json && sleep 2 && grep \"persona_override\" /tmp/myco_state.json | head -2; echo \"---\"; echo \"{\\\\\"policy_boost_kbit\\\\\":2000}\" > /tmp/myco_control.json && sleep 2 && grep \"bandwidth_kbit\" /tmp/myco_state.json; logread | grep \"ctl:\" | tail -5')"
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'echo \"{\\\\\"persona_override\\\\\":\\\\\"clear\\\\\"}\" > /tmp/myco_control.json && sleep 2 && grep \"persona_override\" /tmp/myco_state.json | head -2; echo \"---\"; echo \"{\\\\\"policy_boost_kbit\\\\\":2000}\" > /tmp/myco_control.json && sleep 2 && grep \"bandwidth_kbit\" /tmp/myco_state.json; logread | grep \"ctl:\" | tail -5')",
+      "Bash(ping -c 2 -W 2 10.10.1.114)",
+      "Bash(nc -z -w 2 10.10.1.114 22)",
+      "Bash(ssh-keygen -t ed25519 -N \"\" -f ~/.ssh/id_ed25519 -C \"wsl-mycoflow-test\")",
+      "Bash(ssh bariscanatakli@10.10.1.114 'sudo -n true 2>/dev/null && SUDO=sudo || SUDO=\"\" *)",
+      "Bash(ssh bariscanatakli@10.10.1.114 'which sshpass; python3 -c \"import pandas, numpy, matplotlib; print\\(\\\\\"all ok\\\\\"\\)\" 2>&1')",
+      "Bash(ssh bariscanatakli@10.10.1.114 'pip install --user pandas numpy matplotlib --break-system-packages 2>&1 | tail -5')",
+      "Bash(ssh bariscanatakli@10.10.1.114 '[ -f ~/.ssh/id_ed25519 ] || ssh-keygen -t ed25519 -N \"\" -f ~/.ssh/id_ed25519 -C \"ubuntu-mycoflow\"; cat ~/.ssh/id_ed25519.pub')"
     ],
     "additionalDirectories": [
       "/home/baris/mycoflow-core/paper"
