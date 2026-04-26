@@ -94,7 +94,24 @@
       "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep \"dns\" | tail -5')",
       "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep -iE \"dns|parsed\" | tail -20')",
       "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'grep \"10.10.1.172 dst=18\" /proc/net/nf_conntrack')",
-      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'which tcpdump; opkg list-installed 2>/dev/null | grep -iE \"tcpdump|dnsmasq|pcap\"')"
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'which tcpdump; opkg list-installed 2>/dev/null | grep -iE \"tcpdump|dnsmasq|pcap\"')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'mv /usr/bin/mycoflowd.new /usr/bin/mycoflowd && /etc/init.d/mycoflowd restart && sleep 3 && logread | grep -E \"dns|DNS\" | tail -5')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'grep \"10.10.1.172 dst=18.200.8.190\" /proc/net/nf_conntrack')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep -E \"dns:\" | tail -15')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'grep \"sport=38445\" /proc/net/nf_conntrack')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'mv /usr/bin/mycoflowd.new /usr/bin/mycoflowd && /etc/init.d/mycoflowd restart && sleep 3 && echo OK')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep \"classifier:\" | tail -10')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep \"classifier:\" | grep \"172.217.171.78\"')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep \"classifier:\" | grep -E \"youtube|172.217|192.178\" | tail -10')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep -E \"classifier:.*\\(192.178|172.217|192.178\\)\" | tail -5; echo \"---\"; cat /tmp/myco_state.json')",
+      "Bash(sshpass -p 'sukranflat7' ssh -o StrictHostKeyChecking=no root@10.10.1.1 'logread | grep \"192.178.24.174\"')",
+      "Bash(kill -TERM 3628)",
+      "Bash(kill -TERM 29517)",
+      "Bash(pdflatex -interaction=nonstopmode ieee_tce_mycoflow.tex)",
+      "Bash(bibtex ieee_tce_mycoflow)"
+    ],
+    "additionalDirectories": [
+      "/home/baris/mycoflow-core/paper"
     ]
   }
 }
