@@ -27,3 +27,13 @@ results/*.json
 # Python and Archive
 venv/
 archive/
+__pycache__/
+*.pyc
+
+# LaTeX intermediate artifacts (keep .pdf, .tex, .bib)
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.toc
