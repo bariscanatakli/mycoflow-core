@@ -324,29 +324,37 @@ compares Mode~A vs Mode~B on the same input flows.}
 \toprule
 \textbf{Run} & \textbf{Service-acc} & \textbf{Tin-acc} & \textbf{Tin-matched} \\
 \midrule
-WSL    Mode~A & 20.00\% [18.1,22.0] & 30.42\% [28.3,32.7] & 49.46\% [45.9,53.1] \\
-WSL    Mode~B & 32.48\% [30.3,34.8] & 45.39\% [43.0,47.8] & 64.42\% [61.3,67.4] \\
-Ubuntu Mode~A & 20.24\% [18.4,22.3] & 30.61\% [28.4,32.9] & 49.26\% [45.7,52.8] \\
-Ubuntu Mode~B & \textbf{33.39\% [31.2,35.7]} & \textbf{48.61\% [46.2,51.0]} & \textbf{66.97\% [64.0,69.8]} \\
+WSL    Mode~A           & 20.00\% [18.1,22.0] & 30.42\% [28.3,32.7] & 49.46\% [45.9,53.1] \\
+WSL    Mode~B           & 32.48\% [30.3,34.8] & 45.39\% [43.0,47.8] & 64.42\% [61.3,67.4] \\
+Ubuntu Mode~A           & 20.24\% [18.4,22.3] & 30.61\% [28.4,32.9] & 49.26\% [45.7,52.8] \\
+Ubuntu Mode~B (80-cat.) & 33.39\% [31.2,35.7] & 48.61\% [46.2,51.0] & 66.97\% [64.0,69.8] \\
+Ubuntu Mode~B (585-cat.) & \textbf{37.88\% [35.6,40.3]} & \textbf{52.42\% [50.0,54.8]} & \textbf{70.41\% [67.6,73.1]} \\
 \midrule
 \multicolumn{4}{l}{Testbed invariance (Mode A, WSL vs Ubuntu): all $|\Delta| < 0.5$\,pt} \\
-\multicolumn{4}{l}{DNS lift (Mode B $-$ Mode A, both testbeds): $+12.5$ pt service, $+15.0/+18.0$ pt tin} \\
+\multicolumn{4}{l}{Catalog impact (Mode B, 80\,$\rightarrow$\,585 entries): $+4.5$\,pt service, $+3.4$\,pt tin-matched} \\
+\multicolumn{4}{l}{DNS lift (Mode B 585-cat. $-$ Mode A): $+17.6$\,pt service, $+21.2$\,pt tin-matched} \\
 \multicolumn{4}{l}{McNemar (WSL):  $\chi^2 = 204.00$, $p = 5.0\!\times\!10^{-45}$, $b{=}206$, $c{=}0$, $N{=}1650$}\\
-\multicolumn{4}{l}{McNemar (Ubuntu): $\chi^2 = 215.00$, $p = 2.1\!\times\!10^{-47}$, $b{=}217$, $c{=}0$, $N{=}1650$}\\
+\multicolumn{4}{l}{McNemar (Ubuntu, 80-cat.): $\chi^2 = 215.00$, $p = 2.1\!\times\!10^{-47}$, $b{=}217$, $c{=}0$}\\
+\multicolumn{4}{l}{McNemar (Ubuntu, 585-cat.): $\chi^2 = 289.00$, $p = 1.8\!\times\!10^{-63}$, $b{=}291$, $c{=}0$}\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The deployment-realistic metric (tin-matched, Ubuntu Mode~B) is
-\textbf{66.97\%}: when the daemon's classifier observed a flow at all,
-two flows out of three were placed in the correct CAKE tin. The
-strictest metric (service-level) is the harshest because Unicauca's
-nDPI ground truth distinguishes labels — for example
-\texttt{video\_live} vs \texttt{video\_vod} — that map to the
-\emph{same} tin and therefore receive the same QoS treatment from the
-router; a service-level miss between sibling video labels does not
-affect the user-visible outcome. Per-class precision/recall is reported
-in Table~\ref{tab:invivo_perclass}.
+The deployment-realistic metric (tin-matched, Ubuntu Mode~B with the
+expanded 585-domain catalog) is \textbf{70.41\%} [67.6\%, 73.1\%]: when
+the daemon's classifier observed a flow at all, more than seven flows
+out of ten were placed in the correct CAKE tin. The catalog expansion
+from 80 to 585 entries (a $+42$\,KB read-only addition to the binary,
+no algorithmic change) lifted service-level accuracy from 33.4\% to
+37.9\%, with the largest per-class wins on \texttt{file\_sync}
+(20.7\%\,$\rightarrow$\,43.3\%) and \texttt{game\_rt}
+(50.7\%\,$\rightarrow$\,76.0\%). The strictest metric (service-level)
+remains the harshest because Unicauca's nDPI ground truth distinguishes
+labels — for example \texttt{video\_live} vs \texttt{video\_vod} — that
+map to the \emph{same} tin and therefore receive the same QoS treatment
+from the router; a service-level miss between sibling video labels does
+not affect the user-visible outcome. Per-class precision/recall is
+reported in Table~\ref{tab:invivo_perclass}.
 
 \begin{table}[t]
 \centering
@@ -358,17 +366,17 @@ in Table~\ref{tab:invivo_perclass}.
 \textbf{Class} & \multicolumn{2}{c|}{\textbf{Mode A}} & \multicolumn{2}{c|}{\textbf{Mode B}} & $\Delta$ \\
  & Prec. & Rec. & Prec. & Rec. & Rec. \\
 \midrule
-voip\_call        & 0.286 & 0.013 & 0.667 & 0.013 & +0.000 \\
-game\_rt          & 0.944 & 0.227 & 0.629 & 0.553 & +0.326 \\
-video\_conf       & 1.000 & 0.893 & 0.732 & 0.947 & +0.054 \\
-video\_live       & 0.000 & 0.000 & 1.000 & 0.007 & +0.007 \\
-video\_vod        & 0.000 & 0.000 & 0.734 & \textbf{0.773} & \textbf{+0.773} \\
+voip\_call        & 0.286 & 0.013 & 1.000 & 0.013 & +0.000 \\
+game\_rt          & 0.829 & 0.227 & 0.567 & \textbf{0.760} & \textbf{+0.533} \\
+video\_conf       & 1.000 & 0.893 & 0.716 & \textbf{0.993} & +0.100 \\
+video\_live       & 1.000 & 0.007 & 1.000 & 0.020 & +0.013 \\
+video\_vod        & 0.000 & 0.000 & 0.652 & \textbf{0.860} & \textbf{+0.860} \\
 bulk\_dl          & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
-file\_sync        & 0.000 & 0.000 & 1.000 & 0.207 & +0.207 \\
-torrent           & 1.000 & 0.213 & 1.000 & 0.213 & +0.000 \\
+file\_sync        & 0.000 & 0.000 & 1.000 & \textbf{0.433} & \textbf{+0.433} \\
+torrent           & 1.000 & 0.227 & 1.000 & 0.227 & +0.000 \\
 game\_launcher    & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
 web\_interactive  & 0.000 & 0.000 & 0.000 & 0.000 & +0.000 \\
-system            & 0.243 & 0.853 & 0.323 & 0.860 & +0.007 \\
+system            & 0.243 & 0.860 & 0.399 & 0.860 & +0.000 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -376,27 +384,29 @@ system            & 0.243 & 0.853 & 0.323 & 0.860 & +0.007 \\
 % TODO: insert confusion matrix figure (Mode A & Mode B side-by-side)
 
 \paragraph{Discussion}
-The DNS contribution is statistically dominant: McNemar's test rejects the
-null of equal classifiers at $p < 10^{-44}$, with 206 flows correctly
-classified by Mode B but missed by Mode A and zero flows where DNS
-\emph{degraded} the verdict ($b=206, c=0$). The per-class lifts cluster
-into three patterns:
+The DNS contribution is statistically dominant: McNemar's test rejects
+the null of equal classifiers at $p < 10^{-63}$ (Ubuntu 585-cat. run),
+with 291 flows correctly classified by Mode~B but missed by Mode~A and
+\emph{zero} flows where DNS degraded the verdict ($b=291$, $c=0$). The
+per-class lifts cluster into three patterns:
 
 \begin{itemize}
 \item \textbf{DNS-decisive (large positive $\Delta$):} \texttt{video\_vod}
-goes from 0\% recall to 77.3\%, the strongest lift in the dataset. These
-flows are HTTPS to YouTube/Netflix CDNs over TCP/443 or UDP/443 (QUIC) —
-generic ports that no port hint can disambiguate. The DNS sniffer
+goes from 0\% recall to 86.0\%, the strongest lift in the dataset.
+\texttt{game\_rt} jumps from 22.7\% to 76.0\% and \texttt{file\_sync}
+from 0\% to 43.3\%. These flows are HTTPS to YouTube/Netflix/Steam/
+Dropbox CDNs over TCP/443 or UDP/443 (QUIC) — generic ports that no
+port hint can disambiguate. The expanded 585-domain DNS catalog
 populates $h_{dns}$ from observed \texttt{*.googlevideo.com},
-\texttt{*.nflxvideo.net} resolutions, after which the verdict is
+\texttt{*.nflxvideo.net}, \texttt{*.dropboxusercontent.com},
+\texttt{*.steampowered.com} resolutions, after which the verdict is
 unambiguous.
 
 \item \textbf{DNS-supplementary (moderate positive $\Delta$):}
-\texttt{game\_rt} (+0.326) and \texttt{file\_sync} (+0.207) benefit from
-DNS for the subset of flows where the application uses HTTPS instead of
-its characteristic port (e.g., Steam HTTPS storefront, Dropbox sync
-over 443). Classical port hints continue to dominate for the
-remaining UDP game-server flows.
+\texttt{video\_conf} (+0.100, hitting 99.3\% recall) — the few Zoom/
+Meet/Teams flows that don't match the STUN port range (3478, 19302–
+19309) now resolve via the full domain catalog. Classical port hints
+continue to dominate for the remaining UDP STUN game-server flows.
 
 \item \textbf{DNS-irrelevant ($\Delta \approx 0$):} \texttt{torrent}
 shows no lift because modern BitTorrent clients use random ports and
@@ -562,16 +572,16 @@ consumer-class router hardware without cloud offload, deep packet
 inspection, or central control. The three-signal classifier achieves
 47.0\% accuracy on the held-out June~2019 Unicauca subset (no temporal
 overfitting, $\Delta < 0.5$\,pts vs the calibration window) and, in
-vivo on the live router, \textbf{66.97\% CAKE tin accuracy} on flows
-the classifier successfully observes (Ubuntu testbed, Mode~B; 95\% CI
-64.0\%--69.8\%). Service-level accuracy on the same run is 33.4\%, the
-gap reflecting Unicauca label distinctions (e.g.\ video\_live vs
-video\_vod) that map to the same QoS tin and so do not affect
-user-visible behavior. The DNS hint is the dominant signal: it
-contributes a $+12.5$\,pt service-level lift and $+18$\,pt tin-level
-lift, statistically significant at $p < 2\!\times\!10^{-47}$ via
-paired McNemar test, with zero flows where DNS \emph{degraded} the
-verdict. Mode~A is testbed-invariant ($|\Delta| < 0.5$\,pt across WSL2
+vivo on the live router with the full 585-domain DNS catalog,
+\textbf{70.41\% CAKE tin accuracy} on flows the classifier successfully
+observes (Ubuntu testbed, Mode~B; 95\% CI 67.6\%--73.1\%). Service-level
+accuracy on the same run is 37.9\%, the gap reflecting Unicauca label
+distinctions (e.g.\ \texttt{video\_live} vs \texttt{video\_vod}) that
+map to the same QoS tin and so do not affect user-visible behavior.
+The DNS hint is the dominant signal: it contributes a $+17.6$\,pt
+service-level lift and $+21.2$\,pt tin-matched lift, statistically
+significant at $p < 2\!\times\!10^{-63}$ via paired McNemar test, with
+zero flows where DNS \emph{degraded} the verdict. Mode~A is testbed-invariant ($|\Delta| < 0.5$\,pt across WSL2
 and bare-metal Ubuntu), confirming the lift is attributable to the
 classifier and not the test environment. Resource overhead remains
 remarkably modest: median 9.5\% CPU on a 1.3\,GHz dual-core ARM core,

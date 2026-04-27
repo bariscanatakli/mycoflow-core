@@ -1,0 +1,118 @@
+==============================================================================
+MycoFlow In-Vivo Validation Report (IEEE-grade)
+==============================================================================
+Test methodology: stratified random per-flow replay against live router
+Router          : 10.10.1.1 (Xiaomi AX3000T, MT7981B, 256MB, OpenWrt)
+Dataset         : Universidad del Cauca April-June 2019 Network Flows
+Sampling        : Wilson 95% CI on per-class precision and recall
+Pairing test    : McNemar (continuity-corrected χ², df=1) for Mode A vs B
+
+MODE A — IP-only (no DNS hint exposure)
+=======================================
+  Total flows evaluated : 1,650
+  Correctly classified  : 334
+  Overall accuracy      : 20.24%   (95% CI: 18.37% – 22.25%)
+
+Per-class metrics
+-----------------
+  class         support               precision                   recall       F1
+  bulk_dl           150  0.000 [0.000,0.000]   0.000 [0.000,0.025]   0.000
+  file_sync         150  0.000 [0.000,0.000]   0.000 [0.000,0.025]   0.000
+  game_launcher      150  0.000 [0.000,0.000]   0.000 [0.000,0.025]   0.000
+  game_rt           150  0.829 [0.687,0.915]   0.227 [0.167,0.300]   0.356
+  system            150  0.243 [0.209,0.282]   0.860 [0.795,0.907]   0.379
+  torrent           150  1.000 [0.898,1.000]   0.227 [0.167,0.300]   0.370
+  video_conf        150  1.000 [0.972,1.000]   0.893 [0.834,0.933]   0.944
+  video_live        150  1.000 [0.207,1.000]   0.007 [0.001,0.037]   0.013
+  video_vod         150  0.000 [0.000,0.000]   0.000 [0.000,0.025]   0.000
+  voip_call         150  0.286 [0.082,0.641]   0.013 [0.004,0.047]   0.025
+  web_interactive      150  0.000 [0.000,0.000]   0.000 [0.000,0.025]   0.000
+  unknown             0  0.000 [0.000,0.004]   0.000 [0.000,0.000]   0.000
+
+Confusion matrix (rows=GT, cols=Pred, values=count)
+---------------------------------------------------
+                           bulk_dl       file_sync   game_launcher         game_rt          system         torrent         unknown      video_conf      video_live       video_vod       voip_call web_interactive
+           bulk_dl               0               0               0               1              46               0             103               0               0               0               0               0
+         file_sync               0               0               0               4              78               0              68               0               0               0               0               0
+     game_launcher               0               0               0               0               0               0             150               0               0               0               0               0
+           game_rt               0               0               0              34             114               0               2               0               0               0               0               0
+            system               0               0               0               0             129               0              21               0               0               0               0               0
+           torrent               0               0               0               2               0              34             114               0               0               0               0               0
+           unknown               0               0               0               0               0               0               0               0               0               0               0               0
+        video_conf               0               0               0               0               0               0              11             134               0               0               5               0
+        video_live               0               0               0               0              44               0             105               0               1               0               0               0
+         video_vod               0               0               0               0              63               0              87               0               0               0               0               0
+         voip_call               0               0               0               0              22               0             126               0               0               0               2               0
+   web_interactive               0               0               0               0              34               0             116               0               0               0               0               0
+
+MODE B — Hostname (organic DNS via real services)
+=================================================
+  Total flows evaluated : 1,650
+  Correctly classified  : 625
+  Overall accuracy      : 37.88%   (95% CI: 35.57% – 40.25%)
+
+Per-class metrics
+-----------------
+  class         support               precision                   recall       F1
+  bulk_dl           150  0.000 [0.000,0.000]   0.000 [0.000,0.025]   0.000
+  file_sync         150  1.000 [0.944,1.000]   0.433 [0.357,0.513]   0.605
+  game_launcher      150  0.000 [0.000,0.000]   0.000 [0.000,0.025]   0.000
+  game_rt           150  0.567 [0.498,0.634]   0.760 [0.686,0.821]   0.650
+  system            150  0.399 [0.347,0.454]   0.860 [0.795,0.907]   0.545
+  torrent           150  1.000 [0.898,1.000]   0.227 [0.167,0.300]   0.370
+  video_conf        150  0.716 [0.652,0.773]   0.993 [0.963,0.999]   0.832
+  video_live        150  1.000 [0.438,1.000]   0.020 [0.007,0.057]   0.039
+  video_vod         150  0.652 [0.583,0.714]   0.860 [0.795,0.907]   0.741
+  voip_call         150  1.000 [0.342,1.000]   0.013 [0.004,0.047]   0.026
+  web_interactive      150  0.000 [0.000,0.000]   0.000 [0.000,0.025]   0.000
+  unknown             0  0.000 [0.000,0.006]   0.000 [0.000,0.000]   0.000
+
+Confusion matrix (rows=GT, cols=Pred, values=count)
+---------------------------------------------------
+                           bulk_dl       file_sync   game_launcher         game_rt          system         torrent         unknown      video_conf      video_live       video_vod       voip_call web_interactive
+           bulk_dl               0               0               0               1              46               0             103               0               0               0               0               0
+         file_sync               0              65               0               4              53               0              28               0               0               0               0               0
+     game_launcher               0               0               0              80               0               0              70               0               0               0               0               0
+           game_rt               0               0               0             114              34               0               2               0               0               0               0               0
+            system               0               0               0               0             129               0              21               0               0               0               0               0
+           torrent               0               0               0               2               0              34             114               0               0               0               0               0
+           unknown               0               0               0               0               0               0               0               0               0               0               0               0
+        video_conf               0               0               0               0               0               0               1             149               0               0               0               0
+        video_live               0               0               0               0              20               0              58               0               3              69               0               0
+         video_vod               0               0               0               0               6               0              15               0               0             129               0               0
+         voip_call               0               0               0               0               1               0              88              59               0               0               2               0
+   web_interactive               0               0               0               0              34               0             116               0               0               0               0               0
+
+MODE A vs MODE B Paired Comparison (McNemar)
+============================================
+  Paired flows (same inputs)         : 1,650
+  B correct, A wrong (DNS helped)    : 291
+  A correct, B wrong (DNS hurt)      : 0
+  McNemar χ² (continuity-corrected)  : 289.0034
+  Two-sided p-value (df=1)           : 1.753e-63
+  → Significant at p<0.001 (DNS contribution non-random)
+
+Resource overhead — MODE A
+==========================
+  Samples collected         : 5436
+  Daemon liveness drops     : 0/5436  (0.0%)
+  SSH errors (probe failed) : 0/5436  (0.0%)
+  System CPU%   p50 / p95 / max :  24.5 /  51.2 /  82.8
+  mycoflowd CPU% p50 / p95 / max:  10.0 /  16.8 /  26.5
+  RSS (KB) p50 / p95 / max      :     384 /     384 /     384
+  Mem used % p50 / p95 / max    :  56.3 /  58.3 /  60.5
+  Conntrack p50 / p95 / max     :    661 /    887 /   1126
+
+Resource overhead — MODE B
+==========================
+  Samples collected         : 17228
+  Daemon liveness drops     : 0/17228  (0.0%)
+  SSH errors (probe failed) : 0/17228  (0.0%)
+  System CPU%   p50 / p95 / max :  33.2 /  54.5 /  99.5
+  mycoflowd CPU% p50 / p95 / max:   9.0 /  15.2 /  48.0
+  RSS (KB) p50 / p95 / max      :     384 /     384 /     384
+  Mem used % p50 / p95 / max    :  57.2 /  59.2 /  60.7
+  Conntrack p50 / p95 / max     :    571 /    821 /   3230
+
+==============================================================================
+End of report
