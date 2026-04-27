@@ -1,7 +1,7 @@
-ewma 1 0.00167897
-act 1 0.00166784
-control 1 0.001612
-config 1 5.22138
-persona 1 0.00176417
-device 1 0.00167058
+ewma 2 0.000916179
+act 2 0.00110864
+control 2 0.00103152
+config 2 3.43895
+persona 2 0.00113401
+device 2 0.00109697
 ---

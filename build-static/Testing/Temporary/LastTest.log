@@ -1,10 +1,10 @@
-Start testing: Feb 23 18:12 +03
+Start testing: Apr 27 19:19 +03
 ----------------------------------------------------------
 1/6 Testing: ewma
 1/6 Test: ewma
 Command: "/home/baris/mycoflow-core/build-static/src/test_ewma"
 Directory: /home/baris/mycoflow-core/build-static/src
-"ewma" start time: Feb 23 18:12 +03
+"ewma" start time: Apr 27 19:19 +03
 Output:
 ----------------------------------------------------------
 ALL TESTS PASSED
@@ -13,7 +13,7 @@ Tests run: 2
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"ewma" end time: Feb 23 18:12 +03
+"ewma" end time: Apr 27 19:19 +03
 "ewma" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -21,26 +21,26 @@ Test Passed.
 2/6 Test: act
 Command: "/home/baris/mycoflow-core/build-static/src/test_act"
 Directory: /home/baris/mycoflow-core/build-static/src
-"act" start time: Feb 23 18:12 +03
+"act" start time: Apr 27 19:19 +03
 Output:
 ----------------------------------------------------------
-2026-02-23T18:12:10.654 [INFO] act: tc disabled, would setup IFB ifb0 <- eth0 @ 10000 kbit
-2026-02-23T18:12:10.655 [WARN] act: invalid interface name: wan='eth0; reboot' ifb='ifb0'
-2026-02-23T18:12:10.655 [WARN] act: invalid interface name: wan='eth0' ifb='ifb0$(id)'
-2026-02-23T18:12:10.655 [WARN] act: invalid interface name: wan='' ifb='ifb0'
-2026-02-23T18:12:10.655 [WARN] act: forced actuation failure (ingress setup)
-2026-02-23T18:12:10.655 [INFO] act: tc disabled, would setup IFB ifb0 <- eth0.1 @ 10000 kbit
-2026-02-23T18:12:10.655 [INFO] act: tc disabled, would set ingress rtt 50ms persona=interactive
-2026-02-23T18:12:10.655 [INFO] act: tc disabled, would set ingress rtt 200ms persona=bulk
-2026-02-23T18:12:10.655 [INFO] act: tc disabled, would set ingress rtt 100ms persona=unknown
-2026-02-23T18:12:10.655 [WARN] act: invalid ingress interface name: 'ifb0 && evil'
+2026-04-27T19:19:38.115 [INFO] act: tc disabled, would setup IFB ifb0 <- eth0 @ 10000 kbit
+2026-04-27T19:19:38.115 [WARN] act: invalid interface name: wan='eth0; reboot' ifb='ifb0'
+2026-04-27T19:19:38.115 [WARN] act: invalid interface name: wan='eth0' ifb='ifb0$(id)'
+2026-04-27T19:19:38.115 [WARN] act: invalid interface name: wan='' ifb='ifb0'
+2026-04-27T19:19:38.115 [WARN] act: forced actuation failure (ingress setup)
+2026-04-27T19:19:38.115 [INFO] act: tc disabled, would setup IFB ifb0 <- eth0.1 @ 10000 kbit
+2026-04-27T19:19:38.115 [INFO] act: tc disabled, would set ingress rtt 50ms persona=interactive
+2026-04-27T19:19:38.115 [INFO] act: tc disabled, would set ingress rtt 200ms persona=bulk
+2026-04-27T19:19:38.115 [INFO] act: tc disabled, would set ingress rtt 100ms persona=unknown
+2026-04-27T19:19:38.115 [WARN] act: invalid ingress interface name: 'ifb0 && evil'
 ALL TESTS PASSED
 Tests run: 14
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"act" end time: Feb 23 18:12 +03
+"act" end time: Apr 27 19:19 +03
 "act" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -48,17 +48,17 @@ Test Passed.
 3/6 Test: control
 Command: "/home/baris/mycoflow-core/build-static/src/test_control"
 Directory: /home/baris/mycoflow-core/build-static/src
-"control" start time: Feb 23 18:12 +03
+"control" start time: Apr 27 19:19 +03
 Output:
 ----------------------------------------------------------
-2026-02-23T18:12:10.656 [WARN] control: actuation failed, entering safe mode
+2026-04-27T19:19:38.117 [WARN] control: actuation failed, entering safe mode
 ALL TESTS PASSED
 Tests run: 2
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"control" end time: Feb 23 18:12 +03
+"control" end time: Apr 27 19:19 +03
 "control" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -66,35 +66,35 @@ Test Passed.
 4/6 Test: config
 Command: "/home/baris/mycoflow-core/build-static/src/test_config"
 Directory: /home/baris/mycoflow-core/build-static/src
-"config" start time: Feb 23 18:12 +03
+"config" start time: Apr 27 19:19 +03
 Output:
 ----------------------------------------------------------
 ALL TESTS PASSED
 Tests run: 4
 <end of output>
-Test time =   5.22 sec
+Test time =   6.88 sec
 ----------------------------------------------------------
 Test Passed.
-"config" end time: Feb 23 18:12 +03
-"config" time elapsed: 00:00:05
+"config" end time: Apr 27 19:19 +03
+"config" time elapsed: 00:00:06
 ----------------------------------------------------------
 
 5/6 Testing: persona
 5/6 Test: persona
 Command: "/home/baris/mycoflow-core/build-static/src/test_persona"
 Directory: /home/baris/mycoflow-core/build-static/src
-"persona" start time: Feb 23 18:12 +03
+"persona" start time: Apr 27 19:19 +03
 Output:
 ----------------------------------------------------------
-2026-02-23T18:12:15.880 [INFO] persona: persona changed: unknown -> interactive
-2026-02-23T18:12:15.880 [INFO] persona: persona changed: interactive -> bulk
+2026-04-27T19:19:44.998 [INFO] persona: persona changed: unknown -> interactive
+2026-04-27T19:19:44.998 [INFO] persona: persona changed: interactive -> bulk
 ALL TESTS PASSED
 Tests run: 1
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"persona" end time: Feb 23 18:12 +03
+"persona" end time: Apr 27 19:19 +03
 "persona" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -102,21 +102,21 @@ Test Passed.
 6/6 Test: device
 Command: "/home/baris/mycoflow-core/build-static/src/test_device"
 Directory: /home/baris/mycoflow-core/build-static/src
-"device" start time: Feb 23 18:12 +03
+"device" start time: Apr 27 19:19 +03
 Output:
 ----------------------------------------------------------
-2026-02-23T18:12:15.882 [INFO] persona: persona changed: unknown -> interactive
-2026-02-23T18:12:15.882 [INFO] device: 192.168.1.10 persona: unknown -> interactive
-2026-02-23T18:12:15.882 [INFO] persona: persona changed: unknown -> bulk
-2026-02-23T18:12:15.882 [INFO] device: 192.168.1.20 persona: unknown -> bulk
+2026-04-27T19:19:45.001 [INFO] persona: persona changed: unknown -> interactive
+2026-04-27T19:19:45.001 [INFO] device: 192.168.1.10 persona: unknown -> interactive
+2026-04-27T19:19:45.001 [INFO] persona: persona changed: unknown -> bulk
+2026-04-27T19:19:45.001 [INFO] device: 192.168.1.20 persona: unknown -> bulk
 ALL TESTS PASSED
 Tests run: 3
 <end of output>
 Test time =   0.00 sec
 ----------------------------------------------------------
 Test Passed.
-"device" end time: Feb 23 18:12 +03
+"device" end time: Apr 27 19:19 +03
 "device" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Feb 23 18:12 +03
+End testing: Apr 27 19:19 +03
