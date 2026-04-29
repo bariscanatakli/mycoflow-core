@@ -354,10 +354,10 @@
   ════════════════════════════════════════ */
   .header {
     background: var(--blue);
-    padding: 28px 52px 22px;
+    padding: 12px 52px 6px !important;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 2px !important;
     flex-shrink: 0;
     position: relative;
     overflow: hidden;
@@ -445,10 +445,10 @@
   }
 
   .col {
-    padding: 24px 22px;
+    padding: 2px 20px 10px !important;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 6px !important;
     overflow: hidden;
   }
   .col + .col {
@@ -456,8 +456,8 @@
   }
   /* Right column — compact */
   .col:last-child {
-    gap: 9px;
-    padding: 18px 18px;
+    gap: 3px !important;
+    padding: 2px 16px 8px !important;
   }
 
   /* ── Section label ── */
@@ -491,7 +491,7 @@
   .problem-item {
     display: flex;
     gap: 10px;
-    align-items: flex-start;
+    align-items: center;
   }
   .prob-icon {
     width: 30px;
@@ -508,7 +508,7 @@
     font-size: 12.5px;
     color: var(--ink);
     line-height: 1.45;
-    padding-top: 4px;
+    margin: 0;
   }
   .problem-item p strong { color: var(--blue); font-weight: 600; }
 
@@ -521,23 +521,28 @@
   .sol-item {
     display: flex;
     gap: 10px;
-    align-items: flex-start;
+    align-items: center;
     background: var(--mint);
     border-radius: 6px;
-    padding: 8px 10px;
+    padding: 8px 12px;
     border-left: 3px solid var(--green);
   }
   .sol-num {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
+    font-size: 18px !important;
     font-weight: 700;
-    color: var(--green);
+    color: white !important;
+    background: var(--green);
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
     flex-shrink: 0;
-    width: 18px;
-    padding-top: 1px;
   }
-  .sol-item p { font-size: 12px; color: var(--ink); line-height: 1.4; }
+  .sol-item p { font-size: 12px; color: var(--ink); line-height: 1.4; margin: 0; }
   .sol-item p strong { color: var(--green); font-weight: 600; }
 
   /* ── Comparison table ── */
@@ -584,7 +589,7 @@
 
   .arch-block {
     border-radius: 10px;
-    padding: 14px 16px 12px;
+    padding: 8px 14px 6px;
     position: relative;
     flex: 1;
   }
@@ -699,16 +704,29 @@
   }
   .metric-card {
     background: var(--mint);
-    border-radius: 8px;
-    padding: 8px 10px 7px;
-    border-top: 3px solid var(--green);
+    border-radius: 12px;
+    padding: 12px 16px 12px 20px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+    border: 1px solid rgba(0,0,0,0.05) !important;
+    overflow: hidden;
   }
-  .metric-card.gold { border-top-color: var(--gold); }
-  .metric-card.blue { border-top-color: var(--blue); }
-  .metric-card.purple { border-top-color: #6b3580; }
+  .metric-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 7px;
+    background: #1F7A5D;
+    border-radius: 12px 0 0 12px;
+  }
+  .metric-card.gold::before { background: var(--gold); }
+  .metric-card.blue::before { background: var(--blue); }
+  .metric-card.purple::before { background: #6b3580; }
 
   .metric-icon { margin-bottom: 2px; }
   .metric-icon svg { width: 20px; height: 20px; }
@@ -817,10 +835,11 @@
     font-size: 9.5px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    color: rgba(255,255,255,0.45);
-    background: rgba(255,255,255,0.07);
-    padding: 2px 7px;
-    border-radius: 3px;
+    color: rgba(255,255,255,0.65);
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 3px 8px;
+    border-radius: 4px;
   }
   .footer-qr {
     display: flex;
@@ -861,21 +880,25 @@
 /* PREMIUM DESIGN OVERRIDES */
 .problem-item, .sol-item, .arch-block, .metric-card, .phase-result, .limitation-box, .dscp-item {
   border-radius: 12px !important;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06) !important;
-  border: 1px solid rgba(0,0,0,0.02) !important;
-}
-.metric-card.gold, .phase-result[style*="--gold"] {
-  border-left: 4px solid #B07D12 !important;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.08) !important;
+  border: 1px solid rgba(0,0,0,0.03) !important;
 }
 .phase-result {
-  border-left: 4px solid #1F7A5D !important;
+  border-left: 6px solid #1F7A5D !important;
 }
 .bar-fill[style*="1F7A5D"] {
-  box-shadow: 0 0 10px rgba(31, 122, 93, 0.8) !important;
-  border-radius: 0 4px 4px 0 !important;
+  background: linear-gradient(90deg, #185E48, #1F7A5D) !important;
+  box-shadow: 0 0 12px rgba(31, 122, 93, 0.5) !important;
+  border-radius: 0 6px 6px 0 !important;
 }
-.bar-fill[style*="B07D12"], .bar-fill[style*="c0392b"], .bar-fill[style*="aaa"] {
-  border-radius: 0 4px 4px 0 !important;
+.bar-fill[style*="B07D12"] {
+  background: linear-gradient(90deg, #94690F, #B07D12) !important;
+  box-shadow: 0 0 12px rgba(176, 125, 18, 0.4) !important;
+  border-radius: 0 6px 6px 0 !important;
+}
+.bar-fill[style*="aaa"] {
+  background: linear-gradient(90deg, #888, #aaa) !important;
+  border-radius: 0 6px 6px 0 !important;
 }
 /* Mycelium background */
 #poster {
@@ -891,16 +914,44 @@
 .future-work {
   background: rgba(31, 122, 93, 0.05);
   border-radius: 12px;
-  padding: 10px 15px;
-  margin-top: 10px;
+  padding: 4px 10px !important;
+  margin-top: 5px !important;
   border: 1px solid rgba(31, 122, 93, 0.1);
 }
 
 /* TYPOGRAPHY OVERRIDES (Bigger fonts for A1) */
+.sec-label {
+  font-size: 32px !important;
+  letter-spacing: 3px !important;
+  border-bottom: 3px solid var(--green) !important;
+  padding-bottom: 4px !important;
+  margin-bottom: 8px !important;
+  margin-top: 5px !important;
+  text-transform: uppercase !important;
+}
+.left-col > div:first-child .sec-label, .center-col > div:first-child .sec-label, .right-col > div:first-child .sec-label {
+  margin-top: 0 !important;
+}
+.sec-title {
+  font-size: 24px !important;
+  margin-bottom: 6px !important;
+  margin-top: 2px !important;
+  opacity: 0.9;
+}
+.problem-list { gap: 8px !important; }
+.solution-list { gap: 6px !important; }
+
 .problem-item p, .sol-item p {
-  font-size: 13px !important;
+  font-size: 12.5px !important;
   line-height: 1.4 !important;
 }
+.prob-icon, .sol-num {
+  width: 30px !important;
+  height: 30px !important;
+}
+.sol-num { font-size: 18px !important; }
+.prob-icon svg { width: 16px !important; height: 16px !important; }
+.p-badge { font-size: 11px !important; padding: 2px 6px !important; border-radius: 12px !important; }
 .arch-block-sub {
   font-size: 12px !important;
   line-height: 1.3 !important;
@@ -934,19 +985,19 @@
 .conclusion-box {
   background: rgba(31, 78, 121, 0.05);
   border-left: 4px solid rgb(31, 78, 121);
-  padding: 12px 16px;
+  padding: 6px 12px !important;
   border-radius: 8px;
-  margin-top: 15px;
+  margin-top: 6px !important;
 }
 .references-box {
-  margin-top: 15px;
-  padding-top: 10px;
+  margin-top: 6px !important;
+  padding-top: 5px !important;
   border-top: 1px solid rgba(0,0,0,0.1);
 }
 .ref-item {
-  font-size: 11px !important;
+  font-size: 9.5px !important;
   color: rgba(0,0,0,0.6);
-  margin-bottom: 4px;
+  margin-bottom: 2px !important;
 }
 .persona-badges {
   margin-top: 4px;
@@ -955,13 +1006,15 @@
   flex-wrap: wrap;
 }
 .p-badge {
-  background: rgba(255,255,255,0.7);
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-size: 12px !important;
-  color: #333;
-  font-weight: 600;
+  background: #E8F6F1;
+  border: none;
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 11px !important;
+  color: #1F7A5D;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(31, 122, 93, 0.15);
+  letter-spacing: 0.2px;
 }
 .msku-logo {
   position: absolute;
@@ -1082,21 +1135,21 @@
         <div class="main-title canva-container" data-html-import-id="html-import-6" data-template-id="div-2" style="color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 800;">
           <span class="myco canva-text" data-html-import-id="html-import-7" data-template-id="span-3" style="color: rgb(110, 232, 191);">Myco</span><span class="flow canva-text" data-html-import-id="html-import-8" data-template-id="span-4" style="color: rgb(255, 255, 255);">Flow</span>
           <span style="color:rgba(255,255,255,0.35); font-weight:300; font-size:40px;" data-html-import-id="html-import-9" data-template-id="span-5" class="canva-text">— </span>
-          <span style="font-size:38px; font-weight:600; color:rgba(255,255,255,0.9);" data-html-import-id="html-import-10" data-template-id="span-6" class="canva-text">OpenWrt için Biyolojik Esinli, Refleksif QoS</span>
+          <span style="font-size:38px; font-weight:600; color:rgba(255,255,255,0.9);" data-html-import-id="html-import-10" data-template-id="span-6" class="canva-text">Biologically Inspired, Reflexive QoS for OpenWrt</span>
         </div>
         <div class="author-line" data-html-import-id="html-import-11">
           <span data-html-import-id="html-import-12" data-template-id="span-7" class="canva-text" style="color: rgba(255, 255, 255, 0.65);"><strong data-html-import-id="html-import-13" data-template-id="strong-8" class="canva-text" style="color: rgba(255, 255, 255, 0.92); font-weight: 500;">Barış Can Ataklı</strong></span>
           <span class="dot-sep canva-text" data-html-import-id="html-import-14" data-template-id="span-9" style="color: rgba(255, 255, 255, 0.65); font-size: 13px;">·</span>
-          <span data-html-import-id="html-import-15" data-template-id="span-10" class="canva-text" style="color: rgba(255, 255, 255, 0.65);"><canva-inline-text data-template-id="canva-inline-text-11" class="canva-text" style="color: rgba(255, 255, 255, 0.65); font-size: 13px;">Danışman: </canva-inline-text><strong data-html-import-id="html-import-16" data-template-id="strong-12" class="canva-text" style="color: rgba(255, 255, 255, 0.92); font-weight: 500;">Dr. Öğr. Üyesi Cihat Çetinkaya</strong></span>
+          <span data-html-import-id="html-import-15" data-template-id="span-10" class="canva-text" style="color: rgba(255, 255, 255, 0.65);"><canva-inline-text data-template-id="canva-inline-text-11" class="canva-text" style="color: rgba(255, 255, 255, 0.65); font-size: 13px;">Advisor: </canva-inline-text><strong data-html-import-id="html-import-16" data-template-id="strong-12" class="canva-text" style="color: rgba(255, 255, 255, 0.92); font-weight: 500;">Asst. Prof. Dr. Cihat Çetinkaya</strong></span>
           <span class="dot-sep canva-text" data-html-import-id="html-import-17" data-template-id="span-13" style="color: rgba(255, 255, 255, 0.65); font-size: 13px;">·</span>
-          <span data-html-import-id="html-import-18" data-template-id="span-14" class="canva-text" style="color: rgba(255, 255, 255, 0.65); font-size: 13px;">Muğla Sıtkı Koçman Üniversitesi, Yazılım Mühendisliği</span>
+          <span data-html-import-id="html-import-18" data-template-id="span-14" class="canva-text" style="color: rgba(255, 255, 255, 0.65); font-size: 13px;">Muğla Sıtkı Koçman University, Software Engineering</span>
           <span class="dot-sep canva-text" style="color: rgba(255, 255, 255, 0.65); font-size: 13px;">·</span>
           <span style="font-family: monospace; font-size: 11px; opacity: 0.6; color: rgba(255, 255, 255, 0.65);" class="canva-text">bariscanatakli@posta.mu.edu.tr</span>
           <span class="dot-sep canva-text" style="color: rgba(255, 255, 255, 0.65); font-size: 13px;">·</span>
           <span style="font-family: monospace; font-size: 11px; opacity: 0.6; color: rgba(255, 255, 255, 0.65);" data-html-import-id="html-import-20" data-template-id="span-16" class="canva-text">github.com/bariscanatakli/mycoflow-core</span>
         </div>
       </div>
-      <div class="header-badge canva-container" data-html-import-id="html-import-21" data-template-id="div-17" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 11px;">Bitirme Projesi · 2026</div>
+      <div class="header-badge canva-container" data-html-import-id="html-import-21" data-template-id="div-17" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 11px;">Graduation Project · 2026</div>
     </div>
   </div>
 
@@ -1106,7 +1159,7 @@
     <!-- ── LEFT COLUMN ── -->
     <div class="col" data-html-import-id="html-import-23">
       <div data-html-import-id="html-import-24">
-        <div class="sec-label canva-container" data-html-import-id="html-import-25" data-template-id="div-18" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Motivasyon</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-25" data-template-id="div-18" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Motivation</div>
         <div class="sec-title canva-container" data-html-import-id="html-import-26" data-template-id="div-19" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 20px;">Problem</div>
         <div class="problem-list" data-html-import-id="html-import-27">
           <div class="problem-item" data-html-import-id="html-import-28">
@@ -1118,7 +1171,7 @@
                 <circle cx="12" cy="15" r="1" fill="#fff" data-html-import-id="html-import-33"></circle>
               </svg>
             </div>
-            <p data-html-import-id="html-import-34" data-template-id="p-21" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-35" data-template-id="strong-22" class="canva-text" style="color: rgb(31, 78, 121); font-weight: 600;">Bufferbloat:</strong><canva-inline-text data-template-id="canva-inline-text-23" class="canva-text" style="color: rgb(13, 31, 23); font-size: 13px;"> Tek bir TCP akışı 20 Mbit/s'lik WAN bağlantısında 693 ms kuyruk gecikmesi oluşturuyor — oyun ve VoIP kullanılamaz hale geliyor.</canva-inline-text></p>
+            <p data-html-import-id="html-import-34" data-template-id="p-21" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-35" data-template-id="strong-22" class="canva-text" style="color: rgb(31, 78, 121); font-weight: 600;">Bufferbloat:</strong><canva-inline-text data-template-id="canva-inline-text-23" class="canva-text" style="color: rgb(13, 31, 23); font-size: 13px;"> A single TCP flow causes 693 ms queue delay on a 20 Mbit/s WAN connection — making gaming and VoIP unusable.</canva-inline-text></p>
           </div>
           <div class="problem-item" data-html-import-id="html-import-36">
             <div class="prob-icon canva-container" data-html-import-id="html-import-37" data-template-id="div-24" style="background: rgb(31, 78, 121);">
@@ -1126,7 +1179,7 @@
                 <path d="M18 20V10M12 20V4M6 20v-6" data-html-import-id="html-import-39"></path>
               </svg>
             </div>
-            <p data-html-import-id="html-import-40" data-template-id="p-25" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-41" data-template-id="strong-26" class="canva-text" style="color: rgb(31, 78, 121); font-weight: 600;">Statik QoS:</strong><canva-inline-text data-template-id="canva-inline-text-27" class="canva-text" style="color: rgb(13, 31, 23); font-size: 13px;"> CAKE gibi modern AQM'ler bile DSCP etiketlerine dayanır; ISP'ler bu etiketleri siliyor ve tüm trafik aynı kuyruğa düşüyor.</canva-inline-text></p>
+            <p data-html-import-id="html-import-40" data-template-id="p-25" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-41" data-template-id="strong-26" class="canva-text" style="color: rgb(31, 78, 121); font-weight: 600;">Static QoS:</strong><canva-inline-text data-template-id="canva-inline-text-27" class="canva-text" style="color: rgb(13, 31, 23); font-size: 13px;"> Even modern AQMs like CAKE rely on DSCP tags; ISPs strip these tags, causing all traffic to fall into the same queue.</canva-inline-text></p>
           </div>
           <div class="problem-item" data-html-import-id="html-import-42">
             <div class="prob-icon canva-container" data-html-import-id="html-import-43" data-template-id="div-28" style="background: rgb(31, 78, 121);">
@@ -1135,53 +1188,55 @@
                 <path d="M12 7v5l3 3" data-html-import-id="html-import-46"></path>
               </svg>
             </div>
-            <p data-html-import-id="html-import-47" data-template-id="p-29" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-48" data-template-id="strong-30" class="canva-text" style="color: rgb(31, 78, 121); font-weight: 600;">Sabit bant genişliği:</strong><canva-inline-text data-template-id="canva-inline-text-31" class="canva-text" style="color: rgb(13, 31, 23); font-size: 13px;"> WAN hız sınırı kurulum sırasında bir kez ayarlanıyor; gerçek zamanlı tıkanıklık sinyallerine tepki verilemiyor.</canva-inline-text></p>
+            <p data-html-import-id="html-import-47" data-template-id="p-29" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-48" data-template-id="strong-30" class="canva-text" style="color: rgb(31, 78, 121); font-weight: 600;">Fixed bandwidth:</strong><canva-inline-text data-template-id="canva-inline-text-31" class="canva-text" style="color: rgb(13, 31, 23); font-size: 13px;"> WAN speed limit is configured once during setup; it cannot react to real-time congestion signals.</canva-inline-text></p>
           </div>
         </div>
       </div>
 
       <div data-html-import-id="html-import-49">
-        <div class="sec-label canva-container" data-html-import-id="html-import-50" data-template-id="div-32" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Yaklaşım</div>
-        <div class="sec-title canva-container" data-html-import-id="html-import-51" data-template-id="div-33" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 20px;">Çözüm</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-50" data-template-id="div-32" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Approach</div>
+        <div class="sec-title canva-container" data-html-import-id="html-import-51" data-template-id="div-33" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 20px;">Solution</div>
         <div class="solution-list" data-html-import-id="html-import-52">
           <div class="sol-item canva-container" data-html-import-id="html-import-53" data-template-id="div-34" style="background: rgb(232, 246, 241);">
             <div class="sol-num canva-container" data-html-import-id="html-import-54" data-template-id="div-35" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 18px;">1</div>
-            <p data-html-import-id="html-import-55" data-template-id="p-36" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-56" data-template-id="strong-37" class="canva-text" style="color: rgb(31, 122, 93); font-weight: 600;">Biyolojik İlham:</strong><canva-inline-text data-template-id="canva-inline-text-38" class="canva-text" style="color: rgb(13, 31, 23); font-size: 12px;"> Mantar miselyum ağlarının adaptif besin dağıtım stratejisi → refleksif ağ kontrolü</canva-inline-text></p>
+            <p data-html-import-id="html-import-55" data-template-id="p-36" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-56" data-template-id="strong-37" class="canva-text" style="color: rgb(31, 122, 93); font-weight: 600;">Biological Inspiration:</strong><canva-inline-text data-template-id="canva-inline-text-38" class="canva-text" style="color: rgb(13, 31, 23); font-size: 12px;"> Adaptive nutrient distribution strategy of fungal mycelium networks → reflexive network control</canva-inline-text></p>
           </div>
           <div class="sol-item canva-container" data-html-import-id="html-import-57" data-template-id="div-39" style="background: rgb(232, 246, 241);">
             <div class="sol-num canva-container" data-html-import-id="html-import-58" data-template-id="div-40" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 18px;">2</div>
-            <p data-html-import-id="html-import-59" data-template-id="p-41" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-60" data-template-id="strong-42" class="canva-text" style="color: rgb(31, 122, 93); font-weight: 600;">6-Sınıf Cihaz Personası:</strong><canva-inline-text data-template-id="canva-inline-text-43" class="canva-text" style="color: rgb(13, 31, 23); font-size: 12px;"> VOIP, GAMING, VIDEO, STREAMING, BULK, TORRENT — DPI veya ML olmadan, çip üzerinde &lt;1 μs karar</canva-inline-text></p>
-            <div class="persona-badges" style="margin-left: 24px;">
-              <span class="p-badge">🎮 Gaming</span>
-              <span class="p-badge">📺 Streaming</span>
-              <span class="p-badge">📞 VoIP</span>
-              <span class="p-badge">📦 Bulk</span>
-              <span class="p-badge">🌊 Torrent</span>
-              <span class="p-badge">❓ Unknown</span>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <p data-html-import-id="html-import-59" data-template-id="p-41" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-60" data-template-id="strong-42" class="canva-text" style="color: rgb(31, 122, 93); font-weight: 600;">6-Class Device Persona:</strong><canva-inline-text data-template-id="canva-inline-text-43" class="canva-text" style="color: rgb(13, 31, 23); font-size: 12px;"> VOIP, GAMING, VIDEO, STREAMING, BULK, TORRENT — On-chip &lt;1 μs decision without DPI or ML</canva-inline-text></p>
+              <div class="persona-badges">
+                <span class="p-badge">🎮 Gaming</span>
+                <span class="p-badge">📺 Streaming</span>
+                <span class="p-badge">📞 VoIP</span>
+                <span class="p-badge">📦 Bulk</span>
+                <span class="p-badge">🌊 Torrent</span>
+                <span class="p-badge">❓ Unknown</span>
+              </div>
             </div>
           </div>
           <div class="sol-item canva-container" data-html-import-id="html-import-61" data-template-id="div-44" style="background: rgb(232, 246, 241);">
             <div class="sol-num canva-container" data-html-import-id="html-import-62" data-template-id="div-45" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 18px;">3</div>
-            <p data-html-import-id="html-import-63" data-template-id="p-46" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-64" data-template-id="strong-47" class="canva-text" style="color: rgb(31, 122, 93); font-weight: 600;">12-Sınıf Akış Taksonomisi:</strong><canva-inline-text data-template-id="canva-inline-text-48" class="canva-text" style="color: rgb(13, 31, 23); font-size: 12px;"> Pasif DNS, hedef port ipuçları ve davranışsal parmak izi birleştiren 3-sinyalli ağırlıklı oylama</canva-inline-text></p>
+            <p data-html-import-id="html-import-63" data-template-id="p-46" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-64" data-template-id="strong-47" class="canva-text" style="color: rgb(31, 122, 93); font-weight: 600;">12-Class Flow Taxonomy:</strong><canva-inline-text data-template-id="canva-inline-text-48" class="canva-text" style="color: rgb(13, 31, 23); font-size: 12px;"> 3-signal weighted voting combining passive DNS, target port hints, and behavioral fingerprinting</canva-inline-text></p>
           </div>
           <div class="sol-item canva-container" data-html-import-id="html-import-65" data-template-id="div-49" style="background: rgb(232, 246, 241);">
             <div class="sol-num canva-container" data-html-import-id="html-import-66" data-template-id="div-50" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 18px;">4</div>
-            <p data-html-import-id="html-import-67" data-template-id="p-51" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-68" data-template-id="strong-52" class="canva-text" style="color: rgb(31, 122, 93); font-weight: 600;">Sıfır Flash Yazma:</strong><canva-inline-text data-template-id="canva-inline-text-53" class="canva-text" style="color: rgb(13, 31, 23); font-size: 12px;"> Tüm durum RAM'de tutuluyor — NAND flash ömrüne zarar yok (Xiaomi AX3000T'de canlı test edildi)</canva-inline-text></p>
+            <p data-html-import-id="html-import-67" data-template-id="p-51" class="canva-text" style="color: rgb(13, 31, 23);"><strong data-html-import-id="html-import-68" data-template-id="strong-52" class="canva-text" style="color: rgb(31, 122, 93); font-weight: 600;">Zero Flash Writes:</strong><canva-inline-text data-template-id="canva-inline-text-53" class="canva-text" style="color: rgb(13, 31, 23); font-size: 12px;"> All state is kept in RAM — no damage to NAND flash lifespan (live tested on Xiaomi AX3000T)</canva-inline-text></p>
           </div>
         </div>
       </div>
 
       <div data-html-import-id="html-import-69">
-        <div class="sec-label canva-container" data-html-import-id="html-import-70" data-template-id="div-54" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Karşılaştırma</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-70" data-template-id="div-54" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Comparison</div>
         <table class="cmp-table" data-html-import-id="html-import-71">
           <thead data-html-import-id="html-import-72">
             <tr data-html-import-id="html-import-73">
-              <th data-html-import-id="html-import-74" data-template-id="th-55" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">SİSTEM</th>
-              <th data-html-import-id="html-import-75" data-template-id="th-56" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">GÖMÜLÜ</th>
-              <th data-html-import-id="html-import-76" data-template-id="th-57" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">OTOMATİK</th>
-              <th data-html-import-id="html-import-77" data-template-id="th-58" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">ML YOK</th>
-              <th data-html-import-id="html-import-78" data-template-id="th-59" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">DPI YOK</th>
-              <th data-html-import-id="html-import-79" data-template-id="th-60" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">ADAPTİF</th>
+              <th data-html-import-id="html-import-74" data-template-id="th-55" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">SYSTEM</th>
+              <th data-html-import-id="html-import-75" data-template-id="th-56" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">EMBEDDED</th>
+              <th data-html-import-id="html-import-76" data-template-id="th-57" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">AUTOMATIC</th>
+              <th data-html-import-id="html-import-77" data-template-id="th-58" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">NO ML</th>
+              <th data-html-import-id="html-import-78" data-template-id="th-59" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">NO DPI</th>
+              <th data-html-import-id="html-import-79" data-template-id="th-60" class="canva-text" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">ADAPTIVE</th>
             </tr>
           </thead>
           <tbody data-html-import-id="html-import-80">
@@ -1198,26 +1253,26 @@
     <!-- ── CENTER COLUMN ── -->
     <div class="col" data-html-import-id="html-import-142">
       <div data-html-import-id="html-import-143">
-        <div class="sec-label canva-container" data-html-import-id="html-import-144" data-template-id="div-117" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Sistem Mimarisi</div>
-        <div class="sec-title canva-container" data-html-import-id="html-import-145" data-template-id="div-118" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 20px;">1 Hz Refleksif Kontrol Döngüsü</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-144" data-template-id="div-117" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">System Architecture</div>
+        <div class="sec-title canva-container" data-html-import-id="html-import-145" data-template-id="div-118" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 20px;">1 Hz Reflexive Control Loop</div>
         <div class="topology-box">
-          <span class="topo-node">🏠 Ev Ağı (LAN)</span>
+          <span class="topo-node">🏠 Home Network (LAN)</span>
           <span style="color: #1F7A5D;">⇄</span>
           <span class="topo-node topo-router">Xiaomi AX3000T + MycoFlow</span>
           <span style="color: #1F7A5D;">⇄</span>
-          <span class="topo-node">🌍 İnternet (WAN)</span>
+          <span class="topo-node">🌍 Internet (WAN)</span>
         </div>
       </div>
 
       <div class="arch-flow" data-html-import-id="html-import-146">
         <div class="arch-block blk-sense canva-container" data-html-import-id="html-import-147" data-template-id="div-119" style="background: rgb(234, 244, 255);">
-          <div class="arch-block-title canva-container" data-html-import-id="html-import-148" data-template-id="div-120" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 22px;">① Sense <span style="font-size: 12px; color: rgba(31, 78, 121, 0.6);">(Ortam Algılama)</span></div>
-          <div class="arch-block-sub canva-container" data-html-import-id="html-import-149" data-template-id="div-121" style="color: rgb(44, 95, 138); font-size: 11px;">ICMP çok-ping (RTT/jitter) · /proc/net/nf_conntrack · Netlink qdisc istatistikleri · Pasif DNS dinleme · BPF TC kancası pasif TCP RTT</div>
+          <div class="arch-block-title canva-container" data-html-import-id="html-import-148" data-template-id="div-120" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 22px;">① Sense <span style="font-size: 12px; color: rgba(31, 78, 121, 0.6);">(Environment Sensing)</span></div>
+          <div class="arch-block-sub canva-container" data-html-import-id="html-import-149" data-template-id="div-121" style="color: rgb(44, 95, 138); font-size: 11px;">ICMP multi-ping (RTT/jitter) · /proc/net/nf_conntrack · Netlink qdisc stats · Passive DNS listening · BPF TC hook passive TCP RTT</div>
           <div class="arch-block-tags" data-html-import-id="html-import-150">
             <span class="tag canva-text" data-html-import-id="html-import-151" data-template-id="span-122" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">ICMP PROBE</span>
             <span class="tag canva-text" data-html-import-id="html-import-152" data-template-id="span-123" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">CONNTRACK</span>
-            <span class="tag canva-text" data-html-import-id="html-import-153" data-template-id="span-124" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">NETLİNK</span>
-            <span class="tag canva-text" data-html-import-id="html-import-154" data-template-id="span-125" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">PASİF DNS</span>
+            <span class="tag canva-text" data-html-import-id="html-import-153" data-template-id="span-124" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">NETLINK</span>
+            <span class="tag canva-text" data-html-import-id="html-import-154" data-template-id="span-125" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">PASSIVE DNS</span>
             <span class="tag canva-text" data-html-import-id="html-import-155" data-template-id="span-126" style="background: rgb(31, 78, 121); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">BPF RTT</span>
           </div>
         </div>
@@ -1225,21 +1280,21 @@
         <div class="arch-arrow canva-container" data-html-import-id="html-import-156" data-template-id="div-127" style="color: rgb(31, 122, 93); font-size: 18px;">↓</div>
 
         <div class="arch-block blk-infer canva-container" data-html-import-id="html-import-157" data-template-id="div-128" style="background: rgb(232, 246, 241);">
-          <div class="arch-block-title canva-container" data-html-import-id="html-import-158" data-template-id="div-129" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 22px;">② Infer <span style="font-size: 12px; color: rgba(31, 122, 93, 0.6);">(Besin Yoğunluğu Tespiti)</span></div>
-          <div class="arch-block-sub canva-container" data-html-import-id="html-import-159" data-template-id="div-130" style="color: rgb(26, 97, 73); font-size: 11px;">EWMA düzleştirme · 6-sınıf cihaz personası (çoğunluk oylama) · 3-sinyalli akış sınıflandırıcı (DNS:0.6 + port:0.3 + davranış:0.1) · 2-tick kararlılık kapısı</div>
+          <div class="arch-block-title canva-container" data-html-import-id="html-import-158" data-template-id="div-129" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 22px;">② Infer <span style="font-size: 12px; color: rgba(31, 122, 93, 0.6);">(Nutrient Density Estimation)</span></div>
+          <div class="arch-block-sub canva-container" data-html-import-id="html-import-159" data-template-id="div-130" style="color: rgb(26, 97, 73); font-size: 11px;">EWMA smoothing · 6-class device persona (majority voting) · 3-signal flow classifier (DNS:0.6 + port:0.3 + behavior:0.1) · 2-tick stability gate</div>
           <div class="arch-block-tags" data-html-import-id="html-import-160">
-            <span class="tag canva-text" data-html-import-id="html-import-161" data-template-id="span-131" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">6-SINIF PERSONA</span>
-            <span class="tag canva-text" data-html-import-id="html-import-162" data-template-id="span-132" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">12-SINIF SERVİS</span>
+            <span class="tag canva-text" data-html-import-id="html-import-161" data-template-id="span-131" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">6-CLASS PERSONA</span>
+            <span class="tag canva-text" data-html-import-id="html-import-162" data-template-id="span-132" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">12-CLASS SERVICE</span>
             <span class="tag canva-text" data-html-import-id="html-import-163" data-template-id="span-133" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">EWMA Α=0.30</span>
-            <span class="tag canva-text" data-html-import-id="html-import-164" data-template-id="span-134" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">HİSTEREZ</span>
+            <span class="tag canva-text" data-html-import-id="html-import-164" data-template-id="span-134" style="background: rgb(31, 122, 93); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">HYSTERESIS</span>
           </div>
         </div>
 
         <div class="arch-arrow canva-container" data-html-import-id="html-import-165" data-template-id="div-135" style="color: rgb(31, 122, 93); font-size: 18px;">↓</div>
 
         <div class="arch-block blk-act canva-container" data-html-import-id="html-import-166" data-template-id="div-136" style="background: rgb(255, 248, 236);">
-          <div class="arch-block-title canva-container" data-html-import-id="html-import-167" data-template-id="div-137" style="color: rgb(176, 125, 18); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 22px;">③ Act <span style="font-size: 12px; color: rgba(176, 125, 18, 0.6);">(Ağ Adaptasyonu)</span></div>
-          <div class="arch-block-sub canva-container" data-html-import-id="html-import-168" data-template-id="div-138" style="color: rgb(122, 87, 0); font-size: 11px;">CAKE AQM hedef güncelleme (tc qdisc change) · iptables mangle DSCP kuralları · libnetfilter_conntrack CONNMARK push · nftables POSTROUTING DSCP geri yükleme · IFB ingress şekillendirme</div>
+          <div class="arch-block-title canva-container" data-html-import-id="html-import-167" data-template-id="div-137" style="color: rgb(176, 125, 18); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 22px;">③ Act <span style="font-size: 12px; color: rgba(176, 125, 18, 0.6);">(Network Adaptation)</span></div>
+          <div class="arch-block-sub canva-container" data-html-import-id="html-import-168" data-template-id="div-138" style="color: rgb(122, 87, 0); font-size: 11px;">CAKE AQM target update (tc qdisc change) · iptables mangle DSCP rules · libnetfilter_conntrack CONNMARK push · nftables POSTROUTING DSCP restore · IFB ingress shaping</div>
           <div class="arch-block-tags" data-html-import-id="html-import-169">
             <span class="tag canva-text" data-html-import-id="html-import-170" data-template-id="span-139" style="background: rgb(176, 125, 18); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">CAKE DİFFSERV4</span>
             <span class="tag canva-text" data-html-import-id="html-import-171" data-template-id="span-140" style="background: rgb(176, 125, 18); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">DSCP MARK</span>
@@ -1251,8 +1306,8 @@
         <div class="arch-arrow canva-container" data-html-import-id="html-import-174" data-template-id="div-143" style="color: rgb(31, 122, 93); font-size: 18px;">↓</div>
 
         <div class="arch-block blk-stab canva-container" data-html-import-id="html-import-175" data-template-id="div-144" style="background: rgb(244, 234, 248);">
-          <div class="arch-block-title canva-container" data-html-import-id="html-import-176" data-template-id="div-145" style="color: rgb(107, 53, 128); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 22px;">④ Stabilize <span style="font-size: 12px; color: rgba(107, 53, 128, 0.6);">(Dengeleme Refleksi)</span></div>
-          <div class="arch-block-sub canva-container" data-html-import-id="html-import-177" data-template-id="div-146" style="color: rgb(74, 31, 96); font-size: 11px;">Geri besleme halkası (8 slot) · Adım boyutu adaptasyonu · Kayan EWMA taban çizgisi (β=0.01) · RTT otomatik düşürme/yeniden yükseltme merdiveni</div>
+          <div class="arch-block-title canva-container" data-html-import-id="html-import-176" data-template-id="div-145" style="color: rgb(107, 53, 128); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 22px;">④ Stabilize <span style="font-size: 12px; color: rgba(107, 53, 128, 0.6);">(Balancing Reflex)</span></div>
+          <div class="arch-block-sub canva-container" data-html-import-id="html-import-177" data-template-id="div-146" style="color: rgb(74, 31, 96); font-size: 11px;">Feedback ring (8 slots) · Step size adaptation · Sliding EWMA baseline (β=0.01) · RTT auto-demote/promote ladder</div>
           <div class="arch-block-tags" data-html-import-id="html-import-178">
             <span class="tag canva-text" data-html-import-id="html-import-179" data-template-id="span-147" style="background: rgb(107, 53, 128); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">FEEDBACK RİNG</span>
             <span class="tag canva-text" data-html-import-id="html-import-180" data-template-id="span-148" style="background: rgb(107, 53, 128); color: rgb(255, 255, 255); font-family: &quot;Barlow Condensed&quot;; font-weight: 600; font-size: 10px;">SLİDİNG BASELİNE</span>
@@ -1265,12 +1320,12 @@
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" data-html-import-id="html-import-184"></path>
             <path d="M3 3v5h5" data-html-import-id="html-import-185"></path>
           </svg>
-          <p data-html-import-id="html-import-186" data-template-id="p-151" class="canva-text" style="color: rgb(31, 122, 93);"><strong data-html-import-id="html-import-187" data-template-id="strong-152" class="canva-text" style="color: rgb(31, 122, 93);">Sonraki döngüye geri besleme</strong><canva-inline-text data-template-id="canva-inline-text-153" class="canva-text" style="color: rgb(31, 122, 93); font-size: 11px;"> — tüm durum RAM'de tutulur, sıfır flash yazma garantisi</canva-inline-text></p>
+          <p data-html-import-id="html-import-186" data-template-id="p-151" class="canva-text" style="color: rgb(31, 122, 93);"><strong data-html-import-id="html-import-187" data-template-id="strong-152" class="canva-text" style="color: rgb(31, 122, 93);">Feedback to next loop</strong><canva-inline-text data-template-id="canva-inline-text-153" class="canva-text" style="color: rgb(31, 122, 93); font-size: 11px;"> — all state is kept in RAM, zero flash write guarantee</canva-inline-text></p>
         </div>
       </div>
 
       <div data-html-import-id="html-import-188">
-        <div class="sec-label canva-container" data-html-import-id="html-import-189" data-template-id="div-154" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">DSCP → CAKE Tin Eşlemesi</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-189" data-template-id="div-154" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">DSCP → CAKE Tin Mapping</div>
         <div class="dscp-grid" data-html-import-id="html-import-190">
           <div class="dscp-item canva-container" data-html-import-id="html-import-191" data-template-id="div-155" style="background: rgb(232, 246, 241);">
             <div class="dscp-dot canva-container" style="background:#1F4E79" data-html-import-id="html-import-192" data-template-id="div-156"></div>
@@ -1298,13 +1353,38 @@
           </div>
         </div>
       </div>
+      <div data-html-import-id="html-import-303" style="margin-top: 8px !important;">
+        <div class="sec-label canva-container" data-html-import-id="html-import-304" data-template-id="div-240" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">System Specifications</div>
+        <div style="display:flex; flex-direction:column; gap:3px;" data-html-import-id="html-import-305">
+          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 3px 10px; display: flex; justify-content: space-between; align-items: center;" class="canva-container">
+            <span style="font-size: 10px; color: rgb(74, 94, 85);" class="canva-text">Target hardware</span>
+            <span style="font-size: 10px; font-weight: 600; color: rgb(13, 31, 23);" class="canva-text">Xiaomi AX3000T (MT7981B, 256 MB RAM)</span>
+          </div>
+          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 3px 10px; display: flex; justify-content: space-between; align-items: center;" class="canva-container">
+            <span style="font-size: 10px; color: rgb(74, 94, 85);" class="canva-text">CPU usage</span>
+            <span style="font-size: 10px; font-weight: 600; color: rgb(31, 122, 93);" class="canva-text">&lt;2% (Cortex-A53)</span>
+          </div>
+          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 3px 10px; display: flex; justify-content: space-between; align-items: center;" class="canva-container">
+            <span style="font-size: 10px; color: rgb(74, 94, 85);" class="canva-text">Binary size</span>
+            <span style="font-size: 10px; font-weight: 600; color: rgb(31, 78, 121);" class="canva-text">&lt;200 KB · musl libc statik-pie</span>
+          </div>
+          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 3px 10px; display: flex; justify-content: space-between; align-items: center;" class="canva-container">
+            <span style="font-size: 10px; color: rgb(74, 94, 85);" class="canva-text">Test coverage</span>
+            <span style="font-size: 10px; font-weight: 600; color: rgb(13, 31, 23);" class="canva-text">13/13 CTest · ~190 assertion</span>
+          </div>
+          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 3px 10px; display: flex; justify-content: space-between; align-items: center;" class="canva-container">
+            <span style="font-size: 10px; color: rgb(74, 94, 85);" class="canva-text">Deployment</span>
+            <span style="font-size: 10px; font-weight: 600; color: rgb(31, 78, 121);" class="canva-text">OpenWrt IPK + LuCI · live AX3000T</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ── RIGHT COLUMN ── -->
     <div class="col" data-html-import-id="html-import-215">
       <div data-html-import-id="html-import-216">
-        <div class="sec-label canva-container" data-html-import-id="html-import-217" data-template-id="div-185" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Deney Sonuçları</div>
-        <div class="sec-title canva-container" data-html-import-id="html-import-218" data-template-id="div-186" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 20px;">Temel Metrikler</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-217" data-template-id="div-185" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Experimental Results</div>
+        <div class="sec-title canva-container" data-html-import-id="html-import-218" data-template-id="div-186" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 20px;">Core Metrics</div>
       </div>
 
       <div class="metrics-grid" data-html-import-id="html-import-219">
@@ -1316,7 +1396,7 @@
             </svg>
           </div>
           <div class="metric-value canva-container" data-html-import-id="html-import-225" data-template-id="div-188" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 30px;">154×</div>
-          <div class="metric-label canva-container" data-html-import-id="html-import-226" data-template-id="div-189" style="color: rgb(74, 94, 85); font-weight: 500; font-size: 10px;">Oyun tin gecikmesi avantajı — Voice 225 μs vs Bulk 34.7 ms</div>
+          <div class="metric-label canva-container" data-html-import-id="html-import-226" data-template-id="div-189" style="color: rgb(74, 94, 85); font-weight: 500; font-size: 10px;">Gaming tin latency advantage — Voice 225 μs vs Bulk 34.7 ms</div>
         </div>
         <div class="metric-card gold canva-container" data-html-import-id="html-import-227" data-template-id="div-190" style="background: rgb(232, 246, 241);">
           <div class="metric-icon" data-html-import-id="html-import-228">
@@ -1326,7 +1406,7 @@
             </svg>
           </div>
           <div class="metric-value canva-container" style="color: rgb(176, 125, 18); font-family: &quot;Barlow Condensed&quot;; font-weight: 800; font-size: 30px;" data-html-import-id="html-import-232" data-template-id="div-191">+40.6</div>
-          <div class="metric-label canva-container" data-html-import-id="html-import-233" data-template-id="div-192" style="color: rgb(74, 94, 85); font-weight: 500; font-size: 10px;">DNS sinyali doğruluk artışı (pp) — 42.98% → 83.54% offline validasyon</div>
+          <div class="metric-label canva-container" data-html-import-id="html-import-233" data-template-id="div-192" style="color: rgb(74, 94, 85); font-weight: 500; font-size: 10px;">DNS signal accuracy increase (pp) — 42.98% → 83.54% offline validation</div>
         </div>
         <div class="metric-card blue canva-container" data-html-import-id="html-import-234" data-template-id="div-193" style="background: rgb(232, 246, 241);">
           <div class="metric-icon" data-html-import-id="html-import-235">
@@ -1335,7 +1415,7 @@
             </svg>
           </div>
           <div class="metric-value canva-container" style="font-size: 30px; color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 800;" data-html-import-id="html-import-239" data-template-id="div-194">66.97%</div>
-          <div class="metric-label canva-container" data-html-import-id="html-import-240" data-template-id="div-195" style="color: rgb(74, 94, 85); font-weight: 500; font-size: 10px;">In-vivo tin-matched doğruluğu (DNS aktif, 80-katalog, N=1,650 akış)</div>
+          <div class="metric-label canva-container" data-html-import-id="html-import-240" data-template-id="div-195" style="color: rgb(74, 94, 85); font-weight: 500; font-size: 10px;">In-vivo tin-matched accuracy (DNS active, 80-catalog, N=1,650 flows)</div>
         </div>
         <div class="metric-card purple canva-container" data-html-import-id="html-import-241" data-template-id="div-196" style="background: rgb(232, 246, 241);">
           <div class="metric-icon" data-html-import-id="html-import-242">
@@ -1345,22 +1425,22 @@
             </svg>
           </div>
           <div class="metric-value canva-container" style="color: rgb(107, 53, 128); font-size: 28px; font-family: &quot;Barlow Condensed&quot;; font-weight: 800;" data-html-import-id="html-import-246" data-template-id="div-197">&lt;200 KB</div>
-          <div class="metric-label canva-container" data-html-import-id="html-import-247" data-template-id="div-198" style="color: rgb(74, 94, 85); font-weight: 500; font-size: 10px;">aarch64 binary boyutu — sıfır flash yazma, musl libc statik bağlama</div>
+          <div class="metric-label canva-container" data-html-import-id="html-import-247" data-template-id="div-198" style="color: rgb(74, 94, 85); font-weight: 500; font-size: 10px;">aarch64 binary size — zero flash writes, musl libc static linking</div>
         </div>
       </div>
 
       <div data-html-import-id="html-import-248">
-        <div class="sec-label canva-container" data-html-import-id="html-import-249" data-template-id="div-199" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Faz 1 — İki Persona Doğrulaması</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-249" data-template-id="div-199" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Phase 1 — Dual Persona Validation</div>
         <div class="phase-result canva-container" data-html-import-id="html-import-250" data-template-id="div-200" style="background: rgb(232, 246, 241);">
-          <div class="phase-result-title canva-container" data-html-import-id="html-import-251" data-template-id="div-201" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Oyun Gecikmesi Karşılaştırması (20 Mbit/s WAN)</div>
+          <div class="phase-result-title canva-container" data-html-import-id="html-import-251" data-template-id="div-201" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Gaming Latency Comparison (20 Mbit/s WAN)</div>
           <div class="phase-bar" data-html-import-id="html-import-252">
             <div class="bar-row" data-html-import-id="html-import-253">
-              <span class="bar-label canva-text" data-html-import-id="html-import-254" data-template-id="span-202" style="color: rgb(74, 94, 85); font-size: 10px;">FIFO (QoS yok)</span>
+              <span class="bar-label canva-text" data-html-import-id="html-import-254" data-template-id="span-202" style="color: rgb(74, 94, 85); font-size: 10px;">FIFO (no QoS)</span>
               <div class="bar-track canva-container" data-html-import-id="html-import-255" data-template-id="div-203" style="background: rgb(200, 221, 214);"><div class="bar-fill canva-container" style="width:100%; background:#c0392b;" data-html-import-id="html-import-256" data-template-id="div-204"></div></div>
               <span class="bar-val canva-text" data-html-import-id="html-import-257" data-template-id="span-205" style="color: rgb(13, 31, 23); font-weight: 600; font-size: 10px;">693 ms</span>
             </div>
             <div class="bar-row" data-html-import-id="html-import-258">
-              <span class="bar-label canva-text" data-html-import-id="html-import-259" data-template-id="span-206" style="color: rgb(74, 94, 85); font-size: 10px;">CAKE (tek başına)</span>
+              <span class="bar-label canva-text" data-html-import-id="html-import-259" data-template-id="span-206" style="color: rgb(74, 94, 85); font-size: 10px;">CAKE (standalone)</span>
               <div class="bar-track canva-container" data-html-import-id="html-import-260" data-template-id="div-207" style="background: rgb(200, 221, 214);"><div class="bar-fill canva-container" style="width:0.09%; background:#B07D12; min-width:3px;" data-html-import-id="html-import-261" data-template-id="div-208"></div></div>
               <span class="bar-val canva-text" data-html-import-id="html-import-262" data-template-id="span-209" style="color: rgb(13, 31, 23); font-weight: 600; font-size: 10px;">0.63 ms</span>
             </div>
@@ -1374,18 +1454,18 @@
       </div>
 
       <div data-html-import-id="html-import-268">
-        <div class="sec-label canva-container" data-html-import-id="html-import-269" data-template-id="div-214" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Faz 2 — Altı Persona Karışık Yük</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-269" data-template-id="div-214" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Phase 2 — Six Persona Mixed Load</div>
         <div class="phase-result canva-container" style="border-left-color: var(--green); background: rgb(232, 246, 241); position: relative;" data-html-import-id="html-import-270" data-template-id="div-215">
           <div class="waveform-badge">Waveform Score: A+</div>
-          <div class="phase-result-title canva-container" data-html-import-id="html-import-271" data-template-id="div-216" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">5 İstemci Altında Oyun Gecikmesi</div>
+          <div class="phase-result-title canva-container" data-html-import-id="html-import-271" data-template-id="div-216" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Gaming Latency under 5 Clients</div>
           <div class="phase-bar" data-html-import-id="html-import-272">
             <div class="bar-row" data-html-import-id="html-import-273">
-              <span class="bar-label canva-text" data-html-import-id="html-import-274" data-template-id="span-217" style="color: rgb(74, 94, 85); font-size: 10px;">CAKE (5 istemci)</span>
+              <span class="bar-label canva-text" data-html-import-id="html-import-274" data-template-id="span-217" style="color: rgb(74, 94, 85); font-size: 10px;">CAKE (5 clients)</span>
               <div class="bar-track canva-container" data-html-import-id="html-import-275" data-template-id="div-218" style="background: rgb(200, 221, 214);"><div class="bar-fill canva-container" style="width:100%; background:#B07D12;" data-html-import-id="html-import-276" data-template-id="div-219"></div></div>
               <span class="bar-val canva-text" data-html-import-id="html-import-277" data-template-id="span-220" style="color: rgb(13, 31, 23); font-weight: 600; font-size: 10px;">1.43 ms</span>
             </div>
             <div class="bar-row" data-html-import-id="html-import-278">
-              <span class="bar-label canva-text" data-html-import-id="html-import-279" data-template-id="span-221" style="color: rgb(74, 94, 85); font-size: 10px;">MycoFlow (5 istemci)</span>
+              <span class="bar-label canva-text" data-html-import-id="html-import-279" data-template-id="span-221" style="color: rgb(74, 94, 85); font-size: 10px;">MycoFlow (5 clients)</span>
               <div class="bar-track canva-container" data-html-import-id="html-import-280" data-template-id="div-222" style="background: rgb(200, 221, 214);"><div class="bar-fill canva-container" style="width:62%; background:#1F7A5D;" data-html-import-id="html-import-281" data-template-id="div-223"></div></div>
               <span class="bar-val canva-text" style="color: rgb(31, 122, 93); font-weight: 700; font-size: 10px;" data-html-import-id="html-import-282" data-template-id="span-224">1.10 ms</span>
             </div>
@@ -1394,22 +1474,22 @@
       </div>
 
       <div data-html-import-id="html-import-283">
-        <div class="sec-label canva-container" data-html-import-id="html-import-284" data-template-id="div-225" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">In-Vivo DNS Validasyonu — Tin-Matched Doğruluk</div>
+        <div class="sec-label canva-container" data-html-import-id="html-import-284" data-template-id="div-225" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">In-Vivo DNS Validation — Tin-Matched Accuracy</div>
         <div class="phase-result canva-container" style="border-left-color: var(--gold); background: rgb(232, 246, 241);" data-html-import-id="html-import-285" data-template-id="div-226">
-          <div class="phase-result-title canva-container" data-html-import-id="html-import-286" data-template-id="div-227" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">N=1,650 Akış · seed=42 · Unicauca Dataset</div>
+          <div class="phase-result-title canva-container" data-html-import-id="html-import-286" data-template-id="div-227" style="color: rgb(31, 78, 121); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">N=1,650 Flows · seed=42 · Unicauca Dataset</div>
           <div class="phase-bar" data-html-import-id="html-import-287">
             <div class="bar-row" data-html-import-id="html-import-288">
-              <span class="bar-label canva-text" data-html-import-id="html-import-289" data-template-id="span-228" style="color: rgb(74, 94, 85); font-size: 10px;">DNS yok (port+davr.)</span>
+              <span class="bar-label canva-text" data-html-import-id="html-import-289" data-template-id="span-228" style="color: rgb(74, 94, 85); font-size: 10px;">No DNS (port+behav.)</span>
               <div class="bar-track canva-container" data-html-import-id="html-import-290" data-template-id="div-229" style="background: rgb(200, 221, 214);"><div class="bar-fill canva-container" style="width:70%; background:#aaa;" data-html-import-id="html-import-291" data-template-id="div-230"></div></div>
               <span class="bar-val canva-text" data-html-import-id="html-import-292" data-template-id="span-231" style="color: rgb(13, 31, 23); font-weight: 600; font-size: 10px;">49.26%</span>
             </div>
             <div class="bar-row" data-html-import-id="html-import-293">
-              <span class="bar-label canva-text" data-html-import-id="html-import-294" data-template-id="span-232" style="color: rgb(74, 94, 85); font-size: 10px;">DNS aktif (80-kat.)</span>
+              <span class="bar-label canva-text" data-html-import-id="html-import-294" data-template-id="span-232" style="color: rgb(74, 94, 85); font-size: 10px;">DNS active (80-cat.)</span>
               <div class="bar-track canva-container" data-html-import-id="html-import-295" data-template-id="div-233" style="background: rgb(200, 221, 214);"><div class="bar-fill canva-container" style="width:95%; background:#B07D12;" data-html-import-id="html-import-296" data-template-id="div-234"></div></div>
               <span class="bar-val canva-text" data-html-import-id="html-import-297" data-template-id="span-235" style="color: rgb(13, 31, 23); font-weight: 600; font-size: 10px;">66.97%</span>
             </div>
             <div class="bar-row" data-html-import-id="html-import-298">
-              <span class="bar-label canva-text" data-html-import-id="html-import-299" data-template-id="span-236" style="color: rgb(74, 94, 85); font-size: 10px;">DNS aktif (585-kat.)</span>
+              <span class="bar-label canva-text" data-html-import-id="html-import-299" data-template-id="span-236" style="color: rgb(74, 94, 85); font-size: 10px;">DNS active (585-cat.)</span>
               <div class="bar-track canva-container" data-html-import-id="html-import-300" data-template-id="div-237" style="background: rgb(200, 221, 214);"><div class="bar-fill canva-container" style="width:100%; background:#1F7A5D;" data-html-import-id="html-import-301" data-template-id="div-238"></div></div>
               <span class="bar-val canva-text" style="color: rgb(31, 122, 93); font-weight: 700; font-size: 10px;" data-html-import-id="html-import-302" data-template-id="span-239">70.41%</span>
             </div>
@@ -1417,51 +1497,17 @@
         </div>
       </div>
 
-      <div data-html-import-id="html-import-303">
-        <div class="sec-label canva-container" data-html-import-id="html-import-304" data-template-id="div-240" style="color: rgb(31, 122, 93); font-family: &quot;Barlow Condensed&quot;; font-weight: 700; font-size: 11px;">Sistem Özellikleri</div>
-        <div style="display:flex; flex-direction:column; gap:5px;" data-html-import-id="html-import-305">
-          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center;" data-html-import-id="html-import-306" data-template-id="div-241" class="canva-container">
-            <span style="font-size: 11px; color: rgb(74, 94, 85);" data-html-import-id="html-import-307" data-template-id="span-242" class="canva-text">Hedef donanım</span>
-            <span style="font-size: 11px; font-weight: 600; color: rgb(13, 31, 23);" data-html-import-id="html-import-308" data-template-id="span-243" class="canva-text">Xiaomi AX3000T (MT7981B, 256 MB RAM)</span>
-          </div>
-          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center;" data-html-import-id="html-import-309" data-template-id="div-244" class="canva-container">
-            <span style="font-size: 11px; color: rgb(74, 94, 85);" data-html-import-id="html-import-310" data-template-id="span-245" class="canva-text">CPU kullanımı</span>
-            <span style="font-size: 11px; font-weight: 600; color: rgb(31, 122, 93);" data-html-import-id="html-import-311" data-template-id="span-246" class="canva-text">&lt;2% (Cortex-A53)</span>
-          </div>
-          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center;" data-html-import-id="html-import-312" data-template-id="div-247" class="canva-container">
-            <span style="font-size: 11px; color: rgb(74, 94, 85);" data-html-import-id="html-import-313" data-template-id="span-248" class="canva-text">Binary boyutu</span>
-            <span style="font-size: 11px; font-weight: 600; color: rgb(31, 78, 121);" data-html-import-id="html-import-314" data-template-id="span-249" class="canva-text">&lt;200 KB · musl libc statik-pie</span>
-          </div>
-          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center;" data-html-import-id="html-import-315" data-template-id="div-250" class="canva-container">
-            <span style="font-size: 11px; color: rgb(74, 94, 85);" data-html-import-id="html-import-316" data-template-id="span-251" class="canva-text">Test kapsamı</span>
-            <span style="font-size: 11px; font-weight: 600; color: rgb(13, 31, 23);" data-html-import-id="html-import-317" data-template-id="span-252" class="canva-text">13/13 CTest · ~190 assertion · N=1,650 in-vivo</span>
-          </div>
-          <div style="background: rgb(232, 246, 241); border-radius: 6px; padding: 5px 10px; display: flex; justify-content: space-between; align-items: center;" data-html-import-id="html-import-318" data-template-id="div-253" class="canva-container">
-            <span style="font-size: 11px; color: rgb(74, 94, 85);" data-html-import-id="html-import-319" data-template-id="span-254" class="canva-text">Dağıtım</span>
-            <span style="font-size: 11px; font-weight: 600; color: rgb(31, 78, 121);" data-html-import-id="html-import-320" data-template-id="span-255" class="canva-text">OpenWrt IPK + LuCI · canlı AX3000T üzerinde</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="limitation-box canva-container" data-html-import-id="html-import-321" data-template-id="div-256" style="background: rgb(255, 248, 236);">
-        <p data-html-import-id="html-import-322" data-template-id="p-257" class="canva-text" style="color: rgb(122, 87, 0);"><strong data-html-import-id="html-import-323" data-template-id="strong-258" class="canva-text" style="color: rgb(122, 87, 0); font-weight: 600;">Sınırlama:</strong><canva-inline-text data-template-id="canva-inline-text-259" class="canva-text" style="color: rgb(122, 87, 0); font-size: 10px;"> ECH/QUIC opak payload — pasif DNS veya port tabanlı sınıflandırma çalışmıyor; bu trafik </canva-inline-text><em data-html-import-id="html-import-324" data-template-id="em-260" class="canva-text" style="color: rgb(122, 87, 0);">unknown</em><canva-inline-text data-template-id="canva-inline-text-261" class="canva-text" style="color: rgb(122, 87, 0); font-size: 10px;"> sınıfına düşüyor. DNS katalog kapsamı tin-matched doğruluğu doğrudan etkiliyor (80-kat. → 66.97%, 585-kat. → 70.41%). ISP bant genişliği değişikliklerinde UCI manuel güncelleme gereklidir.</canva-inline-text></p>
-      </div>
-      <div class="future-work" data-html-import-id="html-import-custom-1">
-        <p class="canva-text" style="color: rgb(31, 122, 93); font-size: 10px; margin: 0;"><strong class="canva-text" style="font-weight: 600;">Gelecek Çalışmalar:</strong> QUIC/ECH trafikleri için eBPF tabanlı hafif akış-zamanlaması (flow-timing) analizi entegrasyonu planlanmaktadır.</p>
+      <div class="future-work" data-html-import-id="html-import-custom-1" style="padding: 4px 8px !important; margin-top: 4px !important;">
+        <p class="canva-text" style="color: rgb(31, 122, 93); font-size: 9.5px; margin: 0;"><strong class="canva-text" style="font-weight: 600;">Future Work:</strong> Flow-timing analysis for QUIC/ECH is planned.</p>
       </div>
 
       <div class="conclusion-box">
         <p class="canva-text" style="color: rgb(31, 78, 121); margin: 0; font-weight: 500;">
-          <strong style="font-weight: 800;">Sonuç:</strong> MycoFlow, standart ev donanımlarında (ör. Xiaomi AX3000T) sıfır flaş yazma ve mikrosaniye altı karar mekanizmasıyla, biyolojik esinli refleksif ağ yönetiminin (miselyum ağı konsepti) yeni nesil yönlendiricilerde tam anlamıyla uygulanabilirliğini kanıtlamıştır.
+          <strong style="font-weight: 800;">Conclusion:</strong> MycoFlow proves the full viability of biologically inspired reflexive network management (mycelium network concept) on standard home hardware (e.g. Xiaomi AX3000T) with zero flash writes and sub-microsecond decision making.
         </p>
       </div>
 
-      <div class="references-box">
-        <p class="canva-text" style="color: rgb(0,0,0); font-weight: 700; margin-bottom: 5px; font-size: 12px !important;">KAYNAKLAR</p>
-        <div class="ref-item">[1] Høiland-Jørgensen, T., et al. (2018). "Piece of CAKE: A Comprehensive Queue Management Solution for Home Gateways." IEEE.</div>
-        <div class="ref-item">[2] OpenWrt Project (2024). "Network Traffic Control & QoS." OpenWrt Documentation.</div>
-        <div class="ref-item">[3] Tero, A., et al. (2010). "Rules for Biologically Inspired Adaptive Network Design." Science, 327(5964), 439-442.</div>
-      </div>
+
     </div>
 
   </div>
@@ -1469,7 +1515,7 @@
   <!-- ══════════ FOOTER ══════════ -->
   <div class="footer canva-container" data-html-import-id="html-import-325" data-template-id="div-262" style="background: rgb(13, 31, 23);">
     <div class="footer-left" data-html-import-id="html-import-326">
-      <p data-html-import-id="html-import-327" data-template-id="p-263" class="canva-text" style="color: rgba(255, 255, 255, 0.55); font-size: 11px;">Muğla Sıtkı Koçman Üniversitesi &nbsp;·&nbsp; Yazılım Mühendisliği Bölümü &nbsp;·&nbsp; 2025–2026 Akademik Yılı Bitirme Projesi</p>
+      <p data-html-import-id="html-import-327" data-template-id="p-263" class="canva-text" style="color: rgba(255, 255, 255, 0.55); font-size: 11px;">Muğla Sıtkı Koçman University &nbsp;·&nbsp; Software Engineering Department &nbsp;·&nbsp; 2025–2026 Academic Year Graduation Project</p>
       <div class="footer-keywords" data-html-import-id="html-import-328">
         <span class="kw canva-text" data-html-import-id="html-import-329" data-template-id="span-264" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">BUFFERBLOAT</span>
         <span class="kw canva-text" data-html-import-id="html-import-330" data-template-id="span-265" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">CAKE AQM</span>
@@ -1477,15 +1523,15 @@
         <span class="kw canva-text" data-html-import-id="html-import-332" data-template-id="span-267" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">EBPF</span>
         <span class="kw canva-text" data-html-import-id="html-import-333" data-template-id="span-268" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">OPENWRT</span>
         <span class="kw canva-text" data-html-import-id="html-import-334" data-template-id="span-269" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">PERSONA-AWARE QOS</span>
-        <span class="kw canva-text" data-html-import-id="html-import-335" data-template-id="span-270" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">REFLEKSİF KONTROL</span>
-        <span class="kw canva-text" data-html-import-id="html-import-336" data-template-id="span-271" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">BİYOLOJİK ESİNLİ AĞ</span>
+        <span class="kw canva-text" data-html-import-id="html-import-335" data-template-id="span-270" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">REFLEXIVE CONTROL</span>
+        <span class="kw canva-text" data-html-import-id="html-import-336" data-template-id="span-271" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">BIO-INSPIRED NETWORK</span>
         <span class="kw canva-text" data-html-import-id="html-import-337" data-template-id="span-272" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">CONNTRACK</span>
-        <span class="kw canva-text" data-html-import-id="html-import-338" data-template-id="span-273" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">PASİF RTT</span>
+        <span class="kw canva-text" data-html-import-id="html-import-338" data-template-id="span-273" style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.45); font-family: &quot;Barlow Condensed&quot;; font-size: 10px;">PASSIVE RTT</span>
       </div>
     </div>
     <div class="univ-line" data-html-import-id="html-import-339">
       <p data-html-import-id="html-import-340" data-template-id="p-274" class="canva-text" style="color: rgba(255, 255, 255, 0.55);">
-        <strong data-html-import-id="html-import-341" data-template-id="strong-275" class="canva-text" style="color: rgba(255, 255, 255, 0.8); font-size: 12px;">Kaynak Kodu</strong><canva-inline-text data-template-id="canva-inline-text-276" class="canva-text" style="color: rgba(255, 255, 255, 0.55); font-size: 11px;">github.com/bariscanatakli/</canva-inline-text><br data-html-import-id="html-import-342"><canva-inline-text data-template-id="canva-inline-text-277" class="canva-text" style="color: rgba(255, 255, 255, 0.55); font-size: 11px;">mycoflow-core</canva-inline-text></p>
+        <strong data-html-import-id="html-import-341" data-template-id="strong-275" class="canva-text" style="color: rgba(255, 255, 255, 0.8); font-size: 12px;">Source Code</strong><canva-inline-text data-template-id="canva-inline-text-276" class="canva-text" style="color: rgba(255, 255, 255, 0.55); font-size: 11px;">github.com/bariscanatakli/</canva-inline-text><br data-html-import-id="html-import-342"><canva-inline-text data-template-id="canva-inline-text-277" class="canva-text" style="color: rgba(255, 255, 255, 0.55); font-size: 11px;">mycoflow-core</canva-inline-text></p>
     </div>
     <div class="footer-qrs" style="display: flex; gap: 25px; align-items: center;">
       <div class="footer-qr">
