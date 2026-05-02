@@ -1,0 +1,60 @@
+{
+	"metrics": {
+		"rtt_ms": 0.67,
+		"jitter_ms": 0.13,
+		"tx_bps": 65119200,
+		"rx_bps": 2024928,
+		"cpu_pct": 10.7,
+		"qdisc_backlog": 0,
+		"qdisc_drops": 9331,
+		"avg_pkt_size": 819.6
+	},
+	"baseline": {
+		"rtt_ms": 0.37,
+		"jitter_ms": 0.09
+	},
+	"policy": {
+		"bandwidth_kbit": 13000
+	},
+	"persona": "voip",
+	"reason": "voip-clear: boost",
+	"persona_override": false,
+	"persona_override_value": "unknown",
+	"safe_mode": false,
+	"devices": [
+		{"ip":"192.168.1.10","persona":"torrent","flows":28,"udp":2,"tcp":26,"udp_avg_pkt":18522,"bytes":113846836,"avg_pkt":1080,"elephant":0,"rx_bps":387240,"tx_bps":15089192,"override":false},
+		{"ip":"192.168.1.254","persona":"unknown","flows":6,"udp":0,"tcp":6,"udp_avg_pkt":0,"bytes":33842,"avg_pkt":185,"elephant":0,"rx_bps":75280,"tx_bps":71264,"override":false},
+		{"ip":"10.0.99.10","persona":"voip","flows":2,"udp":2,"tcp":0,"udp_avg_pkt":0,"bytes":304,"avg_pkt":76,"elephant":0,"rx_bps":0,"tx_bps":0,"override":false}],
+	"flows": [
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56774,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56698,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56768,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56730,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.254","dst":"192.168.1.1","sport":46398,"dport":22,"proto":6,"service":"web_interactive","mark":6,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56670,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"10.0.99.10","dst":"194.27.222.5","sport":44077,"dport":123,"proto":17,"service":"system","mark":11,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56652,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56750,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56742,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56740,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56632,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56688,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56722,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56694,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56748,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56638,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56710,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56620,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.254","dst":"192.168.1.1","sport":55604,"dport":22,"proto":6,"service":"web_interactive","mark":6,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56760,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":59613,"dport":27015,"proto":17,"service":"game_rt","mark":1,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56678,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":45499,"dport":3478,"proto":17,"service":"voip_call","mark":2,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56660,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.10","dst":"10.0.1.2","sport":56720,"dport":6881,"proto":6,"service":"torrent","mark":9,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"10.0.99.10","dst":"37.187.145.181","sport":42195,"dport":123,"proto":17,"service":"system","mark":11,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.254","dst":"192.168.1.1","sport":48532,"dport":22,"proto":6,"service":"web_interactive","mark":6,"stable":1,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.254","dst":"192.168.1.1","sport":60568,"dport":22,"proto":6,"service":"web_interactive","mark":0,"stable":0,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.254","dst":"192.168.1.1","sport":60576,"dport":22,"proto":6,"service":"web_interactive","mark":0,"stable":0,"rtt_ms":0,"demoted":0},
+		{"src":"192.168.1.254","dst":"192.168.1.1","sport":60586,"dport":22,"proto":6,"service":"web_interactive","mark":0,"stable":0,"rtt_ms":0,"demoted":0}]
+}

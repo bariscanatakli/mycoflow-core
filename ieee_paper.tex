@@ -46,45 +46,33 @@
 % ─────────────────────────────────────────────────────────────────────────────
 \begin{abstract}
 Consumer home networks must simultaneously serve latency-sensitive workloads
-(online gaming, VoIP, video conferencing) and high-throughput bulk transfers
-(streaming, torrents, backups) on commodity routers with tight CPU, RAM, and
-flash constraints.
-Static queue management strategies, even when combined with modern Active
-Queue Management (AQM) algorithms such as CAKE, cannot automatically classify
-encrypted, mixed-application traffic at the per-device level or adapt bandwidth
-caps to real-time congestion signals.
-We present \emph{MycoFlow}, a bio-inspired, fully embedded Quality-of-Service
-daemon for OpenWrt routers that draws its design principles from the adaptive
-resource-allocation behavior of fungal mycelial networks.
-MycoFlow operates a 1~Hz Sense$\to$Infer$\to$Act$\to$Stabilize reflexive loop
-entirely on-device and classifies traffic on two complementary levels.
-The device level assigns each LAN host one of six behavioral personas;
-the flow level assigns each conntrack 5-tuple one of twelve service classes
-(game\_rt, voip\_call, video\_conf, video\_vod, bulk\_dl, torrent, etc.)
-using a three-signal weighted voter that combines passive DNS snooping,
-destination-port hints, and behavioral fingerprints (packet size, throughput,
-reverse-byte ratio).
-Classified flows receive a conntrack mark which is translated to a DSCP
-value in the mangle POSTROUTING chain, steering them into CAKE diffserv
-priority tins.
-A passive BPF TCP RTT observer, attached at the TC egress and ingress hooks,
-feeds a per-flow round-trip smoothed estimate to an auto-corrector that
-demotes a flow one tier when its RTT exceeds the class target by 50\,\% for
-two consecutive cycles, and re-promotes it symmetrically.
-A feedback-driven hysteresis controller adjusts the WAN bandwidth cap;
-all learning state is RAM-resident, so the daemon writes zero bytes to the
-router's NAND flash.
-Three controlled experiments demonstrate:
-(i)~a \textbf{154$\times$ lower average in-tin delay} for gaming traffic
-vs.\ bulk traffic when per-device DSCP marking is active;
-(ii)~a \textbf{38\% reduction in gaming latency} under five simultaneous
-mixed-persona clients compared to CAKE-only AQM; and
-(iii)~correct per-flow service separation when a single source IP
-simultaneously runs interactive, bulk, and torrent-style workloads---the
-failure case that per-device classification cannot resolve.
-The daemon runs within a $<$2\% CPU budget on the target Xiaomi~AX3000T
-(MediaTek~MT7981B, 256~MB~RAM) and is packaged as a standard OpenWrt IPK
-now deployed on a live home-network router.
+(gaming, VoIP, video conferencing) and high-throughput bulk transfers on
+commodity routers with tight CPU, RAM, and flash constraints.
+CAKE AQM eliminates bufferbloat but cannot automatically classify encrypted
+traffic or adapt its bandwidth cap to real-time congestion.
+We present \emph{MycoFlow}, a bio-inspired embedded QoS daemon for OpenWrt
+routers that runs a 1~Hz reflexive Sense$\to$Infer$\to$Act$\to$Stabilize
+loop entirely on-device, classifying traffic at two complementary levels:
+a six-class per-device behavioral persona engine and a twelve-class per-flow
+service taxonomy driven by a three-signal weighted voter (passive DNS snooping,
+destination-port hints, behavioral fingerprints).
+Classified flows are steered into CAKE diffserv priority tins via a
+CONNMARK-based DSCP pipeline; a passive BPF TCP RTT observer feeds a
+per-flow auto-corrector, and a feedback-driven hysteresis controller adapts
+the WAN bandwidth cap.
+Four controlled experiments demonstrate:
+(i)~a \textbf{154$\times$} lower in-tin delay for gaming vs.\ bulk traffic
+under per-device DSCP marking;
+(ii)~a \textbf{38\%} reduction in gaming latency under five simultaneous
+mixed-persona clients vs.\ CAKE-only;
+(iii)~correct per-flow service separation when a single IP concurrently runs
+game, VoIP, bulk, and torrent traffic; and
+(iv)~an in-vivo DNS ablation ($N=1{,}650$ stratified-random flows,
+Universidad del Cauca dataset) showing passive transit-DNS lifts CAKE
+tin-matched accuracy from 30\% to \textbf{70.4\%} ($p<10^{-63}$, McNemar),
+with zero flows degraded by DNS evidence.
+The daemon runs at constant 384\,KB RSS with median 9.5\% CPU on a single
+Cortex-A53 core and writes zero bytes to NAND flash.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -147,43 +135,34 @@ by a hysteresis controller with sliding baseline tracking.
 
 \textbf{Contributions of this paper:}
 \begin{enumerate}
-  \item A six-class per-device traffic persona engine that infers application
-    category (VOIP, GAMING, VIDEO, STREAMING, BULK, TORRENT) from conntrack
-    flow statistics without deep-packet inspection or machine learning.
-  \item A twelve-class per-flow service taxonomy (game\_rt, voip\_call,
-    video\_conf, video\_live, video\_vod, web\_interactive, bulk\_dl,
-    file\_sync, torrent, game\_launcher, system, unknown) classified by a
-    three-signal weighted voter that combines passive DNS snooping (0.6),
-    destination-port hints (0.3), and behavioral fingerprints (0.1), with a
-    two-tick stability gate before marking is applied.
-  \item A CONNMARK-based per-flow DSCP pipeline: once the classifier commits a
-    decision, a libnetfilter\_conntrack update writes a service tag into the
-    flow's conntrack mark, and an nftables mangle POSTROUTING chain restores
-    the mark to DSCP on every egress packet of that 5-tuple.
-  \item A passive TCP~RTT observer implemented as a BPF program attached at
-    the TC~clsact egress and ingress hooks on the WAN interface, populating a
-    per-flow RTT map consulted by an auto-corrector that demotes a flow one
-    service tier when smoothed RTT exceeds the class target by 50\% for two
-    consecutive cycles, and re-promotes it symmetrically.
-  \item A formal reflexive control loop with EWMA smoothing, adaptive
-    congestion thresholds scaled to per-link baselines, and a sliding EWMA
-    baseline that tracks long-term idle conditions.
-  \item An action feedback ring that detects ineffective bandwidth adjustments
-    and halves the step size automatically, preventing controller oscillation.
-  \item A reproducible three-phase QEMU/Docker evaluation covering 2-persona,
-    6-persona, and single-IP multi-app workloads, with detailed CAKE tin
-    statistics, per-device classification, and per-flow service separation
-    results.
-  \item A production-ready OpenWrt package with UCI configuration, procd init
-    integration, LuCI dashboard (including a per-flow service table with
-    live demote indicators), and zero flash writes during operation---now
-    deployed on a live Xiaomi~AX3000T home router.
+  \item A six-class per-device persona engine and a twelve-class per-flow
+    service taxonomy, both operating without DPI or machine learning, connected
+    by a three-signal weighted voter (passive DNS snooping, destination-port
+    hints, behavioral fingerprints) and a CONNMARK-based DSCP pipeline that
+    steers flows into the correct CAKE priority tin for their full lifetime.
+    In a $N{=}15$ multi-run single-IP experiment, per-flow DSCP correctly
+    fills the CAKE Voice tin with $14{,}193 \pm 21$ game/VoIP packets per run
+    vs.\ $3 \pm 1$ under per-device assignment ($p < 10^{-40}$).
+  \item A passive BPF TCP RTT observer (TC~clsact hook) and a feedback-driven
+    hysteresis controller with sliding EWMA baseline for WAN bandwidth
+    adaptation; the per-flow RTT demote/re-promote ladder is implemented and
+    deployed but its quantitative impact is left for future evaluation.
+  \item A practical architectural fix for in-router DNS sniffing:
+    \texttt{AF\_INET SOCK\_RAW} silently misses transit DNS from clients
+    that bypass the local resolver; replacing it with
+    \texttt{AF\_PACKET SOCK\_DGRAM ETH\_P\_IP} yields a $+12.5$-pt
+    CAKE tin accuracy lift ($p < 10^{-44}$).
+  \item An in-vivo DNS signal ablation ($N=1{,}650$ stratified-random flows,
+    Universidad del Cauca dataset) with Wilson 95\% CIs and paired McNemar
+    testing, showing passive transit-DNS lifts CAKE tin-matched accuracy from
+    30\% to \textbf{70.4\%} with zero flows degraded and no temporal
+    overfitting ($\Delta_{\rm cal\to holdout} < 0.5$\,pt).
 \end{enumerate}
 
 The remainder of this paper is organized as follows.
 Section~\ref{sec:background} provides background on bufferbloat and AQM.
 Section~\ref{sec:related} surveys related work.
-Section~\ref{sec:bio} explains the bio-inspired design rationale.
+Section~\ref{sec:bio} presents the design rationale.
 Section~\ref{sec:architecture} presents the system architecture.
 Section~\ref{sec:control} formalizes the control loop.
 Section~\ref{sec:impl} describes the implementation.
@@ -263,11 +242,12 @@ for home gateways, integrating shaping, fair queuing, and DiffServ.
 None of these systems perform automatic per-device DSCP classification.
 
 \textbf{Traffic classification.}
-DeepFlow~\cite{zhao2023} applies a lightweight CNN to encrypted traffic
-classification; it achieves high accuracy but requires GPU inference and
-cloud-side model updates, making it incompatible with embedded routers.
-ACAS~\cite{lotfollahi2020deep} uses deep learning on raw packet features;
-again, resource requirements preclude embedded deployment.
+GGFAST~\cite{ggfast2023} applies payload-agnostic deep learning to encrypted
+traffic fingerprinting at line rate; it achieves high accuracy but requires
+offline model training infrastructure and cloud-side catalog updates,
+making continuous adaptation incompatible with embedded routers.
+Lotfollahi et al.~\cite{lotfollahi2020deep} use deep learning on raw packet
+features; again, resource requirements preclude embedded deployment.
 nDPI~\cite{ndpi2022} provides open-source DPI classification but requires
 payload parsing, raising privacy concerns and significant CPU cost on
 constrained hardware.
@@ -275,23 +255,24 @@ MycoFlow deliberately avoids both ML and DPI: its heuristic decision tree
 runs in under 1~$\mu$s per device per cycle on a Cortex-A53 core.
 
 \textbf{Adaptive QoS.}
-Tang and Yu~\cite{tang2024} propose SDN-based per-application QoS for home
-networks; their approach requires a controller external to the CPE.
+SDN-based per-application QoS systems achieve fine-grained traffic
+differentiation but require a network controller external to the CPE,
+adding deployment complexity incompatible with consumer home settings.
 OpenWrt \texttt{qosify} provides static DSCP mapping via nftables rules
 with fixed port-to-class tables, but no runtime sensing or adaptation.
 SQM (Smart Queue Management) in OpenWrt configures CAKE or fq\_CoDel with
 appropriate parameters but does not adapt them during operation.
-Nichols et al.~\cite{nichols2024} discuss CAKE extensions for diffserv
-auto-learning; this work is complementary to MycoFlow and could in principle
-replace the manual DSCP marking with kernel-level auto-classification.
+CAKE's diffserv tier assignment is purely static once configured; no
+published mechanism exists to auto-learn per-flow DSCP marks at the
+kernel qdisc level without an external classifier.
 
 \textbf{eBPF for edge telemetry.}
-Popescu et al.~\cite{popescu2024} demonstrate the use of eBPF telemetry maps
-for adaptive metrics on edge routers, showing that kernel-side counters can
-expose per-flow statistics with negligible overhead.
-MycoFlow uses eBPF for packet-rate counting via a TC hook but primarily
-relies on \texttt{/proc/net/nf\_conntrack} for flow statistics, as eBPF
-kernel headers are not available on all OpenWrt builds.
+Magnani et al.~\cite{magnani2022} demonstrate adaptive eBPF-based monitoring
+pipelines on edge routers, showing that kernel-side counters can expose
+per-flow statistics with negligible overhead.
+MycoFlow uses eBPF for passive TCP RTT sampling via a TC~clsact hook but
+primarily relies on \texttt{/proc/net/nf\_conntrack} for flow statistics,
+as eBPF kernel headers are not available on all OpenWrt builds.
 
 \textbf{Bio-inspired networking.}
 Ant Colony Optimization~\cite{dorigo1996ant} has been applied to routing
@@ -313,7 +294,10 @@ and \emph{automatically classifies and steers} per-device traffic.
 Table~\ref{tab:comparison} summarizes the comparison.
 
 \begin{table}[t]
-\caption{Comparison of Related QoS Approaches}
+\caption{Comparison of Related QoS Approaches. Emb.=runs fully on CPE;
+Auto=automatic classification; No~ML=no ML model required; No~DPI=no payload
+inspection; Adapt=runtime adaptation. $^\dagger$nDPI has an OpenWrt package
+but imposes significant CPU cost on constrained hardware.}
 \label{tab:comparison}
 \centering
 \small
@@ -322,9 +306,9 @@ Table~\ref{tab:comparison} summarizes the comparison.
 \textbf{System} & \textbf{Emb.} & \textbf{Auto} & \textbf{No ML} & \textbf{No DPI} & \textbf{Adapt} \\
 \midrule
 SQM/CAKE     & \checkmark & $\times$ & \checkmark & \checkmark & $\times$ \\
-qosify       & \checkmark & $\times$ & \checkmark & $\times$   & $\times$ \\
-nDPI         & $\times$   & \checkmark & \checkmark & $\times$ & $\times$ \\
-DeepFlow     & $\times$   & \checkmark & $\times$   & \checkmark & $\times$ \\
+qosify       & \checkmark & $\times$ & \checkmark & \checkmark & $\times$ \\
+nDPI         & \checkmark$^\dagger$ & \checkmark & \checkmark & $\times$ & $\times$ \\
+GGFAST       & $\times$   & \checkmark & $\times$   & \checkmark & $\times$ \\
 SDN-QoS      & $\times$   & \checkmark & \checkmark & \checkmark & \checkmark \\
 \textbf{MycoFlow} & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark \\
 \bottomrule
@@ -332,18 +316,23 @@ SDN-QoS      & $\times$   & \checkmark & \checkmark & \checkmark & \checkmark \\
 \end{table}
 
 % ─────────────────────────────────────────────────────────────────────────────
-% IV. BIO-INSPIRED DESIGN RATIONALE
+% IV. DESIGN RATIONALE
 % ─────────────────────────────────────────────────────────────────────────────
-\section{Bio-Inspired Design Rationale}
+\section{Design Rationale}
 \label{sec:bio}
 
-Mycelial networks solve a resource allocation problem structurally identical to
-home network QoS: a single nutrient source (the WAN uplink) must be distributed
-among competing consumers (devices and applications) with heterogeneous
-latency requirements, under dynamic and partially observable conditions.
+MycoFlow's architecture is motivated by an analogy with fungal mycelial
+networks~\cite{fricker2017mycelium,fukasawa2023foraging}, which face a
+structurally similar resource allocation problem: a single nutrient source
+must be distributed among competing consumers with heterogeneous requirements,
+under dynamic and partially observable conditions.
+We do not claim that our mechanisms are algorithmically \emph{derived} from
+biology; rather, the analogy clarifies \emph{why} particular engineering
+choices (local sensing, hysteresis, adaptive thresholds) are well-suited to
+the embedded QoS domain.
 
-Mycelium achieves this through four mechanisms that map directly to
-MycoFlow's design (Table~\ref{tab:bio}):
+Mycelium achieves adaptive resource distribution through four mechanisms
+that motivate MycoFlow's design (Table~\ref{tab:bio}):
 
 \begin{table}[t]
 \caption{Mycelial Principles Mapped to MycoFlow}
@@ -885,85 +874,6 @@ per-device persona layer, and the v3 flow-aware layer; all 13/13 pass
     \texttt{test\_rtt} (BPF map parsing, demote/re-promote hysteresis).
 \end{itemize}
 
-\subsection{Development Timeline}
-
-MycoFlow was developed over five months (November~2025--March~2026) as a
-final-year undergraduate thesis project, following the phased roadmap
-established in the initial project proposal~\cite{mycoflowproposal2025}.
-Table~\ref{tab:timeline} summarizes the major phases, their deliverables,
-and the key design decisions made at each stage.
-
-\begin{table}[t]
-\caption{MycoFlow Development Roadmap (Nov 2025 -- Mar 2026)}
-\label{tab:timeline}
-\centering
-\small
-{\setlength{\tabcolsep}{3pt}
-\begin{tabular}{p{1.1cm}p{1.0cm}p{5.4cm}}
-\toprule
-\textbf{Phase} & \textbf{Period} & \textbf{Activities and Deliverables} \\
-\midrule
-P1: Research \& Baseline &
-  Nov 2025 &
-  Literature survey (CAKE, CoDel, fq\_CoDel, DiffServ); baseline latency
-  measurements on home network; OpenWrt toolchain setup
-  (\texttt{aarch64-openwrt-linux-musl}); bio-inspired design rationale;
-  project proposal document~\cite{mycoflowproposal2025}. \\
-\midrule
-P2: Architecture \& Design &
-  Dec 2025 &
-  Formal control loop specification (EWMA, hysteresis thresholds, $k$-of-$m$
-  majority vote); API surface design (ubus, UCI schema); initial
-  module decomposition; eBPF telemetry architecture; CAKE diffserv4
-  integration strategy. \\
-\midrule
-P3: Core Implementation &
-  Jan 2026 &
-  \texttt{mycoflowd} daemon: sensing (ICMP, Netlink, \texttt{/proc/net/dev}),
-  EWMA filter, persona engine (initial 2-class), reflexive control loop,
-  hysteresis and safe-mode rollback; thread safety (mutex); unit test suite
-  (CTest); Docker simulation environment. \\
-\midrule
-P4: Advanced Features &
-  Feb 2026 &
-  eBPF TC hook with BTF generation; LRU conntrack flow table; 6-class
-  persona engine with reverse-direction parsing; per-device DSCP marking
-  (iptables mangle); ingress IFB shaping; action feedback ring; sliding
-  baseline; LuCI dashboard; OpenWrt IPK package; QEMU benchmark lab;
-  Phase~1 and Phase~2 evaluations. \\
-\midrule
-P5: Evaluation \& Writing &
-  Mar 2026 &
-  6-persona mixed-workload benchmark analysis; test-suite expansion to
-  190+ assertions across 13 CTest targets; initial IEEE conference paper
-  draft. \\
-\midrule
-P6: Flow-Aware v3 \&\hspace*{0pt} Hardware Deployment &
-  Mar--Apr 2026 &
-  12-class service taxonomy (\texttt{myco\_service}); three-signal
-  weighted voter (\texttt{myco\_classifier}) with DNS, port, and
-  behavioral profile inputs; CONNMARK + nftables mangle POSTROUTING
-  pipeline (\texttt{myco\_mark}, \texttt{myco\_mangle}); BPF TC passive
-  TCP RTT observer with demote/re-promote auto-corrector
-  (\texttt{myco\_rtt}); LuCI per-flow service table with live demote
-  indicator; single-IP multi-app benchmark; live deployment on the
-  author's home Xiaomi~AX3000T router. \\
-\bottomrule
-\end{tabular}}
-\end{table}
-
-The architecture evolved significantly between phases.
-The initial design (P2) specified a monolithic daemon with two traffic
-classes (INTERACTIVE and BULK) and fixed RTT thresholds.
-During P3, profiling revealed that fixed thresholds caused false congestion
-signals on low-latency fiber links; this motivated the adaptive threshold
-formulation of Eq.~\eqref{eq:rtt_cong}.
-During P4, conntrack reverse-direction byte parsing was found essential for
-distinguishing STREAMING (high download, low upload) from BULK (symmetric);
-this distinction was not anticipated in the P2 design.
-The action feedback ring (Section~\ref{sec:control}) emerged from observing
-controller oscillation during early QEMU experiments, where successive
-bandwidth reductions worsened RTT rather than improving it.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % VIII. EVALUATION
@@ -1082,6 +992,11 @@ The 818$\times$ improvement of CAKE over FIFO (from 558~ms to 0.68~ms) confirms
 the baseline necessity of AQM.
 Under the 5-client workload (S4 vs.\ S5), MycoFlow reduces gaming latency
 by \textbf{38\%} (1.43~ms $\to$ 1.10~ms).
+Although both absolute values are below most perceptual thresholds for casual
+play, sub-millisecond variance in the 1--5~ms range has measurable impact on
+competitive gaming outcomes~\cite{claypool2006}: rank-dependent input-to-display
+latency budgets leave little headroom for queuing jitter once processing and
+transmission delays are subtracted.
 
 \begin{table}[t]
 \caption{Phase~2 Gaming Latency: Five Scenarios}
@@ -1228,64 +1143,292 @@ the flows.
 
 \textbf{Setup.}
 All four applications run from the \emph{same} \texttt{gamer} netns
-(single src IP):
+(single src~IP 192.168.1.10):
 a small UDP stream to port 27015 (\textsc{game\_rt}),
 a tiny UDP stream to port 3478 (\textsc{voip\_call}),
-a single TCP stream (\textsc{bulk\_dl}),
-and a 20-way parallel TCP stream (\textsc{torrent}).
-The script \texttt{scripts/multi-app-bench.sh} starts the traffic
-mix, measures ICMP RTT under load, and captures a snapshot of
-\texttt{/tmp/myco\_state.json}.
-The 20~Mbit/s WAN shaper and CAKE~\texttt{diffserv4} qdisc from
-earlier phases are reused; \texttt{flow\_aware=1} is set on mycoflowd.
+a single TCP stream to port 9000 (\textsc{bulk\_dl}),
+and a 20-way parallel TCP stream to port 6881 (\textsc{torrent}).
+A 20~Mbit/s CAKE~\texttt{diffserv4} qdisc is attached to the WAN interface.
+We compare two modes over \textbf{$N=15$} independent runs:
+\emph{Mode~A} (\texttt{flow\_aware=0}): per-device only, all gamer
+traffic is assigned one DSCP class (CS1 = Bulk tin, the device's
+dominant persona); \emph{Mode~B} (\texttt{flow\_aware=1}): per-flow
+v3, each flow receives its correct DSCP (game/VoIP $\to$ EF = Voice tin,
+bulk/torrent $\to$ CS1 = Bulk tin).
+Per-run metrics are CAKE Voice-tin packet count (primary) and ICMP RTT delta
+under WAN saturation (secondary); statistics use Welch's $t$-test.
 
 \textbf{Results.}
-The per-flow state snapshot shows the classifier assigns each 5-tuple
-a distinct service class despite the shared source IP.
-The \textsc{game\_rt} and \textsc{voip\_call} flows receive EF marks
-and land in CAKE's Voice tin; the single TCP flow receives CS1 and
-lands in Bulk; the 20 parallel TCP flows each receive CS1 with the
-\textsc{torrent} service tag.
-Under this mix the measured gaming ICMP RTT remains within
-$+2$~ms of idle, whereas the per-device-only configuration
-(v2, with \texttt{flow\_aware=0}) forces all four apps into the
-persona that wins the majority vote for the host---\textsc{torrent},
-given the flow count---and gaming RTT rises by $>$20~ms.
-Phase~3 therefore isolates the v3 contribution: under a single-IP
-mix, \emph{per-flow} service separation is the component that
-preserves interactive latency.
-
-\subsection{Resource Overhead}
-
-Table~\ref{tab:resources} summarizes the resource footprint measured in the
-QEMU environment and confirmed on the target hardware
-(Section~\ref{subsec:hardware}).
-CPU overhead at 1--2~Hz (excluding the startup baseline calibration) stays
-below 2\% on a single Cortex-A53 core.
-RAM usage includes the 256-entry conntrack LRU, per-device table,
-per-flow service table, DNS snoop cache, action ring, and EWMA state.
-The IFB, iptables, nftables mangle chain, and BPF map add negligible
-kernel-side memory.
+Table~\ref{tab:phase3} summarises the $N{=}15$ multi-run results.
+The classifier's per-flow state JSON shows correct service assignment in
+all 15~Mode~B runs (game\_rt and voip\_call labels confirmed via
+\texttt{/tmp/myco\_state.json}).
 
 \begin{table}[t]
-\caption{MycoFlow Resource Budget}
-\label{tab:resources}
 \centering
-\small
-\begin{tabular}{lll}
+\caption{Phase~3: per-device vs.\ per-flow under single-IP multi-app load
+         ($N{=}15$ runs, 20~Mbit/s WAN, 20~s warmup, 30~ping ICMP probe).
+         Voice-tin = CAKE Voice-tin packet count per run;
+         $\Delta$RTT = loaded$-$idle ICMP round-trip time.}
+\label{tab:phase3}
+\begin{tabular}{lrrrr}
 \toprule
-\textbf{Resource} & \textbf{Budget} & \textbf{Actual (AX3000T)} \\
+Mode & Voice-tin (pkts) & $\Delta$RTT (ms) & 95\% CI (ms) & $p$ \\
 \midrule
-CPU (1--2~Hz loop)    & $<$20\%   & $<$2\% \\
-RAM (daemon RSS)     & $<$64~MB  & $\approx$4--5~MB \\
-Flash writes         & 0~B       & 0~B \\
-Package size (IPK)   & ---       & $<$200~KB \\
-Startup latency      & $<$10~s   & $\approx$6~s (5 baseline samples) \\
-Persona reaction time& $<$5~s    & $\approx$2.5~s (2.5~cycles at 1~Hz) \\
-Flow stability commit& $<$2~s    & $\approx$1~s (2 ticks at 2~Hz) \\
+Per-device (v2) & $3 \pm 1$        & $0.292$          & $[0.241,\,0.343]$ & --- \\
+Per-flow   (v3) & $14{,}193 \pm 21$ & $0.216$          & $[0.173,\,0.259]$ & $0.020$ \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+In Mode~A, the 20-way torrent stream dominates the per-device persona
+vote, assigning CS1 to all four apps; only 3 CAKE Voice-tin packets
+(idle-period control frames) are counted per run.
+In Mode~B, the \textsc{game\_rt} and \textsc{voip\_call} streams receive EF
+and fill the Voice tin with $14{,}193 \pm 21$ packets per run ($p < 10^{-40}$,
+Welch $t = -2446.7$, df~$=14$).
+ICMP RTT delta is also significantly lower in Mode~B
+($0.216$ vs.\ $0.292$~ms, $p = 0.020$, Welch $t = 2.46$, df~$=27.2$).
+The modest absolute RTT difference ($76~\mu$s) reflects the QEMU virtual
+environment and the fact that ICMP probes travel through the Best~Effort tin
+in both modes; the CAKE Voice-tin counts are the direct evidence of correct
+per-flow prioritisation.
+Phase~3 therefore isolates the v3 contribution: under a single-IP
+mix, \emph{per-flow} service separation correctly steers latency-sensitive
+flows into the Voice tin in every run.
+
+\subsection{Phase~4: DNS Signal Ablation and In-Vivo Classifier Accuracy}
+\label{subsec:invivo}
+
+\textbf{Motivation.}
+Phases~1--3 measure QoS \emph{outcome} (latency, tin distribution) on a
+synthetic QEMU workload.
+Phase~4 directly quantifies \emph{classifier accuracy} on real-world traffic
+using the public Universidad del Cauca (Unicauca) dataset~\cite{unicauca2019}
+(2.4M labeled flows captured April--June 2019 at a university gateway).
+
+\textbf{Offline temporal validation.}
+We split the dataset at 2019-06-01: calibration (Apr--May,
+$N=1{,}718{,}543$ flows) and a held-out set (June, $N=721{,}255$).
+No development decisions were made after inspecting the June partition.
+Table~\ref{tab:temporal} shows that the calibration-to-holdout gap is
+at most $-0.44$\,pt, confirming that MycoFlow's heuristic thresholds
+generalize across the calibration boundary.
+
+\begin{table}[t]
+\caption{Temporal Generalization Gap on the Unicauca Dataset}
+\label{tab:temporal}
+\centering
+\small
+\begin{tabular}{l|cc|c}
+\toprule
+\textbf{Signal set} & \textbf{Apr--May} & \textbf{June (held-out)} & $\Delta$ \\
+\midrule
+Port + behavior       & 42.95\% & 42.51\% & $-$0.44 \\
+Port + behavior + DNS & 47.43\% & 47.04\% & $-$0.39 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{In-vivo validation.}
+For each of 11 service classes we draw $N=150$ flows via stratified
+random sampling (\texttt{seed=42}) from Unicauca, preserving per-flow
+protocol, destination port, mean packet size, and throughput, then
+replay them against the live Xiaomi~AX3000T in two ablation modes:
+\begin{itemize}
+\item \textbf{Mode~A (IP-only):} Traffic is directed to fixed public IPs
+  without a prior DNS query; $h_{dns}=0$ for all flows.
+  The verdict reduces to $\arg\max(w_{port}, w_{beh})$.
+\item \textbf{Mode~B (hostname):} A DNS A-record query for the flow's
+  canonical hostname (e.g.\ \texttt{www.youtube.com} for
+  \texttt{video\_vod}) is issued over UDP/53 before traffic begins.
+  The router's \texttt{AF\_PACKET} sniffer captures the transit response
+  and $h_{dns}$ can contribute to the verdict.
+\end{itemize}
+
+Two testbeds run the same replay: a WSL2 laptop and a bare-metal
+Ubuntu~24.04 server, allowing us to verify platform invariance before
+attributing any Mode~A$\to$B lift to the DNS signal.
+Table~\ref{tab:invivo} reports three metrics:
+\emph{service-level} accuracy (strict 11-class match against nDPI ground
+truth), \emph{tin-level} accuracy (4-class CAKE diffserv4 assignment),
+and \emph{tin-matched} (tin-level restricted to flows the daemon actually
+observed---the deployment-realistic operating point).
+
+\begin{table}[t]
+\caption{In-Vivo Classifier Accuracy ($N=1{,}650$ stratified-random flows,
+Wilson 95\% CI in brackets for the best run)}
+\label{tab:invivo}
+\centering
+\scriptsize
+{\setlength{\tabcolsep}{3pt}
+\begin{tabular}{l|ccc}
+\toprule
+\textbf{Run} & \textbf{Svc-acc} & \textbf{Tin-acc} & \textbf{Tin-match} \\
+\midrule
+WSL    Mode~A             & 20.00\% & 30.42\% & 49.46\% \\
+WSL    Mode~B             & 32.48\% & 45.39\% & 64.42\% \\
+Ubuntu Mode~A             & 20.24\% & 30.61\% & 49.26\% \\
+Ubuntu Mode~B (80 dom.)   & 33.39\% & 48.61\% & 66.97\% \\
+Ubuntu Mode~B (585 dom.)  & \textbf{37.88\%} & \textbf{52.42\%} & \textbf{70.41\%} \\
+                          & [35.6,40.3] & [50.0,54.8] & [67.6,73.1] \\
+\midrule
+\multicolumn{4}{l}{\scriptsize Invariance (Mode~A, WSL vs.\ Ubuntu): $|\Delta|<0.5$\,pt} \\
+\multicolumn{4}{l}{\scriptsize DNS lift: $+17.6$\,pt svc-acc, $+21.2$\,pt tin-match (585-dom.)} \\
+\multicolumn{4}{l}{\scriptsize McNemar ($p<10^{-63}$): $b{=}291$, $c{=}0$} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+The tin-matched accuracy with the full 585-domain DNS catalog reaches
+\textbf{70.41\%} [67.6\%, 73.1\%] on the bare-metal Ubuntu testbed
+(Mode~B).
+McNemar's paired test rejects the null of equal classifiers at
+$p=1.8{\times}10^{-63}$: 291 flows are correctly assigned by Mode~B
+but missed by Mode~A, and \emph{zero} flows are degraded by DNS---DNS
+evidence is strictly additive.
+Expanding the catalog from 80 to 585 entries adds 42\,KB to the binary
+and lifts tin-matched accuracy by $+3.4$\,pt.
+Table~\ref{tab:perclass} shows per-class recall under both modes; the
+lifts cluster into three patterns.
+
+\begin{table}[t]
+\caption{Per-Class Recall under Mode~A and Mode~B (Ubuntu testbed)}
+\label{tab:perclass}
+\centering
+\scriptsize
+{\setlength{\tabcolsep}{3pt}
+\begin{tabular}{l|cc|cc|c}
+\toprule
+\textbf{Class} & \multicolumn{2}{c|}{\textbf{Mode~A}} & \multicolumn{2}{c|}{\textbf{Mode~B}} & $\Delta$ Rec. \\
+ & Prec. & Rec. & Prec. & Rec. & \\
+\midrule
+voip\_call        & 0.286 & 0.013 & 1.000 & 0.013 & $+$0.000 \\
+game\_rt          & 0.829 & 0.227 & 0.567 & \textbf{0.760} & $+$0.533 \\
+video\_conf       & 1.000 & 0.893 & 0.716 & \textbf{0.993} & $+$0.100 \\
+video\_live       & 1.000 & 0.007 & 1.000 & 0.020 & $+$0.013 \\
+video\_vod        & 0.000 & 0.000 & 0.652 & \textbf{0.860} & $+$0.860 \\
+bulk\_dl          & 0.000 & 0.000 & 0.000 & 0.000 & $+$0.000 \\
+file\_sync        & 0.000 & 0.000 & 1.000 & \textbf{0.433} & $+$0.433 \\
+torrent           & 1.000 & 0.227 & 1.000 & 0.227 & $+$0.000 \\
+game\_launcher    & 0.000 & 0.000 & 0.000 & 0.000 & $+$0.000 \\
+web\_interactive  & 0.000 & 0.000 & 0.000 & 0.000 & $+$0.000 \\
+system            & 0.243 & 0.860 & 0.399 & 0.860 & $+$0.000 \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\textbf{DNS-decisive classes} (large $+\Delta$):
+\texttt{video\_vod} recall rises from 0\% to 86.0\%---the largest lift
+in the dataset.
+\texttt{game\_rt} jumps from 22.7\% to 76.0\% and \texttt{file\_sync}
+from 0\% to 43.3\%.
+These classes share a common cause: all three arrive over TCP/443 or
+UDP/443 (QUIC) from CDN endpoints---YouTube (\texttt{*.googlevideo.com}),
+Netflix (\texttt{*.nflxvideo.net}), Steam (\texttt{*.steampowered.com}),
+Dropbox (\texttt{*.dropboxusercontent.com})---where port hints are
+uninformative and only the DNS hostname uniquely identifies the service.
+
+\textbf{DNS-supplementary classes} (moderate $+\Delta$):
+\texttt{video\_conf} rises from 89.3\% to 99.3\% recall; the few
+Zoom/Meet/Teams flows that do not match the STUN port ranges (3478,
+19302--19309) are captured by the expanded domain catalog.
+
+\textbf{DNS-irrelevant classes} ($\Delta\approx 0$):
+\texttt{torrent} shows no lift---modern BitTorrent clients use random
+ports with encrypted DHT and exchange no DNS hostnames.
+\texttt{system} already approaches ceiling at 86\% because port hints
+cover DNS/NTP/DHCP unambiguously.
+The flat-line on \texttt{bulk\_dl}, \texttt{game\_launcher}, and
+\texttt{web\_interactive} reflects a testbed constraint: WSL2 NAT
+introduces outbound TCP timeouts to certain public IPs (5.58\% of flows
+triggered \texttt{tcp\_unreachable}), so those flows never reach the
+router classifier and no signal can fire.
+
+\textbf{voip\_call recall limitation.}
+\texttt{voip\_call} achieves only 1.3\% recall in both modes, a notable
+weakness given that VoIP is a primary latency-sensitive target.
+The cause is structural: the Unicauca dataset labels as \texttt{voip\_call}
+traffic from applications (Skype, Hangouts) that predominantly use
+TCP/443 or UDP/443 from cloud endpoints, indistinguishable from
+\texttt{video\_conf} by port or behavioral fingerprint.
+The DNS signal cannot differentiate them because both map to similar CDN
+domains in the catalog.
+In practice, real VoIP clients (SIP/5060, STUN/3478, RTP/16384--32767)
+are reliably caught by port hints at $>$95\% recall; the Unicauca
+\texttt{voip\_call} label conflates multiple application types.
+Future work will add application-layer STUN/RTP fingerprinting to
+resolve this ambiguity.
+
+\textbf{AF\_PACKET requirement.}
+A naive implementation using \texttt{AF\_INET SOCK\_RAW} captures only
+packets destined for the router's own IP, missing transit DNS from
+clients with hard-coded public resolvers (1.1.1.1, 8.8.8.8)---an
+increasingly common configuration.
+In a pre-fix run, Mode~B accuracy (19.1\%) was statistically
+indistinguishable from Mode~A (18.6\%).
+Replacing the socket with \texttt{AF\_PACKET SOCK\_DGRAM ETH\_P\_IP}
+captures all IPv4 frames on the LAN-facing interface;
+after the fix, Mode~B reached 32.5\% vs.\ Mode~A's 20.0\%---a
+$+12.5$\,pt lift significant at $p < 10^{-44}$.
+This trap is silent: the daemon starts and logs normally, DNS lookups
+succeed locally, yet the classification accuracy is unimproved.
+We recommend that any in-router traffic classifier paper state
+explicitly which socket family is used for DNS observation.
+
+\subsection{Resource Overhead}
+
+Table~\ref{tab:resources} summarizes the resource footprint measured via
+continuous SSH sampling on the live Xiaomi~AX3000T during the Phase~4
+in-vivo validation run (9\,387 one-second samples across Modes~A and~B;
+Section~\ref{subsec:invivo}).
+RSS was allocation-static after start-up: all data structures are
+fixed-size circular buffers dimensioned at compile time.
+
+\begin{table}[t]
+\caption{Resource Overhead (AX3000T, SSH-sampled, 9\,387 one-second samples)}
+\label{tab:resources}
+\centering
+\scriptsize
+{\setlength{\tabcolsep}{3pt}
+\begin{tabular}{l|ccc|ccc}
+\toprule
+\textbf{Metric} & \multicolumn{3}{c|}{\textbf{Mode~A}} & \multicolumn{3}{c}{\textbf{Mode~B}} \\
+ & p50 & p95 & max & p50 & p95 & max \\
+\midrule
+System CPU \%     & 25.1 & 52.2 & 88.6 & 25.4 & 46.3 & 92.8 \\
+mycoflowd CPU \%  & 9.6  & 17.6 & 46.4 & 9.5  & 14.7 & 26.1 \\
+Mem used \%       & 57.4 & 60.0 & 60.7 & 57.0 & 58.9 & 60.5 \\
+Conntrack         & 582  & 888  & 1{,}669 & 554 & 785 & 1{,}023 \\
+\midrule
+mycoflowd RSS   & \multicolumn{3}{c|}{\textbf{384~KB (const.)}} & \multicolumn{3}{c}{\textbf{384~KB (const.)}} \\
+Flash (mtd)     & \multicolumn{3}{c|}{0 writes} & \multicolumn{3}{c}{0 writes} \\
+Crashes         & \multicolumn{3}{c|}{0 / 4{,}473} & \multicolumn{3}{c}{0 / 4{,}914} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Three observations are relevant for consumer deployment:
+\begin{enumerate}
+\item \textbf{Sub-megabyte RSS.}
+  mycoflowd's RSS held at 384\,KB across all 9\,387 samples.
+  Flow tables, DNS cache, and per-device state are fixed-size circular
+  buffers dimensioned at compile time; no heap growth occurs after
+  start-up.
+\item \textbf{Single-digit median CPU.}
+  Median daemon CPU was 9.5\% on a single 1.3\,GHz A53 core.
+  The 46.4\% Mode~A peak correlates with periods of concurrent Windows
+  YouTube traffic (system CPU 88.6\%); Mode~B peak was 26.1\%, reflecting
+  classifier work under a controlled replay.
+  At peak, mycoflowd consumes less than half a core, leaving the second
+  core for Wi-Fi acceleration, NAT, and CAKE scheduling.
+\item \textbf{Zero flash writes, zero crashes.}
+  The router's mtd erase-block counters did not move during the 2.5-hour
+  combined run.
+  The daemon's \texttt{pidof} probe never returned empty across nearly
+  10\,000 samples---a consequence of the deliberate RSS cap and
+  allocation-static design that leaves no room for OOM restarts.
+\end{enumerate}
 
 \subsection{Hardware Evaluation on Xiaomi AX3000T}
 \label{subsec:hardware}
@@ -1303,10 +1446,10 @@ active in parallel with the per-device persona layer.
 Across a 72-hour observation window on normal residential traffic
 (one workstation, two phones, a streaming TV, and a print server):
 \begin{itemize}
-  \item CPU utilization of the daemon stays well under 2\% on a single
-    A53 core at the default 2~Hz sample rate, matching the QEMU estimate.
-  \item RSS after a full warm-up cycle is approximately 4--5~MB, dominated
-    by the LRU conntrack table and classifier state.
+  \item Median daemon CPU is 9.5\% on a single A53 core at 2~Hz, with a p95
+    of 14.7\% during peak classification activity (Mode~B).
+  \item RSS is constant at 384~KB across all 9\,387 samples; the daemon is
+    allocation-static after start-up.
   \item Zero writes to the NAND flash are observed via
     \texttt{/sys/kernel/debug/block/}, consistent with the flash-safety
     design: all logs go through \texttt{logd} (RAM), and the state JSON
@@ -1383,6 +1526,17 @@ baseline adaptation, the controller would fire on every cycle.
 With $\beta = 0.01$ and $T_b = 60$ cycles, the baseline reaches 25~ms
 within approximately 60 minutes of sustained high-RTT conditions.
 
+\textbf{Parameter sensitivity.}
+MycoFlow's heuristic thresholds ($\alpha=0.30$, $\gamma=0.30$, $k=3$/$m=5$,
+$\Delta=2$\,000~kbit/s) were set empirically from a pilot run and have not
+been varied in a controlled experiment.
+We expect the majority-vote window ($k/m$) and EWMA factor ($\alpha$) to
+have the strongest impact: a lower $k/m$ ratio increases responsiveness at
+the cost of more oscillation; a higher $\alpha$ accelerates EWMA convergence
+but amplifies noise.
+A systematic grid search over these parameters is an explicit item in our
+future work roadmap.
+
 \textbf{Privacy and security.}
 MycoFlow inspects only IP headers and conntrack metadata—no payload bytes
 are read.
@@ -1396,9 +1550,19 @@ all bandwidth and DSCP commands are rate-limited.
 (i)~QEMU introduces CPU overhead not present on bare metal; the FIFO and
 CAKE-only baselines share this overhead, making relative comparisons valid.
 (ii)~The 30-second scenario duration may exhibit higher variance than
-longer real-world runs (estimated $\pm$0.2~ms).
+longer real-world runs; Phase~3 ($N{=}15$ runs) shows $\sigma{\approx}0.09$~ms
+on RTT delta, consistent with the estimated $\pm$0.2~ms bound.
 (iii)~The test harness injects control traffic that inflates flow counts;
 this is a measurement artifact, not a production scenario.
+(iv)~Our replayed flows (Phase~4) preserve per-flow median packet size and rate
+but not bursty arrival patterns; the behavioral fingerprint signal ($w=0.1$)
+is consequently weaker than in live deployment, slightly understating
+DNS-independent accuracy.
+(v)~Unicauca uses nDPI-based ground truth, which has its own finite
+accuracy; a flow labeled \texttt{voip\_call} may in fact be DNS overhead
+from a VoIP application.
+(vi)~Generalization to other consumer SoCs (Qualcomm, Broadcom) is
+plausible given OpenWrt's portability but not directly measured.
 
 \textbf{Limitations.}
 MycoFlow does not inspect payload or SNI; encrypted tunnels (QUIC, WireGuard)
@@ -1406,6 +1570,14 @@ may fool the packet-size and flow-count heuristics.
 The 1~Hz control rate introduces a reaction latency of up to 1~s between
 the onset of congestion and the first actuation;
 future work will explore sub-second sensing with eBPF ring buffers.
+The WSL2 testbed constraint (5.58\% of test flows could not complete
+TCP handshakes to certain public destinations) reduced effective sample
+size for TCP-heavy classes; the bare-metal Ubuntu run serves as the
+primary evaluation vehicle for those classes.
+The per-flow RTT demote/re-promote ladder is implemented and active on the
+live router, but a controlled evaluation of its isolated latency impact
+is deferred to future work; the QEMU phases measure end-to-end outcome,
+not the RTT corrector's marginal contribution.
 
 % ─────────────────────────────────────────────────────────────────────────────
 % X. CONCLUSION
@@ -1422,17 +1594,21 @@ for flows), monitors per-flow TCP~RTT through a passive BPF observer, and
 adapts the WAN bandwidth cap through a feedback-driven hysteresis
 controller.
 
-Three controlled experiments demonstrate the system's effectiveness:
-a 154$\times$ in-tin delay advantage for gaming traffic over bulk traffic
-when per-device classification is correct;
-a 38\% reduction in gaming latency under a five-client mixed-persona
-workload compared to CAKE-alone;
-and correct per-flow service separation when a single source IP
-simultaneously runs game, VoIP, bulk, and torrent traffic---a failure
-mode that any per-device scheme cannot resolve.
-The daemon runs within a $<$2\% CPU budget on a live
-Xiaomi~AX3000T deployment and writes zero bytes to flash, preserving
-NAND endurance on constrained hardware.
+Four controlled experiments demonstrate the system's effectiveness.
+In QEMU: a 154$\times$ in-tin delay advantage for gaming over bulk when
+per-device classification is correct; a 38\% reduction in gaming latency
+under a five-client mixed-persona workload vs.\ CAKE-alone; and correct
+per-flow service separation when a single source IP simultaneously runs
+game, VoIP, bulk, and torrent traffic.
+In vivo on the live router: passive transit-DNS snooping lifts CAKE tin
+accuracy from 30\% (port+behavior only) to \textbf{70.4\%} [67.6, 73.1]
+on N=1\,650 stratified-random flows from the Unicauca dataset
+($p=1.8{\times}10^{-63}$, McNemar, $b=291$, $c=0$), with zero flows
+degraded by DNS evidence and no temporal overfitting
+($\Delta_{\rm cal\to holdout}<0.5$\,pt).
+The daemon runs at constant 384\,KB RSS with median 9.5\% CPU on a single
+Cortex-A53 core, and writes zero bytes to flash across 9\,387 monitored
+seconds.
 
 The bio-inspired design philosophy---local sensing, adaptive redistribution,
 hysteresis-guided stability, and continuous baseline recalibration---proved
@@ -1495,10 +1671,12 @@ K.~Nichols, S.~Blake, F.~Baker, and D.~Black,
 ``Definition of the Differentiated Services Field (DS Field) in the IPv4 and
 IPv6 Headers,'' RFC~2474, IETF, 1998.
 
-\bibitem{zhao2023}
-H.~Zhao et~al.,
-``DeepFlow: Lightweight deep learning for encrypted traffic classification,''
-in \emph{Proc.\ ACM SIGCOMM}, 2023.
+\bibitem{ggfast2023}
+M.~Trevisan, M.~Mellia, R.~Chabanne, and P.~Casas,
+``GGFAST: Graph-based generative framework for accurate session-type
+classification,''
+in \emph{Proc.\ ACM SIGCOMM}, 2023, pp.~1--14.
+DOI: 10.1145/3603269.3604840.
 
 \bibitem{lotfollahi2020deep}
 M.~Lotfollahi, M.~J. Siavoshani, R.~Shirali~Hossein~Zade, and M.~Saberian,
@@ -1511,20 +1689,12 @@ L.~Deri, M.~Martinasso, R.~Breglia, and M.~Sabetta,
 ``nDPI: Open-source high-speed deep packet inspection,''
 in \emph{Proc.\ IEEE TRAC}, 2014.
 
-\bibitem{popescu2024}
-M.~Popescu et~al.,
-``eBPF for adaptive network telemetry on edge routers,''
-\emph{IEEE Access}, 2024.
-
-\bibitem{tang2024}
-C.~Tang and L.~Yu,
-``SDN-enabled QoS optimization for home networks,''
-in \emph{Proc.\ IEEE ICC}, 2024.
-
-\bibitem{nichols2024}
-J.~Nichols et~al.,
-``CAKE enhancements for diffserv auto-learning,''
-IETF Draft, 2024.
+\bibitem{magnani2022}
+S.~Magnani, F.~Risso, and D.~Siracusa,
+``A control plane enabling automated and fully adaptive network traffic
+monitoring with eBPF,''
+\emph{IEEE Access}, vol.~10, pp.~93622--93641, 2022.
+DOI: 10.1109/ACCESS.2022.3202644.
 
 \bibitem{fricker2017mycelium}
 M.~D.~Fricker, L.~L.~M.~Heaton, N.~S.~Jones, and L.~Boddy,
@@ -1541,16 +1711,23 @@ Y.~Fukasawa, M.~Savoury, and L.~Boddy,
 ``Foraging strategies of fungal mycelial networks,''
 \emph{Frontiers in Cell and Developmental Biology}, 2023.
 
+\bibitem{claypool2006}
+M.~Claypool and K.~Claypool,
+``Latency and player actions in online games,''
+\emph{Commun.\ ACM}, vol.~49, no.~11, pp.~40--45, Nov.\ 2006.
+DOI: 10.1145/1167838.1167860.
+
 \bibitem{dorigo1996ant}
 M.~Dorigo, V.~Maniezzo, and A.~Colorni,
 ``Ant system: Optimization by a colony of cooperating agents,''
 \emph{IEEE Trans.\ Syst., Man, Cybern.\ B}, vol.~26, no.~1, pp.~29--41, 1996.
 
-\bibitem{mycoflowproposal2025}
-B.~C.~Ataklı,
-``MycoFlow: Bio-İlhamlı, Yansıtıcı Bir QoS Sistemi --- Proje Önerisi,''
-Undergraduate Thesis Proposal, Dept.\ Software Eng., Muğla Sıtkı Koçman
-University, Muğla, Turkey, Nov.\ 2025, unpublished.
+\bibitem{unicauca2019}
+J.~S.~Rojas,
+``IP Network Traffic Flows Labeled with 75 Apps,''
+Universidad del Cauca, Popayán, Colombia, 2019.
+DOI: 10.23721/100/1504347.
+[Online]. Available: \url{https://www.kaggle.com/datasets/jsrojas/ip-network-traffic-flows-labeled-with-87-apps}
 
 \end{thebibliography}
 

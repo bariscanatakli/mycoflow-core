@@ -1,0 +1,66 @@
+[P3] Phase 3 multi-run: N=15, WARMUP=20s, DURATION=30s
+[P3] Ports: game=27015 voip=3478 bulk=9000 torrent=6881
+[P3] Results: /home/baris/mycoflow-core/scripts/../results/phase3_multirun_20260503_013401
+[P3] === Mode A: flow_aware=0 (per-device only) ===
+sleep: invalid number '0.5'
+[fa=0 run  1] idle=0.61 loaded=0.98 Δ=0.376 ms  tins=101232 22 0 4  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run  2] idle=0.53 loaded=0.89 Δ=0.360 ms  tins=101092 22 0 2  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run  3] idle=0.57 loaded=0.88 Δ=0.304 ms  tins=100982 22 0 3  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run  4] idle=0.57 loaded=0.92 Δ=0.352 ms  tins=100963 22 0 2  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run  5] idle=0.53 loaded=0.72 Δ=0.190 ms  tins=100834 22 0 2  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run  6] idle=0.50 loaded=0.68 Δ=0.181 ms  tins=101056 22 0 2  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run  7] idle=0.51 loaded=0.89 Δ=0.375 ms  tins=100771 22 0 2  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run  8] idle=0.51 loaded=0.75 Δ=0.240 ms  tins=100554 22 0 3  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run  9] idle=0.48 loaded=0.66 Δ=0.176 ms  tins=100799 22 0 2  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run 10] idle=0.59 loaded=0.74 Δ=0.157 ms  tins=100715 22 0 2  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run 11] idle=0.56 loaded=0.97 Δ=0.412 ms  tins=100516 22 0 3  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run 12] idle=0.53 loaded=0.95 Δ=0.423 ms  tins=100625 22 0 4  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run 13] idle=0.49 loaded=0.72 Δ=0.234 ms  tins=100766 22 0 4  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run 14] idle=0.55 loaded=0.89 Δ=0.340 ms  tins=100567 22 0 4  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=0 run 15] idle=0.50 loaded=0.76 Δ=0.260 ms  tins=101033 22 0 5  jitter=999 ms
+[P3] === Mode B: flow_aware=1 (per-flow v3) ===
+sleep: invalid number '0.5'
+[fa=1 run  1] idle=0.57 loaded=0.74 Δ=0.171 ms  tins=87142 72 0 14243  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run  2] idle=0.57 loaded=0.77 Δ=0.207 ms  tins=87066 73 0 14221  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run  3] idle=0.54 loaded=0.82 Δ=0.288 ms  tins=87078 74 0 14239  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run  4] idle=0.54 loaded=0.77 Δ=0.231 ms  tins=87121 72 0 14246  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run  5] idle=0.53 loaded=0.76 Δ=0.232 ms  tins=86904 73 0 14225  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run  6] idle=0.52 loaded=0.80 Δ=0.285 ms  tins=86943 73 0 14229  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run  7] idle=0.51 loaded=0.72 Δ=0.209 ms  tins=87002 72 0 14265  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run  8] idle=0.57 loaded=0.71 Δ=0.137 ms  tins=86916 74 0 14258  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run  9] idle=0.52 loaded=0.70 Δ=0.181 ms  tins=87040 74 0 14289  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run 10] idle=0.53 loaded=0.70 Δ=0.175 ms  tins=86771 74 0 14258  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run 11] idle=0.53 loaded=0.73 Δ=0.201 ms  tins=86778 72 0 14245  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run 12] idle=0.54 loaded=0.66 Δ=0.129 ms  tins=86985 73 0 14268  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run 13] idle=0.48 loaded=0.67 Δ=0.192 ms  tins=86921 73 0 14265  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run 14] idle=0.56 loaded=1.00 Δ=0.440 ms  tins=86543 74 0 14209  jitter=999 ms
+sleep: invalid number '0.5'
+[fa=1 run 15] idle=0.50 loaded=0.66 Δ=0.159 ms  tins=86875 73 0 14259  jitter=999 ms
+[P3] Done. Results: /home/baris/mycoflow-core/scripts/../results/phase3_multirun_20260503_013401
