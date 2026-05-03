@@ -255,14 +255,32 @@ constrained hardware.
 MycoFlow deliberately avoids both ML and DPI: its heuristic decision tree
 runs in under 1~$\mu$s per device per cycle on a Cortex-A53 core.
 
-\textbf{Adaptive QoS.}
+\textbf{Adaptive QoS and SQM.}
 SDN-based per-application QoS systems achieve fine-grained traffic
 differentiation but require a network controller external to the CPE,
 adding deployment complexity incompatible with consumer home settings.
 OpenWrt \texttt{qosify} provides static DSCP mapping via nftables rules
 with fixed port-to-class tables, but no runtime sensing or adaptation.
-SQM (Smart Queue Management) in OpenWrt configures CAKE or fq\_CoDel with
-appropriate parameters but does not adapt them during operation.
+
+SQM (Smart Queue Management, \texttt{luci-app-sqm}) is the canonical
+OpenWrt QoS solution~\cite{cake2018}: it configures CAKE or fq\_CoDel with
+user-specified bandwidth limits and applies AQM.
+However, SQM has three structural limitations that MycoFlow addresses.
+\emph{First}, SQM requires the operator to manually configure the WAN
+bandwidth cap once at installation; it does not adjust the cap in response
+to observed congestion or time-of-day variation.
+\emph{Second}, SQM provides no automatic device or flow classification:
+if a user wants gaming traffic to enter CAKE's Voice tin, they must
+manually assign DSCP marks on each game client---an operation requiring
+per-device network configuration knowledge that is unavailable to most
+residential users.
+\emph{Third}, SQM cannot distinguish between multiple applications
+running simultaneously on the same host (e.g., a gaming session and a
+background torrent), because it operates at the qdisc level with no
+per-flow state.
+MycoFlow is designed as a \emph{zero-touch complement} to SQM: it deploys
+CAKE identically but adds autonomous sensing, classification, and actuation
+so that no manual DSCP tagging or bandwidth tuning is ever required.
 CAKE's diffserv tier assignment is purely static once configured; no
 published mechanism exists to auto-learn per-flow DSCP marks at the
 kernel qdisc level without an external classifier.
