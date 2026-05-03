@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MycoFlow: Biologically Inspired, Reflexive QoS for OpenWrt. Graduation Project Poster.">
+  <meta name="author" content="Barış Can Ataklı">
+  <title>MycoFlow — Graduation Poster (A1 Portrait)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --green:  #1F7A5D;
+      --blue:   #1F4E79;
+      --mint:   #E8F6F1;
+      --gold:   #B07D12;
+      --white:  #F7FCFA;
+      --ink:    #0D1F17;
+      --gray:   #4A5E55;
+      --lgray:  #C8DDD6;
+      --purple: #6B3580;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #2a2a2a;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh;
+      font-family: 'Barlow', -apple-system, sans-serif;
+    }
+
+    #stage {
+      width: 100vw; height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+
+    #poster {
+      width: 1188px; height: 1680px; /* A1 portrait @ ~50 DPI */
+      background: var(--white);
+      transform-origin: center center;
+      display: flex; flex-direction: column;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ════════════════ HEADER ════════════════ */
+    .header {
+      background: var(--blue);
+      color: white;
+      padding: 14px 46px 12px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute; right: -50px; top: -50px;
+      width: 200px; height: 200px; border-radius: 50%;
+      background: rgba(176,125,18,0.13);
+    }
+    .header-top {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      position: relative; z-index: 1;
+    }
+    .main-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 50px; font-weight: 800; line-height: 1.0;
+    }
+    .main-title .myco { color: #6ee8bf; }
+    .author-line {
+      font-size: 13px; color: rgba(255,255,255,0.72);
+      margin-top: 6px; display: flex; flex-wrap: wrap; gap: 3px; align-items: center;
+    }
+    .author-line strong { color: white; font-weight: 600; }
+    .dot-sep { color: rgba(255,255,255,0.35); margin: 0 3px; }
+    .header-badge {
+      background: var(--green);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+      padding: 5px 12px; border-radius: 6px;
+      white-space: nowrap; margin-top: 4px; flex-shrink: 0;
+    }
+
+    /* ════════════════ CONTENT GRID ════════════════ */
+    .content {
+      flex: 1; min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 18px 44px 8px 44px;
+      gap: 36px;
+    }
+    .col {
+      display: flex; flex-direction: column; gap: 12px;
+      min-height: 0; overflow: hidden;
+    }
+
+    /* ── Section labels ── */
+    .sec-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 19px; font-weight: 700; color: var(--green);
+      letter-spacing: 3px; text-transform: uppercase;
+      border-bottom: 3px solid var(--green);
+      padding-bottom: 4px; margin-bottom: 7px;
+    }
+    .sec-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 25px; font-weight: 700; color: var(--blue);
+      margin-bottom: 9px;
+    }
+
+    /* ── Problem items ── */
+    .problem-list { display: flex; flex-direction: column; gap: 7px; }
+    .problem-item {
+      display: flex; gap: 11px; align-items: flex-start;
+      background: var(--mint); padding: 9px 13px;
+      border-radius: 10px; border-left: 4px solid var(--blue);
+    }
+    .prob-icon {
+      width: 30px; height: 30px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .prob-icon svg { width: 16px; height: 16px; }
+    .problem-item p { font-size: 15px; line-height: 1.5; color: var(--ink); }
+    .problem-item strong { color: var(--blue); }
+
+    /* ── Solution items ── */
+    .solution-list { display: flex; flex-direction: column; gap: 7px; }
+    .sol-item {
+      display: flex; gap: 11px; align-items: flex-start;
+      background: white; padding: 9px 12px; border-radius: 10px;
+      border: 1px solid var(--lgray);
+    }
+    .sol-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--green); color: white;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .sol-item p { font-size: 15px; line-height: 1.5; color: var(--ink); }
+    .sol-item strong { color: var(--blue); }
+    .persona-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+    .p-badge {
+      background: var(--mint); padding: 3px 7px; border-radius: 5px;
+      font-size: 12px; font-weight: 600; color: var(--blue);
+      border: 1px solid var(--lgray);
+    }
+
+    /* ── Comparison table ── */
+    table.cmp-table {
+      width: 100%; border-collapse: collapse;
+      font-size: 14px; text-align: center;
+    }
+    table.cmp-table th {
+      background: var(--blue); color: white;
+      padding: 8px 5px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 15px; letter-spacing: 0.5px;
+    }
+    table.cmp-table td { padding: 8px 5px; border-bottom: 1px solid var(--lgray); }
+    table.cmp-table tr:nth-child(even) { background: rgba(200,221,214,0.18); }
+    table.cmp-table tr.highlight { background: var(--mint); }
+    table.cmp-table tr.highlight td:first-child { color: var(--green); font-weight: 700; }
+    table.cmp-table td:first-child { text-align: left; font-weight: 600; color: var(--ink); padding-left: 8px; }
+    .check { color: var(--green); font-weight: 900; font-size: 15px; }
+    .cross { color: #c0392b; font-weight: 900; font-size: 15px; }
+
+    /* ── Topology ── */
+    .topology-box {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; background: white; border: 1px solid var(--lgray);
+      padding: 7px 12px; border-radius: 9px; margin-bottom: 9px;
+      font-size: 13px; font-weight: 600; color: var(--blue);
+    }
+    .topo-sep { color: var(--gray); font-size: 16px; }
+    .topo-router {
+      background: var(--blue); color: white;
+      padding: 3px 9px; border-radius: 6px; font-size: 12px;
+    }
+
+    /* ── Arch loop ── */
+    .arch-flow { display: flex; flex-direction: column; gap: 4px; }
+    .arch-step {
+      background: #EAF4FF; border: 2px solid #90b8d8;
+      padding: 7px 12px; border-radius: 9px;
+    }
+    .arch-step.infer { background: var(--mint); border-color: #7dc4a8; }
+    .arch-step.act   { background: #FFF3DB; border-color: #e5b95a; }
+    .arch-step.stab  { background: #F4EAFF; border-color: #c9a0e0; }
+    .arch-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 19px; font-weight: 700; margin-bottom: 3px;
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .arch-subtitle { font-size: 12px; font-weight: 400; opacity: 0.65; font-family: 'Barlow', sans-serif; }
+    .arch-body { font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--ink); }
+    .arch-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .arch-tag {
+      padding: 2px 6px; border-radius: 3px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 700; font-size: 11px; letter-spacing: 0.5px;
+      text-transform: uppercase; color: white;
+    }
+    .arch-arrow { text-align: center; color: var(--gray); font-size: 14px; margin: -2px 0; }
+
+    .feedback-row {
+      display: flex; align-items: center; gap: 7px;
+      background: rgba(31,122,93,0.06); border-radius: 7px;
+      padding: 5px 10px; margin-top: 4px;
+      font-size: 12px; color: var(--green); font-weight: 500;
+    }
+
+    /* ── DSCP map ── */
+    .dscp-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 5px; margin-top: 5px;
+    }
+    .dscp-item {
+      background: var(--mint); padding: 6px 10px;
+      border-radius: 7px; font-size: 14px; font-weight: 600; color: var(--blue);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .dscp-item span { font-size: 12px; font-weight: 400; color: var(--gray); margin-left: auto; }
+
+    /* ── Specs grid ── */
+    .specs-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 4px;
+    }
+    .hw-card {
+      grid-column: span 2;
+      background: white; border: 1px solid rgba(31,122,93,0.15);
+      border-radius: 9px; padding: 8px 14px;
+      display: flex; align-items: center; gap: 11px;
+    }
+    .hw-icon {
+      width: 36px; height: 36px; background: rgba(31,122,93,0.1);
+      border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .hw-icon svg { width: 20px; height: 20px; }
+    .hw-name { font-size: 16px; font-weight: 800; color: #111; }
+    .hw-sub  { font-size: 11px; color: var(--gray); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .spec-card {
+      background: white; border: 1px solid rgba(31,122,93,0.12);
+      border-radius: 9px; padding: 8px 11px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .spec-card svg { width: 17px; height: 17px; flex-shrink: 0; }
+    .spec-label { font-size: 11px; color: var(--gray); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .spec-val   { font-size: 17px; font-weight: 800; color: var(--blue); }
+
+    /* ── Metrics ── */
+    .metrics-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 3px;
+    }
+    .metric-card {
+      padding: 9px 12px; border-radius: 11px;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .metric-icon { font-size: 14px; margin-bottom: 1px; }
+    .metric-val {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 36px; font-weight: 800; line-height: 1;
+    }
+    .metric-desc { font-size: 13px; font-weight: 500; color: var(--gray); line-height: 1.35; }
+
+    /* ── Phase boxes ── */
+    .phase-box {
+      background: var(--mint); padding: 7px 12px;
+      border-radius: 10px; border-left: 5px solid var(--gray);
+      position: relative;
+    }
+    .phase-box.p1 { border-color: var(--blue); }
+    .phase-box.p2 { border-color: var(--green); }
+    .phase-box.p3 { border-color: var(--gold); }
+    .phase-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px; font-weight: 700; color: var(--blue);
+      margin-bottom: 8px; text-transform: uppercase;
+    }
+    .phase-badge {
+      position: absolute; top: 9px; right: 11px;
+      background: var(--gold); color: white;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 700; padding: 2px 7px;
+      border-radius: 4px; letter-spacing: 0.5px;
+    }
+    .bar-row { display: flex; align-items: center; margin-bottom: 7px; font-size: 14px; font-weight: 500; }
+    .bar-label { width: 148px; color: var(--gray); font-size: 13px; }
+    .bar-track {
+      flex: 1; height: 16px; background: rgba(0,0,0,0.06);
+      border-radius: 8px; overflow: hidden; margin: 0 11px;
+    }
+    .bar-fill { height: 100%; border-radius: 8px; }
+    .bar-val { width: 88px; font-weight: 700; text-align: right; font-size: 13px; }
+    .bar-sub { font-size: 10px; opacity: 0.7; font-weight: 500; display: block; line-height: 1; }
+
+    /* ── Conclusion ── */
+    .future-work { font-size: 13px; color: var(--green); font-weight: 500; margin-top: 4px; }
+    .conclusion-box {
+      background: rgba(31,122,93,0.08); border-left: 5px solid var(--green);
+      padding: 8px 12px; font-size: 12.5px; font-weight: 500; color: var(--blue);
+      border-radius: 8px; margin-top: 4px; line-height: 1.45;
+    }
+
+    /* ════════════════ FOOTER ════════════════ */
+    .footer {
+      background: var(--ink); color: white;
+      padding: 14px 46px 52px 46px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-shrink: 0; gap: 20px;
+    }
+    .footer-left { flex: 1; }
+    .footer p { font-size: 12px; color: rgba(255,255,255,0.6); margin-bottom: 3px; }
+    .footer strong { color: rgba(255,255,255,0.9); }
+    .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .tag {
+      background: rgba(255,255,255,0.08); padding: 2px 7px; border-radius: 3px;
+      font-family: 'Barlow Condensed', sans-serif; font-size: 11px;
+      letter-spacing: 0.8px; color: rgba(255,255,255,0.55);
+    }
+    .qrs { display: flex; gap: 14px; align-items: center; }
+    .qr { text-align: center; font-family: 'Barlow Condensed', sans-serif; font-size: 10px; letter-spacing: 0.8px; color: rgba(255,255,255,0.5); }
+    .qr img { width: 50px; height: 50px; border-radius: 5px; margin-bottom: 3px; background: white; padding: 3px; display: block; }
+
+    /* ── Export controls ── */
+    .export-controls {
+      position: fixed; top: 20px; right: 20px; z-index: 1000;
+      display: flex; gap: 10px;
+    }
+    .export-btn {
+      padding: 8px 14px; border: none; border-radius: 6px;
+      background: var(--green); color: white; font-weight: 600;
+      cursor: pointer; font-size: 13px; font-family: 'Barlow', sans-serif;
+      transition: 0.15s;
+    }
+    .export-btn:hover { background: var(--blue); }
+    .export-btn:active { transform: scale(0.95); }
+
+    @media print {
+      body { background: white; display: block; }
+      #stage { width: 100%; height: 100%; overflow: visible; }
+      #poster { width: 100%; height: auto; box-shadow: none; transform: none !important; }
+      .export-controls { display: none; }
+    }
+    @page { size: A1 portrait; margin: 0; }
+  </style>
+</head>
+<body>
+
+  <div class="export-controls">
+    <button class="export-btn" onclick="window.print()">🖨 Print to PDF</button>
+    <button class="export-btn" onclick="downloadScreenshot()" style="background:var(--blue)">💾 PNG</button>
+  </div>
+
+  <div id="stage">
+    <div id="poster" role="img" aria-label="MycoFlow Graduation Poster — Biologically Inspired QoS for OpenWrt">
+
+      <!-- ══════════════ HEADER ══════════════ -->
+      <div class="header">
+        <div class="header-top">
+          <div>
+            <div class="main-title">
+              <span class="myco">Myco</span><span style="color:white;">Flow</span><span style="color:rgba(255,255,255,0.6);font-weight:400;"> — </span><span style="color:white;">Biologically Inspired, Reflexive QoS for OpenWrt</span>
+            </div>
+            <div class="author-line">
+              <strong>Barış Can Ataklı</strong>
+              <span class="dot-sep">·</span>
+              <span style="opacity:0.6">Advisor:</span>&nbsp;<strong>Asst. Prof. Dr. Cihat Çetinkaya</strong>
+              <span class="dot-sep">·</span>
+              Muğla Sıtkı Koçman University, Software Engineering
+              <span class="dot-sep">·</span>
+              bariscanatakli@posta.mu.edu.tr
+              <span class="dot-sep">·</span>
+              github.com/bariscanatakli/mycoflow-core
+            </div>
+          </div>
+          <div class="header-badge">GRADUATION PROJECT · 2025-2026</div>
+        </div>
+      </div>
+
+      <!-- ══════════════ CONTENT ══════════════ -->
+      <div class="content">
+
+        <!-- ──────────── LEFT COLUMN ──────────── -->
+        <div class="col">
+
+          <!-- MOTIVATION -->
+          <div>
+            <div class="sec-label">Motivation</div>
+            <div class="sec-title">Problem</div>
+            <div class="problem-list">
+              <div class="problem-item">
+                <div class="prob-icon" style="background:var(--blue)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/>
+                  </svg>
+                </div>
+                <p><strong>Bufferbloat:</strong> A single TCP flow causes 693 ms queue delay on a 20 Mbit/s WAN connection — making gaming and VoIP unusable.</p>
+              </div>
+              <div class="problem-item">
+                <div class="prob-icon" style="background:var(--gold)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                  </svg>
+                </div>
+                <p><strong>Static QoS:</strong> Even modern AQMs like CAKE rely on DSCP tags; ISPs strip these tags, causing all traffic to fall into the same queue.</p>
+              </div>
+              <div class="problem-item">
+                <div class="prob-icon" style="background:var(--green)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                </div>
+                <p><strong>Fixed Bandwidth:</strong> WAN speed limit is configured once during setup; it cannot react to real-time congestion signals.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- APPROACH -->
+          <div>
+            <div class="sec-label">Approach</div>
+            <div class="sec-title">Solution</div>
+            <div class="solution-list">
+              <div class="sol-item">
+                <div class="sol-num">1</div>
+                <p><strong>Biological Inspiration:</strong> Adaptive nutrient distribution strategy of fungal mycelium networks → reflexive network control</p>
+              </div>
+              <div class="sol-item">
+                <div class="sol-num">2</div>
+                <div>
+                  <p><strong>6-Class Device Persona:</strong> VOIP, GAMING, VIDEO, STREAMING, BULK, TORRENT — On-chip &lt;1 µs decision without DPI or ML</p>
+                  <div class="persona-badges">
+                    <span class="p-badge">🎮 Gaming</span>
+                    <span class="p-badge">📺 Streaming</span>
+                    <span class="p-badge">📞 VoIP</span>
+                    <span class="p-badge">📦 Bulk</span>
+                    <span class="p-badge">🌊 Torrent</span>
+                    <span class="p-badge">❓ Unknown</span>
+                  </div>
+                </div>
+              </div>
+              <div class="sol-item">
+                <div class="sol-num">3</div>
+                <p><strong>12-Class Flow Taxonomy:</strong> 3-signal weighted voting combining passive DNS (0.6), target port hints (0.3), and behavioral fingerprinting (0.1)</p>
+              </div>
+              <div class="sol-item">
+                <div class="sol-num">4</div>
+                <p><strong>Zero Flash Writes:</strong> All state is kept in RAM — no damage to NAND flash lifespan (live tested on Xiaomi AX3000T)</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- COMPARISON -->
+          <div>
+            <div class="sec-label">Comparison</div>
+            <table class="cmp-table">
+              <thead>
+                <tr>
+                  <th style="text-align:left;padding-left:8px;">System</th>
+                  <th>Embedded</th>
+                  <th>Automatic</th>
+                  <th>No ML</th>
+                  <th>No DPI</th>
+                  <th>Adaptive</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>SQM/CAKE</td>
+                  <td><span class="check">✓</span></td><td><span class="cross">✗</span></td>
+                  <td><span class="check">✓</span></td><td><span class="check">✓</span></td><td><span class="cross">✗</span></td>
+                </tr>
+                <tr>
+                  <td>qosify</td>
+                  <td><span class="check">✓</span></td><td><span class="cross">✗</span></td>
+                  <td><span class="check">✓</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td>
+                </tr>
+                <tr>
+                  <td>nDPI</td>
+                  <td><span class="cross">✗</span></td><td><span class="check">✓</span></td>
+                  <td><span class="cross">✗</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td>
+                </tr>
+                <tr>
+                  <td>DeepFlow</td>
+                  <td><span class="cross">✗</span></td><td><span class="check">✓</span></td>
+                  <td><span class="cross">✗</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td>
+                </tr>
+                <tr class="highlight">
+                  <td><strong>MycoFlow</strong></td>
+                  <td style="background:var(--mint)"><span class="check">✓</span></td>
+                  <td style="background:var(--mint)"><span class="check">✓</span></td>
+                  <td style="background:var(--mint)"><span class="check">✓</span></td>
+                  <td style="background:var(--mint)"><span class="check">✓</span></td>
+                  <td style="background:var(--mint)"><span class="check">✓</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- DSCP MAP -->
+          <div>
+            <div class="sec-label" style="font-size:16px;">DSCP → CAKE Tin Mapping</div>
+            <div class="dscp-grid">
+              <div class="dscp-item">📞 VOIP      <span>→ EF  → Voice tin</span></div>
+              <div class="dscp-item">🎮 GAMING    <span>→ CS4 → Voice tin</span></div>
+              <div class="dscp-item">📺 VIDEO     <span>→ CS3 → Video tin</span></div>
+              <div class="dscp-item">📱 STREAMING <span>→ CS2 → Video tin</span></div>
+              <div class="dscp-item">📦 BULK      <span>→ CS1 → Bulk tin</span></div>
+              <div class="dscp-item">🌊 TORRENT   <span>→ CS1 → Bulk tin</span></div>
+            </div>
+          </div>
+
+          <!-- SYSTEM SPECS -->
+          <div>
+            <div class="sec-label" style="font-size:16px;">System Specifications</div>
+            <div class="specs-grid">
+              <div class="hw-card">
+                <div class="hw-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
+                    <line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>
+                    <line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="hw-sub">Target Hardware</div>
+                  <div class="hw-name">Xiaomi AX3000T <span style="font-weight:500;font-size:12px;color:var(--gray)">(MT7981B, 256MB)</span></div>
+                </div>
+              </div>
+              <div class="spec-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                </svg>
+                <div><div class="spec-label">CPU Usage</div><div class="spec-val">&lt;2% (A53)</div></div>
+              </div>
+              <div class="spec-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <div><div class="spec-label">Binary Size</div><div class="spec-val">&lt;200 KB</div></div>
+              </div>
+              <div class="spec-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <div><div class="spec-label">Test Coverage</div><div class="spec-val">13/13 CTest</div></div>
+              </div>
+              <div class="spec-card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+                <div><div class="spec-label">Deployment</div><div class="spec-val">OpenWrt IPK</div></div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /left col -->
+
+        <!-- ──────────── RIGHT COLUMN ──────────── -->
+        <div class="col">
+
+          <!-- SYSTEM ARCHITECTURE -->
+          <div>
+            <div class="sec-label">System Architecture</div>
+            <div class="sec-title">1 Hz Reflexive Control Loop</div>
+
+            <div class="topology-box">
+              <span>🏠 Home Network (LAN)</span>
+              <span class="topo-sep">⇌</span>
+              <span class="topo-router">Xiaomi AX3000T + MycoFlow</span>
+              <span class="topo-sep">⇌</span>
+              <span>🌍 Internet (WAN)</span>
+            </div>
+
+            <div class="arch-flow">
+              <div class="arch-step">
+                <div class="arch-title" style="color:var(--blue)">
+                  ① SENSE <span class="arch-subtitle">(Environment Sensing)</span>
+                </div>
+                <div class="arch-body">ICMP multi-ping (RTT/jitter) · /proc/net/nf_conntrack · Netlink qdisc stats · Passive DNS listening · BPF TC hook passive TCP RTT</div>
+                <div class="arch-tags">
+                  <span class="arch-tag" style="background:var(--blue)">ICMP PROBE</span>
+                  <span class="arch-tag" style="background:var(--blue)">CONNTRACK</span>
+                  <span class="arch-tag" style="background:var(--blue)">NETLINK</span>
+                  <span class="arch-tag" style="background:var(--blue)">PASSIVE DNS</span>
+                  <span class="arch-tag" style="background:var(--blue)">BPF RTT</span>
+                </div>
+              </div>
+              <div class="arch-arrow">↓</div>
+              <div class="arch-step infer">
+                <div class="arch-title" style="color:var(--green)">
+                  ② INFER <span class="arch-subtitle">(Nutrient Density Estimation)</span>
+                </div>
+                <div class="arch-body">EWMA smoothing · 6-class device persona (majority voting) · 3-signal flow classifier (DNS:0.6 + port:0.3 + behavior:0.1) · 2-tick stability gate</div>
+                <div class="arch-tags">
+                  <span class="arch-tag" style="background:var(--green)">6-CLASS PERSONA</span>
+                  <span class="arch-tag" style="background:var(--green)">12-CLASS SERVICE</span>
+                  <span class="arch-tag" style="background:var(--green)">EWMA α=0.30</span>
+                  <span class="arch-tag" style="background:var(--green)">HYSTERESIS</span>
+                </div>
+              </div>
+              <div class="arch-arrow">↓</div>
+              <div class="arch-step act">
+                <div class="arch-title" style="color:var(--gold)">
+                  ③ ACT <span class="arch-subtitle">(Network Adaptation)</span>
+                </div>
+                <div class="arch-body">CAKE AQM target update (tc qdisc change) · iptables mangle DSCP rules · libnetfilter_conntrack CONNMARK push · nftables POSTROUTING DSCP restore · IFB ingress shaping</div>
+                <div class="arch-tags">
+                  <span class="arch-tag" style="background:var(--gold)">CAKE DIFFSERV4</span>
+                  <span class="arch-tag" style="background:var(--gold)">DSCP MARK</span>
+                  <span class="arch-tag" style="background:var(--gold)">CONNMARK</span>
+                  <span class="arch-tag" style="background:var(--gold)">IFB</span>
+                </div>
+              </div>
+              <div class="arch-arrow">↓</div>
+              <div class="arch-step stab">
+                <div class="arch-title" style="color:var(--purple)">
+                  ④ STABILIZE <span class="arch-subtitle">(Balancing Reflex)</span>
+                </div>
+                <div class="arch-body">Feedback ring (8 slots) · Step size adaptation · Sliding EWMA baseline (β=0.01) · RTT auto-demote/promote ladder</div>
+                <div class="arch-tags">
+                  <span class="arch-tag" style="background:var(--purple)">FEEDBACK RING</span>
+                  <span class="arch-tag" style="background:var(--purple)">SLIDING BASELINE</span>
+                  <span class="arch-tag" style="background:var(--purple)">RTT DEMOTE</span>
+                </div>
+              </div>
+            </div>
+            <div class="feedback-row">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+              </svg>
+              Feedback to next loop — all state in RAM, zero flash write guarantee
+            </div>
+          </div>
+
+          <!-- EXPERIMENTAL RESULTS -->
+          <div>
+            <div class="sec-label">Experimental Results</div>
+            <div class="sec-title" style="margin-bottom:4px;">Core Metrics</div>
+            <div class="metrics-grid" style="margin-bottom:0">
+              <div class="metric-card" style="background:var(--mint)">
+                <div class="metric-icon">⏱</div>
+                <div class="metric-val" style="color:var(--green)">154×</div>
+                <div class="metric-desc">Gaming tin latency advantage — Voice 225 µs vs Bulk 34.7 ms</div>
+              </div>
+              <div class="metric-card" style="background:#FFF3DB">
+                <div class="metric-icon">📶</div>
+                <div class="metric-val" style="color:var(--gold)">+40.6</div>
+                <div class="metric-desc">DNS signal accuracy increase (pp) — 42.88% → 83.54% offline validation</div>
+              </div>
+              <div class="metric-card" style="background:#EAF4FF">
+                <div class="metric-icon">🎯</div>
+                <div class="metric-val" style="color:var(--blue)">66.97%</div>
+                <div class="metric-desc">In-vivo tin-matched accuracy (DNS active, 80-catalog, N=1,650 flows)</div>
+              </div>
+              <div class="metric-card" style="background:#F4EAFF">
+                <div class="metric-icon">📦</div>
+                <div class="metric-val" style="color:var(--purple)">&lt;200 KB</div>
+                <div class="metric-desc">aarch64 binary size — zero flash writes, musl libc static linking</div>
+              </div>
+            </div>
+
+            <div class="phase-box p1" style="margin-top:5px;">
+              <div class="phase-title">Phase 1 — Dual Persona Validation (20 Mbit/s WAN)</div>
+              <div class="bar-row">
+                <div class="bar-label">FIFO (no QoS)</div>
+                <div class="bar-track"><div class="bar-fill" style="width:100%;background:#c0392b"></div></div>
+                <div class="bar-val">693 ms</div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">CAKE (standalone)</div>
+                <div class="bar-track"><div class="bar-fill" style="width:14%;background:var(--gold)"></div></div>
+                <div class="bar-val">0.63 ms</div>
+              </div>
+              <div class="bar-row" style="color:var(--green);font-weight:700">
+                <div class="bar-label" style="color:var(--green)">CAKE + MycoFlow</div>
+                <div class="bar-track"><div class="bar-fill" style="width:15%;background:var(--green)"></div></div>
+                <div class="bar-val">0.71 ms <span class="bar-sub">(+0.08ms overhead)</span></div>
+              </div>
+            </div>
+
+            <div class="phase-box p2" style="margin-top:4px;">
+              <div class="phase-badge">Waveform Score: A+</div>
+              <div class="phase-title">Phase 2 — Six Persona Mixed Load (5 Clients)</div>
+              <div class="bar-row">
+                <div class="bar-label">CAKE (5 clients)</div>
+                <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--gold)"></div></div>
+                <div class="bar-val">1.43 ms</div>
+              </div>
+              <div class="bar-row" style="color:var(--green);font-weight:700">
+                <div class="bar-label" style="color:var(--green)">MycoFlow (5 clients)</div>
+                <div class="bar-track"><div class="bar-fill" style="width:77%;background:var(--green)"></div></div>
+                <div class="bar-val">1.10 ms</div>
+              </div>
+            </div>
+
+            <div class="phase-box p3" style="margin-top:4px;">
+              <div class="phase-title">In-Vivo DNS Validation — Tin-Matched Accuracy <span style="font-size:11px;font-weight:400;opacity:0.7;font-family:'Barlow';text-transform:none">(N=1,650 Flows · seed=42)</span></div>
+              <div class="bar-row">
+                <div class="bar-label">No DNS (port+behav.)</div>
+                <div class="bar-track"><div class="bar-fill" style="width:70%;background:#aaa"></div></div>
+                <div class="bar-val">49.26%</div>
+              </div>
+              <div class="bar-row">
+                <div class="bar-label">DNS active (80-cat)</div>
+                <div class="bar-track"><div class="bar-fill" style="width:95%;background:var(--gold)"></div></div>
+                <div class="bar-val">66.97%</div>
+              </div>
+              <div class="bar-row" style="color:var(--green);font-weight:700">
+                <div class="bar-label" style="color:var(--green)">DNS active (585-cat)</div>
+                <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--green)"></div></div>
+                <div class="bar-val">70.41%</div>
+              </div>
+            </div>
+
+            <div class="future-work" style="margin-top:5px;"><strong>Future Work:</strong> Flow-timing analysis for QUIC/ECH is planned.</div>
+            <div class="conclusion-box">
+              <strong>Conclusion:</strong> MycoFlow proves the full viability of biologically inspired reflexive network management (mycelium network concept) on standard home hardware (Xiaomi AX3000T) with zero flash writes and sub-microsecond decision making.
+            </div>
+          </div>
+
+        </div><!-- /right col -->
+      </div><!-- /content -->
+
+      <!-- ══════════════ FOOTER ══════════════ -->
+      <div class="footer">
+        <div class="footer-left">
+          <p>Muğla Sıtkı Koçman University · Software Engineering Department · 2025-2026 Academic Year Graduation Project</p>
+          <p><strong>Source Code:</strong> github.com/bariscanatakli/mycoflow-core</p>
+          <div class="tags">
+            <span class="tag">BUFFERBLOAT</span>
+            <span class="tag">CAKE AQM</span>
+            <span class="tag">DSCP</span>
+            <span class="tag">EBPF</span>
+            <span class="tag">OPENWRT</span>
+            <span class="tag">PERSONA-AWARE QOS</span>
+            <span class="tag">REFLEXIVE CONTROL</span>
+            <span class="tag">BIO-INSPIRED NETWORK</span>
+            <span class="tag">CONNTRACK</span>
+            <span class="tag">PASSIVE RTT</span>
+          </div>
+        </div>
+        <div class="qrs">
+          <div class="qr">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://bariscanatakli.com" alt="Portfolio QR">
+            <div>PORTFOLIO</div>
+          </div>
+          <div class="qr">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://mycoflow.bariscanatakli.com" alt="MycoFlow QR">
+            <div>MYCOFLOW<br>LANDING</div>
+          </div>
+          <div class="qr">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/bariscanatakli/mycoflow-core" alt="GitHub QR">
+            <div>REPO / GITHUB</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /poster -->
+  </div><!-- /stage -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <script>
+    function scale() {
+      const poster = document.getElementById('poster');
+      const W = 1188, H = 1680;
+      const s = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.98;
+      poster.style.transform = `scale(${s})`;
+    }
+
+    function downloadScreenshot() {
+      const poster = document.getElementById('poster');
+      const btn = event.target;
+      btn.disabled = true; btn.textContent = '⏳ Rendering…';
+      html2canvas(poster, { scale: 2, backgroundColor: '#F7FCFA', logging: false, useCORS: true })
+        .then(canvas => {
+          const a = document.createElement('a');
+          a.download = 'MycoFlow_Poster_A1_Portrait.png';
+          a.href = canvas.toDataURL(); a.click();
+          btn.disabled = false; btn.textContent = '💾 PNG';
+        })
+        .catch(() => { btn.disabled = false; btn.textContent = '💾 PNG'; });
+    }
+
+    scale();
+    window.addEventListener('resize', scale);
+  </script>
+</body>
+</html>

@@ -63,7 +63,7 @@ int mark_engine_set(mark_engine_t *eng, const flow_key_t *key, uint32_t mark) {
     }
 
     nfct_set_attr_u8 (ct, ATTR_L3PROTO,  AF_INET);
-    nfct_set_attr_u32(ct, ATTR_IPV4_SRC, key->src_ip);   /* already NBO */
+    nfct_set_attr_u32(ct, ATTR_IPV4_SRC, key->src_ip);
     nfct_set_attr_u32(ct, ATTR_IPV4_DST, key->dst_ip);
     nfct_set_attr_u8 (ct, ATTR_L4PROTO,  key->protocol);
     nfct_set_attr_u16(ct, ATTR_PORT_SRC, htons(key->src_port));

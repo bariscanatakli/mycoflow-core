@@ -37,3 +37,26 @@ paper/*.blg
 paper/*.log
 paper/*.out
 paper/*.toc
+# Root-level LaTeX build artifacts (ieee_paper specific)
+ieee_paper.aux
+ieee_paper.bbl
+ieee_paper.blg
+ieee_paper.log
+ieee_paper.out
+
+# Poster build artifacts
+poster/node_modules/
+poster/package-lock.json
+
+# Downloaded .deb packages
+*.deb
+
+# Temporary analysis/fix scripts
+fix.py
+fix_poster.py
+rewrite.py
+rewrite_v2.py
+
+# Phase3 bulk experiment runs (keep only authoritative results)
+results/phase3_multirun_20260502_*/
+results/phase3_multirun_20260503_005145/
