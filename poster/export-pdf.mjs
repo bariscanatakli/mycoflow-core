@@ -32,9 +32,12 @@ await page.evaluate((zoom, pw, ph) => {
   const poster = document.getElementById('poster');
   const stage  = document.getElementById('stage');
 
-  // Remove JS-set transform and shadow
+  // Remove JS-set transform and shadow; override @media print which sets height:auto
   poster.style.transform = 'none';
   poster.style.boxShadow = 'none';
+  poster.style.width  = pw + 'px';
+  poster.style.height = ph + 'px';
+  poster.style.overflow = 'hidden';
 
   // Flat block wrapper — exact poster dimensions
   stage.style.cssText = `display:block;width:${pw}px;height:${ph}px;overflow:hidden;`;

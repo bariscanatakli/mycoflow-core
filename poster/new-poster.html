@@ -8,7 +8,7 @@
   <title>MycoFlow — Graduation Poster (A1 Portrait)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700&family=Montserrat:wght@700&family=Open+Sans:ital,wdth,wght@0,75,600;0,75,700;1,75,400;1,75,600&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -50,48 +50,50 @@
 
     /* ════════════════ HEADER ════════════════ */
     .header {
-      background: var(--blue);
+      background: #00167A;
       color: white;
-      padding: 14px 46px 12px;
       flex-shrink: 0;
-      position: relative;
-      overflow: hidden;
     }
-    .header::before {
-      content: '';
-      position: absolute; right: -50px; top: -50px;
-      width: 200px; height: 200px; border-radius: 50%;
-      background: rgba(176,125,18,0.13);
-    }
-    .header-top {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      position: relative; z-index: 1;
+    .header-title-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 40px 16px;
     }
     .main-title {
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 50px; font-weight: 800; line-height: 1.0;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 38px; font-weight: 700; line-height: 1.1;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      color: white; flex: 1; padding-right: 24px;
     }
-    .main-title .myco { color: #6ee8bf; }
-    .author-line {
-      font-size: 13px; color: rgba(255,255,255,0.72);
-      margin-top: 6px; display: flex; flex-wrap: wrap; gap: 3px; align-items: center;
+    .header-logo-block {
+      flex-shrink: 0;
     }
-    .author-line strong { color: white; font-weight: 600; }
+    .header-logo-block img {
+      height: 120px; width: auto; display: block;
+    }
+    .header-author-row {
+      background: #00167A;
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 40px;
+    }
+    .header-student-name {
+      font-family: 'Open Sans', sans-serif;
+      font-variation-settings: 'wdth' 75;
+      font-size: 22px; font-weight: 700; color: white;
+    }
+    .header-advisors {
+      font-family: 'Open Sans', sans-serif;
+      font-variation-settings: 'wdth' 75;
+      font-size: 17px; font-style: italic; font-weight: 400;
+      color: rgba(255,255,255,0.88);
+    }
     .dot-sep { color: rgba(255,255,255,0.35); margin: 0 3px; }
-    .header-badge {
-      background: var(--green);
-      font-family: 'Barlow Condensed', sans-serif;
-      font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-      padding: 5px 12px; border-radius: 6px;
-      white-space: nowrap; margin-top: 4px; flex-shrink: 0;
-    }
 
     /* ════════════════ CONTENT GRID ════════════════ */
     .content {
       flex: 1; min-height: 0;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      padding: 18px 44px 8px 44px;
+      padding: 8px 44px 8px 44px;
       gap: 36px;
     }
     .col {
@@ -280,7 +282,7 @@
     .phase-title {
       font-family: 'Barlow Condensed', sans-serif;
       font-size: 18px; font-weight: 700; color: var(--blue);
-      margin-bottom: 8px; text-transform: uppercase;
+      margin-bottom: 5px; text-transform: uppercase;
     }
     .phase-badge {
       position: absolute; top: 9px; right: 11px;
@@ -289,7 +291,7 @@
       font-size: 11px; font-weight: 700; padding: 2px 7px;
       border-radius: 4px; letter-spacing: 0.5px;
     }
-    .bar-row { display: flex; align-items: center; margin-bottom: 7px; font-size: 14px; font-weight: 500; }
+    .bar-row { display: flex; align-items: center; margin-bottom: 4px; font-size: 14px; font-weight: 500; }
     .bar-label { width: 148px; color: var(--gray); font-size: 13px; }
     .bar-track {
       flex: 1; height: 16px; background: rgba(0,0,0,0.06);
@@ -310,7 +312,7 @@
     /* ════════════════ FOOTER ════════════════ */
     .footer {
       background: var(--ink); color: white;
-      padding: 14px 46px 52px 46px;
+      padding: 14px 46px 10px 46px;
       display: flex; justify-content: space-between; align-items: center;
       flex-shrink: 0; gap: 20px;
     }
@@ -362,24 +364,15 @@
 
       <!-- ══════════════ HEADER ══════════════ -->
       <div class="header">
-        <div class="header-top">
-          <div>
-            <div class="main-title">
-              <span class="myco">Myco</span><span style="color:white;">Flow</span><span style="color:rgba(255,255,255,0.6);font-weight:400;"> — </span><span style="color:white;">Biologically Inspired, Reflexive QoS for OpenWrt</span>
-            </div>
-            <div class="author-line">
-              <strong>Barış Can Ataklı</strong>
-              <span class="dot-sep">·</span>
-              <span style="opacity:0.6">Advisor:</span>&nbsp;<strong>Asst. Prof. Dr. Cihat Çetinkaya</strong>
-              <span class="dot-sep">·</span>
-              Muğla Sıtkı Koçman University, Software Engineering
-              <span class="dot-sep">·</span>
-              bariscanatakli@posta.mu.edu.tr
-              <span class="dot-sep">·</span>
-              github.com/bariscanatakli/mycoflow-core
-            </div>
+        <div class="header-title-row">
+          <div class="main-title">MycoFlow: Biologically Inspired, Reflexive QoS for OpenWrt</div>
+          <div class="header-logo-block">
+            <img src="msku-header-block.png" alt="MSKU Software Engineering">
           </div>
-          <div class="header-badge">GRADUATION PROJECT · 2025-2026</div>
+        </div>
+        <div class="header-author-row">
+          <div class="header-student-name">Barış Can Ataklı</div>
+          <div class="header-advisors">Advisor: Asst. Prof. Dr. Cihat Çetinkaya</div>
         </div>
       </div>
 
@@ -536,14 +529,14 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                 </svg>
-                <div><div class="spec-label">CPU Usage</div><div class="spec-val">&lt;2% (A53)</div></div>
+                <div><div class="spec-label">CPU Usage</div><div class="spec-val">6% median</div></div>
               </div>
               <div class="spec-card">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <div><div class="spec-label">Binary Size</div><div class="spec-val">&lt;200 KB</div></div>
+                <div><div class="spec-label">RAM (RSS)</div><div class="spec-val">1,152 KB</div></div>
               </div>
               <div class="spec-card">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -651,23 +644,23 @@
                 <div class="metric-desc">Gaming tin latency advantage — Voice 225 µs vs Bulk 34.7 ms</div>
               </div>
               <div class="metric-card" style="background:#FFF3DB">
-                <div class="metric-icon">📶</div>
-                <div class="metric-val" style="color:var(--gold)">+40.6</div>
-                <div class="metric-desc">DNS signal accuracy increase (pp) — 42.88% → 83.54% offline validation</div>
+                <div class="metric-icon">🎮</div>
+                <div class="metric-val" style="color:var(--gold)">38%</div>
+                <div class="metric-desc">Gaming latency vs. CAKE-alone — 5-persona load (1.43→1.10 ms)</div>
               </div>
               <div class="metric-card" style="background:#EAF4FF">
                 <div class="metric-icon">🎯</div>
-                <div class="metric-val" style="color:var(--blue)">66.97%</div>
-                <div class="metric-desc">In-vivo tin-matched accuracy (DNS active, 80-catalog, N=1,650 flows)</div>
+                <div class="metric-val" style="color:var(--blue)">70.4%</div>
+                <div class="metric-desc">In-vivo tin-matched accuracy with passive DNS from 30% — N=1,650 flows</div>
               </div>
               <div class="metric-card" style="background:#F4EAFF">
-                <div class="metric-icon">📦</div>
-                <div class="metric-val" style="color:var(--purple)">&lt;200 KB</div>
-                <div class="metric-desc">aarch64 binary size — zero flash writes, musl libc static linking</div>
+                <div class="metric-icon">💾</div>
+                <div class="metric-val" style="color:var(--purple)">1,152 KB</div>
+                <div class="metric-desc">Constant RSS · zero NAND flash writes · 6% median CPU (A53)</div>
               </div>
             </div>
 
-            <div class="phase-box p1" style="margin-top:5px;">
+            <div class="phase-box p1" style="margin-top:2px;">
               <div class="phase-title">Phase 1 — Dual Persona Validation (20 Mbit/s WAN)</div>
               <div class="bar-row">
                 <div class="bar-label">FIFO (no QoS)</div>
@@ -686,8 +679,8 @@
               </div>
             </div>
 
-            <div class="phase-box p2" style="margin-top:4px;">
-              <div class="phase-badge">Waveform Score: A+</div>
+            <div class="phase-box p2" style="margin-top:2px;">
+              <div class="phase-badge">−38% gaming latency</div>
               <div class="phase-title">Phase 2 — Six Persona Mixed Load (5 Clients)</div>
               <div class="bar-row">
                 <div class="bar-label">CAKE (5 clients)</div>
@@ -701,7 +694,7 @@
               </div>
             </div>
 
-            <div class="phase-box p3" style="margin-top:4px;">
+            <div class="phase-box p3" style="margin-top:2px;">
               <div class="phase-title">In-Vivo DNS Validation — Tin-Matched Accuracy <span style="font-size:11px;font-weight:400;opacity:0.7;font-family:'Barlow';text-transform:none">(N=1,650 Flows · seed=42)</span></div>
               <div class="bar-row">
                 <div class="bar-label">No DNS (port+behav.)</div>
@@ -720,9 +713,9 @@
               </div>
             </div>
 
-            <div class="future-work" style="margin-top:5px;"><strong>Future Work:</strong> Flow-timing analysis for QUIC/ECH is planned.</div>
+            <div class="future-work" style="margin-top:5px;"><strong>Future Work:</strong> Sub-second eBPF sensing · cooperative mycelium maps · TinyML classification.</div>
             <div class="conclusion-box">
-              <strong>Conclusion:</strong> MycoFlow proves the full viability of biologically inspired reflexive network management (mycelium network concept) on standard home hardware (Xiaomi AX3000T) with zero flash writes and sub-microsecond decision making.
+              <strong>Conclusion:</strong> MycoFlow proves bio-inspired reflexive QoS on consumer CPE: 154× gaming advantage, 38% latency reduction under mixed load, 70.4% CAKE tin-matched accuracy with passive DNS — all at 1,152 KB RAM, 6% CPU, zero flash writes.
             </div>
           </div>
 
