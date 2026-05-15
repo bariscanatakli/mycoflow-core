@@ -50,41 +50,43 @@
 
     /* ════════════════ HEADER ════════════════ */
     .header {
-      background: #00167A;
-      color: white;
+      position: relative;
+      height: 210px;
       flex-shrink: 0;
+      color: white;
+      background-image: url('header-bg.png');
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
     }
     .header-title-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 18px 40px 16px;
+      position: absolute;
+      top: 40px; left: 34px; right: 262px;
     }
     .main-title {
       font-family: 'Montserrat', sans-serif;
-      font-size: 38px; font-weight: 700; line-height: 1.1;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      color: white; flex: 1; padding-right: 24px;
-    }
-    .header-logo-block {
-      flex-shrink: 0;
-    }
-    .header-logo-block img {
-      height: 120px; width: auto; display: block;
+      font-size: 40px; font-weight: 700; line-height: 1.15;
+      text-transform: uppercase; letter-spacing: 0.3px;
+      color: white;
     }
     .header-author-row {
-      background: #00167A;
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 9px 40px;
+      position: absolute;
+      bottom: 8px; left: 34px; right: 262px;
+      height: 35px;
+      display: flex; align-items: center;
     }
     .header-student-name {
       font-family: 'Open Sans', sans-serif;
       font-variation-settings: 'wdth' 75;
-      font-size: 22px; font-weight: 700; color: white;
+      font-size: 26px; font-weight: 700; color: white;
+      flex-shrink: 0;
     }
     .header-advisors {
       font-family: 'Open Sans', sans-serif;
       font-variation-settings: 'wdth' 75;
-      font-size: 17px; font-style: italic; font-weight: 400;
+      font-size: 22px; font-style: italic; font-weight: 400;
       color: rgba(255,255,255,0.88);
+      position: absolute;
+      left: 414px;
     }
     .dot-sep { color: rgba(255,255,255,0.35); margin: 0 3px; }
 
@@ -97,8 +99,9 @@
       gap: 36px;
     }
     .col {
-      display: flex; flex-direction: column; gap: 12px;
+      display: flex; flex-direction: column; gap: 14px;
       min-height: 0; overflow: hidden;
+      justify-content: space-evenly;
     }
 
     /* ── Section labels ── */
@@ -186,10 +189,10 @@
     }
 
     /* ── Arch loop ── */
-    .arch-flow { display: flex; flex-direction: column; gap: 4px; }
+    .arch-flow { display: flex; flex-direction: column; gap: 2px; }
     .arch-step {
       background: #EAF4FF; border: 2px solid #90b8d8;
-      padding: 7px 12px; border-radius: 9px;
+      padding: 5px 12px; border-radius: 9px;
     }
     .arch-step.infer { background: var(--mint); border-color: #7dc4a8; }
     .arch-step.act   { background: #FFF3DB; border-color: #e5b95a; }
@@ -260,8 +263,8 @@
       display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 3px;
     }
     .metric-card {
-      padding: 9px 12px; border-radius: 11px;
-      display: flex; flex-direction: column; gap: 2px;
+      padding: 6px 12px; border-radius: 11px;
+      display: flex; flex-direction: column; gap: 1px;
     }
     .metric-icon { font-size: 14px; margin-bottom: 1px; }
     .metric-val {
@@ -272,7 +275,7 @@
 
     /* ── Phase boxes ── */
     .phase-box {
-      background: var(--mint); padding: 7px 12px;
+      background: var(--mint); padding: 5px 12px;
       border-radius: 10px; border-left: 5px solid var(--gray);
       position: relative;
     }
@@ -282,7 +285,7 @@
     .phase-title {
       font-family: 'Barlow Condensed', sans-serif;
       font-size: 18px; font-weight: 700; color: var(--blue);
-      margin-bottom: 5px; text-transform: uppercase;
+      margin-bottom: 3px; text-transform: uppercase;
     }
     .phase-badge {
       position: absolute; top: 9px; right: 11px;
@@ -291,7 +294,7 @@
       font-size: 11px; font-weight: 700; padding: 2px 7px;
       border-radius: 4px; letter-spacing: 0.5px;
     }
-    .bar-row { display: flex; align-items: center; margin-bottom: 4px; font-size: 14px; font-weight: 500; }
+    .bar-row { display: flex; align-items: center; margin-bottom: 2px; font-size: 14px; font-weight: 500; }
     .bar-label { width: 148px; color: var(--gray); font-size: 13px; }
     .bar-track {
       flex: 1; height: 16px; background: rgba(0,0,0,0.06);
@@ -366,13 +369,10 @@
       <div class="header">
         <div class="header-title-row">
           <div class="main-title">MycoFlow: Biologically Inspired, Reflexive QoS for OpenWrt</div>
-          <div class="header-logo-block">
-            <img src="msku-header-block.png" alt="MSKU Software Engineering">
-          </div>
         </div>
         <div class="header-author-row">
           <div class="header-student-name">Barış Can Ataklı</div>
-          <div class="header-advisors">Advisor: Asst. Prof. Dr. Cihat Çetinkaya</div>
+          <div class="header-advisors">Advisor: Dr. Cihat Çetinkaya</div>
         </div>
       </div>
 
@@ -381,6 +381,13 @@
 
         <!-- ──────────── LEFT COLUMN ──────────── -->
         <div class="col">
+
+          <!-- BUFFERBLOAT DIAGRAM -->
+          <div>
+            <div class="sec-label">The Problem</div>
+            <div class="sec-title" style="margin-bottom:6px;">What is Bufferbloat?</div>
+            <img src="12f1662a-c63f-4126-b36d-f7897d9900ac.jpg" style="width:100%;display:block;border-radius:10px;" alt="Bufferbloat: Traditional Router vs MycoFlow"/>
+          </div>
 
           <!-- MOTIVATION -->
           <div>
@@ -495,64 +502,6 @@
             </table>
           </div>
 
-          <!-- DSCP MAP -->
-          <div>
-            <div class="sec-label" style="font-size:16px;">DSCP → CAKE Tin Mapping</div>
-            <div class="dscp-grid">
-              <div class="dscp-item">📞 VOIP      <span>→ EF  → Voice tin</span></div>
-              <div class="dscp-item">🎮 GAMING    <span>→ CS4 → Voice tin</span></div>
-              <div class="dscp-item">📺 VIDEO     <span>→ CS3 → Video tin</span></div>
-              <div class="dscp-item">📱 STREAMING <span>→ CS2 → Video tin</span></div>
-              <div class="dscp-item">📦 BULK      <span>→ CS1 → Bulk tin</span></div>
-              <div class="dscp-item">🌊 TORRENT   <span>→ CS1 → Bulk tin</span></div>
-            </div>
-          </div>
-
-          <!-- SYSTEM SPECS -->
-          <div>
-            <div class="sec-label" style="font-size:16px;">System Specifications</div>
-            <div class="specs-grid">
-              <div class="hw-card">
-                <div class="hw-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/>
-                    <line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>
-                    <line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
-                  </svg>
-                </div>
-                <div>
-                  <div class="hw-sub">Target Hardware</div>
-                  <div class="hw-name">Xiaomi AX3000T <span style="font-weight:500;font-size:12px;color:var(--gray)">(MT7981B, 256MB)</span></div>
-                </div>
-              </div>
-              <div class="spec-card">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                </svg>
-                <div><div class="spec-label">CPU Usage</div><div class="spec-val">6% median</div></div>
-              </div>
-              <div class="spec-card">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
-                <div><div class="spec-label">RAM (RSS)</div><div class="spec-val">1,152 KB</div></div>
-              </div>
-              <div class="spec-card">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                <div><div class="spec-label">Test Coverage</div><div class="spec-val">13/13 CTest</div></div>
-              </div>
-              <div class="spec-card">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#1F7A5D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2"/>
-                  <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-                </svg>
-                <div><div class="spec-label">Deployment</div><div class="spec-val">OpenWrt IPK</div></div>
-              </div>
-            </div>
-          </div>
 
         </div><!-- /left col -->
 
