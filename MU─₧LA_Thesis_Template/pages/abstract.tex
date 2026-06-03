@@ -1,0 +1,31 @@
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Consumer home networks must simultaneously serve latency-sensitive workloads---gaming, VoIP, and video conferencing---alongside high-throughput bulk transfers on commodity routers that operate under tight CPU, RAM, and flash constraints. CAKE Active Queue Management eliminates bufferbloat but cannot automatically classify encrypted traffic or adapt its bandwidth cap to real-time congestion conditions.
+
+This thesis presents \textbf{MycoFlow}, a bio-inspired embedded QoS daemon for OpenWrt routers. Motivated by the information-processing strategy of fungal mycelial networks, MycoFlow runs a 1~Hz reflexive Sense\textrightarrow{}Infer\textrightarrow{}Act\textrightarrow{}Stabilize control loop entirely on-device. It classifies traffic at two complementary levels: a six-class per-device behavioral persona engine and a twelve-class per-flow service taxonomy driven by a three-signal weighted voter combining passive DNS snooping, destination-port hints, and behavioral fingerprints.
+
+Classified flows are steered into CAKE diffserv priority tins via a CONNMARK-based DSCP pipeline. A passive BPF TCP RTT observer feeds a per-flow auto-corrector, and a feedback-driven hysteresis controller adapts the WAN bandwidth cap dynamically.
+
+Four controlled experiments demonstrate the effectiveness of the system:
+(i) a \textbf{154$\times$} lower in-tin delay for gaming versus bulk traffic under per-device DSCP marking;
+(ii) a \textbf{38\%} reduction in gaming latency under five simultaneous mixed-persona clients compared to CAKE alone;
+(iii) correct per-flow service separation when a single IP concurrently runs game, VoIP, bulk, and torrent traffic; and
+(iv) an in-vivo DNS ablation on 1,650 stratified-random flows from the Universidad del Cauca dataset, showing passive transit-DNS lifts CAKE tin-matched accuracy from 30\% to \textbf{70.4\%} ($p < 10^{-63}$, McNemar), with zero flows degraded by DNS evidence.
+
+The daemon runs at a constant 1,152~KB RSS (static CONNMARK libraries included) with median 6\% CPU on a single Cortex-A53 core and writes zero bytes to NAND flash, making it suitable for deployment on consumer-grade embedded hardware.
+
+\vspace{1cm}
+\noindent\textbf{Keywords:} bufferbloat, CAKE, DSCP, eBPF, OpenWrt, QoS, traffic classification, bio-inspired networking, home network, adaptive queue management, flow-aware classification, passive TCP RTT
+
+\chapter*{Özet}
+\addcontentsline{toc}{chapter}{Özet}
+
+Tüketici ev ağlarının, CPU, RAM ve flash depolama açısından kısıtlı olan hazır yönlendiriciler üzerinde aynı anda gecikmeye duyarlı iş yüklerine (oyun, VoIP, video konferans) ve yüksek bant genişlikli toplu aktarımlara hizmet etmesi gerekmektedir. CAKE Aktif Kuyruk Yönetimi (AQM) tampon şişkinliğini ortadan kaldırmakta, ancak şifrelenmiş trafiği otomatik olarak sınıflandıramamakta ya da bant genişliği sınırını gerçek zamanlı tıkanıklığa göre ayarlayamamaktadır.
+
+Bu tez, OpenWrt yönlendiricileri için biyolojiden ilham alan gömülü bir QoS daemon'ı olan \textbf{MycoFlow}'u sunmaktadır. Fungal misel ağlarının bilgi işleme stratejisinden esinlenen MycoFlow, cihaz üzerinde tamamen çalışan 1~Hz'lik bir Algıla\textrightarrow{}Çıkarım Yap\textrightarrow{}Harekete Geç\textrightarrow{}Sabitle döngüsü yürütmektedir. Trafiği iki tamamlayıcı düzeyde sınıflandırmaktadır: pasif DNS dinleme, hedef port ipuçları ve davranışsal parmak izlerini birleştiren üç sinyalli ağırlıklı bir seçici ile yönlendirilen altı sınıflı cihaz başına davranışsal kişilik motoru ve on iki sınıflı akış başına hizmet sınıflandırması.
+
+Dört kontrollü deney sistemin etkinliğini kanıtlamaktadır: cihaz başına DSCP işaretlemesi altında oyun ile toplu trafik için \textbf{154 kat} daha düşük kuyruk gecikmesi; beş eş zamanlı karma istemci altında yalnızca CAKE'e kıyasla oyun gecikmesinde \textbf{\%38} azalma; tek bir IP'nin aynı anda oyun, VoIP, toplu ve torrent trafiği çalıştırması durumunda doğru akış başına hizmet ayrıştırması; ve pasif transit DNS dinlemenin CAKE kutu eşleştirme doğruluğunu \%30'dan \textbf{\%70,4}'e yükselten in-vivo DNS ablasyonu.
+
+\vspace{1cm}
+\noindent\textbf{Anahtar Kelimeler:} tampon şişkinliği, CAKE, DSCP, eBPF, OpenWrt, QoS, trafik sınıflandırma, biyolojiden ilham alan ağlar, ev ağı

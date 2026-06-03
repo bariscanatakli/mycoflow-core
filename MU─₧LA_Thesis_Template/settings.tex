@@ -1,0 +1,82 @@
+\PassOptionsToPackage{table,svgnames,dvipsnames}{xcolor}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[sc]{mathpazo}
+\usepackage[english]{babel}
+\usepackage[autostyle]{csquotes}
+\usepackage[numbers,sort&compress]{natbib}
+
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{lstautogobble}
+\usepackage{tikz}
+\usetikzlibrary{positioning,calc,arrows.meta,shapes.geometric}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{booktabs}
+\usepackage[final]{microtype}
+\usepackage{caption}
+\usepackage[hidelinks]{hyperref}
+\usepackage{ifthen}
+\usepackage{pdftexcmds}
+\usepackage{paralist}
+\usepackage{subfig}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{makecell}
+\usepackage{pdfpages}
+\usepackage{adjustbox}
+\usepackage{amssymb}
+\usepackage{amsmath}
+
+% bibliography loaded in main.tex via \bibliographystyle and \bibliography
+
+\setkomafont{disposition}{\normalfont\bfseries}
+\linespread{1.05}
+% Fix old font commands
+\DeclareOldFontCommand{\rm}{\normalfont\rmfamily}{\mathrm}
+
+\BeforeTOCHead[toc]{{\cleardoublepage\pdfbookmark[0]{\contentsname}{toc}}}
+
+% Colors
+\definecolor{DarkBlue}{HTML}{0065BD}
+\definecolor{DarkGray}{HTML}{333333}
+\definecolor{AccentOrange}{HTML}{E37222}
+
+% Settings for pgfplots
+\pgfplotsset{compat=newest}
+\pgfplotsset{
+  cycle list={DarkBlue\\AccentOrange\\DarkGray\\},
+}
+
+% Settings for code listings
+\lstset{%
+  basicstyle=\ttfamily,
+  columns=fullflexible,
+  autogobble,
+  keywordstyle=\bfseries\color{DarkBlue},
+  stringstyle=\color{DarkGray}
+}
+
+% Search paths for graphics
+\graphicspath{
+    {logos/}
+    {figures/}
+}
+
+% Hyphenation
+\babelhyphenation[english]{
+an-oth-er
+ex-am-ple
+}
+
+% Helper commands
+\newcommand{\todo}[1]{{\bfseries{\scshape{\color{AccentOrange}[(TODO: #1)]}}}}
+\newcommand{\tabitem}{~~\llap{\textbullet}~~}
+
+% Column types for tables
+\newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{M}[1]{>{\centering\arraybackslash}m{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}m{#1}}

@@ -1,0 +1,86 @@
+% !TeX root = ../main.tex
+
+\chapter{Background}\label{chapter:background}
+
+This chapter provides the technical foundations necessary to understand MycoFlow's design. It covers the bufferbloat problem, AQM algorithms, CAKE's architecture, and the DiffServ framework for packet prioritization.
+
+\section{Bufferbloat and Active Queue Management}
+
+\subsection{The Bufferbloat Problem}
+
+When a WAN uplink is saturated, the router's transmit queue accumulates packets faster than they can be sent. Without queue management, packets wait in FIFO order; round-trip time grows linearly with queue depth. On a 20~Mbit/s uplink with a 1000-packet queue and 1500-byte packets, the maximum queue drain time exceeds 600~ms---far beyond the 20~ms threshold for interactive applications.
+
+This phenomenon, termed \emph{bufferbloat} by Gettys and Nichols~\cite{gettys2012}, was identified as the dominant cause of degraded user experience on home networks. A single saturating TCP flow triggers TCP's congestion window growth, fills the router's transmit buffer, and causes all latency-sensitive traffic (gaming, VoIP) to wait behind bulk transfer packets.
+
+The economic incentive to add large buffers at modest cost has historically outweighed the networking community's concern about the consequences for latency. Router manufacturers ship devices with buffers large enough to prevent buffer exhaustion at peak throughput, inadvertently maximizing queuing latency as a side effect.
+
+\subsection{CoDel and fq\_CoDel}
+
+CoDel~\cite{nichols2012} (Controlled Delay) controls standing queue depth by measuring the minimum queuing delay experienced by packets over a sliding window. It signals congestion via ECN marks or packet drops when the minimum delay exceeds a target (typically 5~ms) for longer than an interval (100~ms). CoDel's key insight is to measure queuing delay directly rather than queue length, making it robust to variations in packet size and link speed.
+
+fq\_CoDel~\cite{hoeiland2018} adds per-flow fair queuing so that a single bulk flow cannot monopolize the queue at the expense of interactive flows. By hash-routing packets into sparse flow buckets, each with independent CoDel management, fq\_CoDel ensures that a BitTorrent swarm with 200 TCP connections does not inflict its queuing delay on a single VoIP packet.
+
+\subsection{CAKE: Common Applications Kept Enhanced}
+
+CAKE~\cite{cake2018} subsumes both CoDel and fq\_CoDel and adds three layers of priority management:
+\begin{itemize}
+  \item \textbf{Per-tin bandwidth allocation:} Traffic is separated into priority tiers (tins), each with guaranteed minimum bandwidth and an independent AQM target.
+  \item \textbf{Per-flow isolation within each tin:} Within each tin, flows are hash-routed to minimize head-of-line blocking.
+  \item \textbf{Per-host round-robin within each flow set:} Ensures fairness between hosts sharing the same tin.
+\end{itemize}
+
+CAKE is the default AQM on OpenWrt since version~22.03 and is configured via the \texttt{tc} command. Its \texttt{diffserv4} mode partitions traffic into four tins based on the IP Precedence field (upper three bits of DSCP): Voice (Precedence~4--7), Video (Precedence~2--3), Best~Effort (Precedence~0), and Bulk (Precedence~1).
+
+\section{CAKE diffserv4 Mode}
+
+CAKE's \texttt{diffserv4} mode partitions traffic into four tins based on the IP Precedence field (upper three bits of DSCP):
+
+\begin{itemize}
+  \item \textbf{Voice tin} (Precedence 4--7): Served first; designed for VoIP and gaming traffic.
+  \item \textbf{Video tin} (Precedence 2--3): High-priority video streaming traffic.
+  \item \textbf{Best Effort tin} (Precedence 0): Default for all unmarked traffic.
+  \item \textbf{Bulk tin} (Precedence 1): Background transfers that should not affect interactive applications.
+\end{itemize}
+
+Each tin has an independent minimum guaranteed rate and an AQM target delay. Under CAKE diffserv4, a packet with DSCP CS4 (Precedence~4) enters the Voice tin and is served before any Best~Effort or Bulk packet.
+
+The DSCP-to-tin mapping used by MycoFlow is:
+\begin{itemize}
+  \item EF $\rightarrow$ Voice (VoIP)
+  \item CS4 $\rightarrow$ Voice (gaming)
+  \item CS3 $\rightarrow$ Video (video call)
+  \item CS2 $\rightarrow$ Video (streaming)
+  \item CS1 $\rightarrow$ Bulk (torrent, bulk transfer)
+\end{itemize}
+
+MycoFlow exploits this mechanism by correctly marking per-device and per-flow traffic, shifting it from the default Best~Effort tin into the appropriate priority tier without any modification to CAKE itself.
+
+\section{DiffServ and DSCP on Home Networks}
+
+The Differentiated Services architecture~\cite{rfc2474} defines per-hop behaviors based on the DSCP field of the IP header. DSCP occupies the upper six bits of the former IPv4 Type of Service (ToS) byte and the IPv6 Traffic Class field.
+
+Edge routers at ISP boundaries are expected to re-mark traffic entering their network, but most ISP CPE (Customer Premises Equipment) devices either ignore DSCP or clear it entirely. Home devices typically generate unmarked traffic (CS0, Best~Effort), and no automatic mechanism exists to reclassify it at the home gateway.
+
+This creates the fundamental gap that MycoFlow addresses: the CAKE qdisc is present and fully functional on OpenWrt routers, but without correctly classified DSCP markings, all traffic lands in the Best~Effort tin regardless of its latency requirements.
+
+\section{Netfilter and Connection Tracking}
+
+Linux's Netfilter subsystem provides packet filtering, NAT, and connection tracking capabilities used by OpenWrt. The \texttt{iptables} and \texttt{nftables} frontends configure Netfilter rules; the \texttt{nf\_conntrack} kernel module tracks connection state.
+
+\subsection{Connection Tracking}
+
+The conntrack table (\texttt{/proc/net/nf\_conntrack}) maintains state for each active network connection as a 5-tuple (source IP, destination IP, source port, destination port, protocol). For each entry, it records byte and packet counts in both directions, enabling per-flow statistics without kernel modifications.
+
+\subsection{CONNMARK}
+
+CONNMARK is a Netfilter mechanism that stores a 32-bit mark on a conntrack entry. Unlike per-packet marks (MARK), which are ephemeral, a CONNMARK persists for the lifetime of the connection. An iptables rule can save a packet's mark to the conntrack entry (\texttt{CONNMARK --save-mark}) or restore the conntrack mark to the packet (\texttt{CONNMARK --restore-mark}).
+
+This mechanism is central to MycoFlow's per-flow DSCP pipeline: once a flow is classified, a CONNMARK stores the service class, and a POSTROUTING rule restores it to DSCP on every subsequent packet without re-running the classifier.
+
+\section{eBPF for Kernel-Side Telemetry}
+
+Extended Berkeley Packet Filter (eBPF) allows user-defined programs to run in the Linux kernel in a verified, sandboxed environment. For networking, eBPF programs can be attached to TC (Traffic Control) hooks, XDP (eXpress Data Path), and socket-level filters.
+
+MycoFlow uses a TC~clsact hook to sample passive TCP RTT from TCP timestamp options (TSval/TSecr pairs). The BPF program maintains a per-flow smoothed RTT in a BPF hash map that the userspace daemon polls each cycle, enabling RTT-driven flow demotion without active probing overhead.
+
+The eBPF integration is optional: when \texttt{libbpf} is unavailable or loading fails, the daemon falls back gracefully to netlink-only statistics.

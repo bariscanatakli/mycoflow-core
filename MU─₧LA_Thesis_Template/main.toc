@@ -1,0 +1,121 @@
+\babel@toc {english}{}\relax 
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{Abstract}{ii}{chapter*.1}%
+\contentsline {chapter}{Özet}{iii}{chapter*.2}%
+\contentsline {chapter}{\numberline {1}Introduction}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Research Background}{1}{section.1.1}%
+\contentsline {subsection}{\numberline {1.1.1}Problem Definition}{2}{subsection.1.1.1}%
+\contentsline {section}{\numberline {1.2}Objectives and Contributions}{2}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Thesis Structure}{2}{section.1.3}%
+\contentsline {chapter}{\numberline {2}Background}{4}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Bufferbloat and Active Queue Management}{4}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}The Bufferbloat Problem}{4}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}CoDel and fq\_CoDel}{4}{subsection.2.1.2}%
+\contentsline {subsection}{\numberline {2.1.3}CAKE: Common Applications Kept Enhanced}{5}{subsection.2.1.3}%
+\contentsline {section}{\numberline {2.2}CAKE diffserv4 Mode}{5}{section.2.2}%
+\contentsline {section}{\numberline {2.3}DiffServ and DSCP on Home Networks}{6}{section.2.3}%
+\contentsline {section}{\numberline {2.4}Netfilter and Connection Tracking}{6}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}Connection Tracking}{6}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}CONNMARK}{6}{subsection.2.4.2}%
+\contentsline {section}{\numberline {2.5}eBPF for Kernel-Side Telemetry}{6}{section.2.5}%
+\contentsline {chapter}{\numberline {3}Related Work}{8}{chapter.3}%
+\contentsline {section}{\numberline {3.1}AQM Evolution}{8}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Traffic Classification}{8}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Deep Learning Approaches}{8}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Deep Packet Inspection}{8}{subsection.3.2.2}%
+\contentsline {section}{\numberline {3.3}Adaptive QoS and SQM}{9}{section.3.3}%
+\contentsline {section}{\numberline {3.4}eBPF for Edge Telemetry}{9}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Bio-Inspired Networking}{9}{section.3.5}%
+\contentsline {subsection}{\numberline {3.5.1}Ant Colony Optimization}{9}{subsection.3.5.1}%
+\contentsline {subsection}{\numberline {3.5.2}Mycelial Network Research}{10}{subsection.3.5.2}%
+\contentsline {section}{\numberline {3.6}Positioning}{10}{section.3.6}%
+\contentsline {chapter}{\numberline {4}Design Rationale}{11}{chapter.4}%
+\contentsline {section}{\numberline {4.1}The Mycelial Network Analogy}{11}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Mycelial Principles Mapped to MycoFlow}{11}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Hyphal Tip Sensing}{11}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}Adaptive Nutrient Redistribution}{12}{subsection.4.2.2}%
+\contentsline {subsection}{\numberline {4.2.3}Hysteresis and Structural Memory}{13}{subsection.4.2.3}%
+\contentsline {subsection}{\numberline {4.2.4}Load-Triggered Remodeling}{13}{subsection.4.2.4}%
+\contentsline {section}{\numberline {4.3}Design Principles}{13}{section.4.3}%
+\contentsline {chapter}{\numberline {5}System Architecture}{15}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Overview}{15}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Module Structure}{16}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Data Flow}{16}{section.5.3}%
+\contentsline {section}{\numberline {5.4}LuCI Web Dashboard}{17}{section.5.4}%
+\contentsline {section}{\numberline {5.5}Build System and Deployment}{18}{section.5.5}%
+\contentsline {chapter}{\numberline {6}The Control Loop}{19}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Metric Sensing and Smoothing}{19}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}RTT and Jitter}{19}{subsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.1.2}Queue Statistics}{19}{subsection.6.1.2}%
+\contentsline {subsection}{\numberline {6.1.3}Flow Statistics}{19}{subsection.6.1.3}%
+\contentsline {section}{\numberline {6.2}Six-Class Per-Device Persona Engine}{20}{section.6.2}%
+\contentsline {subsection}{\numberline {6.2.1}Decision Tree}{20}{subsection.6.2.1}%
+\contentsline {subsection}{\numberline {6.2.2}Majority-Vote Stability}{20}{subsection.6.2.2}%
+\contentsline {subsection}{\numberline {6.2.3}Persona-to-DSCP Mapping}{20}{subsection.6.2.3}%
+\contentsline {section}{\numberline {6.3}Flow-Aware Service Classification (v3)}{21}{section.6.3}%
+\contentsline {subsection}{\numberline {6.3.1}Service Taxonomy}{21}{subsection.6.3.1}%
+\contentsline {subsection}{\numberline {6.3.2}Three-Signal Weighted Voter}{22}{subsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.3.3}Stability Gate}{22}{subsection.6.3.3}%
+\contentsline {section}{\numberline {6.4}Congestion Detection and Bandwidth Policy}{22}{section.6.4}%
+\contentsline {subsection}{\numberline {6.4.1}Adaptive Thresholds}{22}{subsection.6.4.1}%
+\contentsline {subsection}{\numberline {6.4.2}Bandwidth Policy}{23}{subsection.6.4.2}%
+\contentsline {section}{\numberline {6.5}Action Feedback Ring}{23}{section.6.5}%
+\contentsline {section}{\numberline {6.6}Sliding Baseline}{23}{section.6.6}%
+\contentsline {chapter}{\numberline {7}Implementation}{24}{chapter.7}%
+\contentsline {section}{\numberline {7.1}CAKE Integration}{24}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Per-Device DSCP Mangle Chain}{24}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Per-Flow CONNMARK Pipeline}{25}{section.7.3}%
+\contentsline {subsection}{\numberline {7.3.1}Critical Kernel Module Dependency}{25}{subsection.7.3.1}%
+\contentsline {section}{\numberline {7.4}Ingress Shaping via IFB}{25}{section.7.4}%
+\contentsline {section}{\numberline {7.5}eBPF Telemetry}{26}{section.7.5}%
+\contentsline {section}{\numberline {7.6}Configuration Hierarchy}{26}{section.7.6}%
+\contentsline {section}{\numberline {7.7}Flash Safety}{26}{section.7.7}%
+\contentsline {section}{\numberline {7.8}Test Coverage}{27}{section.7.8}%
+\contentsline {chapter}{\numberline {8}Evaluation}{28}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Experimental Setup}{28}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Phase 1: Two-Persona Validation}{28}{section.8.2}%
+\contentsline {subsection}{\numberline {8.2.1}Setup}{28}{subsection.8.2.1}%
+\contentsline {subsection}{\numberline {8.2.2}Gaming Latency Results}{28}{subsection.8.2.2}%
+\contentsline {subsection}{\numberline {8.2.3}CAKE Tin Statistics}{29}{subsection.8.2.3}%
+\contentsline {section}{\numberline {8.3}Phase 2: Six-Persona Mixed Workload}{29}{section.8.3}%
+\contentsline {subsection}{\numberline {8.3.1}Setup}{29}{subsection.8.3.1}%
+\contentsline {subsection}{\numberline {8.3.2}Latency Results}{30}{subsection.8.3.2}%
+\contentsline {subsection}{\numberline {8.3.3}CAKE Tin Distribution}{30}{subsection.8.3.3}%
+\contentsline {section}{\numberline {8.4}Phase 3: Single-IP Multi-App Flow Separation}{31}{section.8.4}%
+\contentsline {subsection}{\numberline {8.4.1}Motivation}{31}{subsection.8.4.1}%
+\contentsline {subsection}{\numberline {8.4.2}Setup}{31}{subsection.8.4.2}%
+\contentsline {subsection}{\numberline {8.4.3}Results}{31}{subsection.8.4.3}%
+\contentsline {section}{\numberline {8.5}Phase 4: DNS Signal Ablation and In-Vivo Classifier Accuracy}{31}{section.8.5}%
+\contentsline {subsection}{\numberline {8.5.1}Motivation}{31}{subsection.8.5.1}%
+\contentsline {subsection}{\numberline {8.5.2}Offline Temporal Validation}{31}{subsection.8.5.2}%
+\contentsline {subsection}{\numberline {8.5.3}In-Vivo Validation}{32}{subsection.8.5.3}%
+\contentsline {subsection}{\numberline {8.5.4}AF\_PACKET Requirement}{33}{subsection.8.5.4}%
+\contentsline {section}{\numberline {8.6}Resource Overhead}{33}{section.8.6}%
+\contentsline {chapter}{\numberline {9}Discussion}{34}{chapter.9}%
+\contentsline {section}{\numberline {9.1}Why 38\% and Not More?}{34}{section.9.1}%
+\contentsline {section}{\numberline {9.2}Classification Accuracy Discussion}{34}{section.9.2}%
+\contentsline {subsection}{\numberline {9.2.1}Per-Device Heuristic Design}{34}{subsection.9.2.1}%
+\contentsline {subsection}{\numberline {9.2.2}In-Vivo Classification Ceiling}{35}{subsection.9.2.2}%
+\contentsline {section}{\numberline {9.3}Comparison with Two-Persona Results}{35}{section.9.3}%
+\contentsline {section}{\numberline {9.4}Adaptive Baseline vs.\ Static Threshold}{35}{section.9.4}%
+\contentsline {section}{\numberline {9.5}Parameter Sensitivity}{36}{section.9.5}%
+\contentsline {section}{\numberline {9.6}Privacy and Security}{36}{section.9.6}%
+\contentsline {section}{\numberline {9.7}Threats to Validity}{36}{section.9.7}%
+\contentsline {section}{\numberline {9.8}Limitations}{37}{section.9.8}%
+\contentsline {chapter}{\numberline {10}Conclusion}{38}{chapter.10}%
+\contentsline {section}{\numberline {10.1}Summary of Contributions}{38}{section.10.1}%
+\contentsline {section}{\numberline {10.2}Experimental Findings}{38}{section.10.2}%
+\contentsline {section}{\numberline {10.3}Bio-Inspired Design Validation}{39}{section.10.3}%
+\contentsline {section}{\numberline {10.4}Future Directions}{39}{section.10.4}%
+\contentsline {section}{\numberline {10.5}Acknowledgements}{40}{section.10.5}%
+\contentsline {chapter}{\numberline {A}Additional Materials}{41}{appendix.A}%
+\contentsline {section}{\numberline {A.1}Configuration Parameters Reference}{41}{section.A.1}%
+\contentsline {section}{\numberline {A.2}Unicauca Dataset Service Class Mapping}{42}{section.A.2}%
+\contentsline {section}{\numberline {A.3}CAKE Tin Target Delay Summary}{42}{section.A.3}%
+\contentsline {section}{\numberline {A.4}Build and Installation Instructions}{42}{section.A.4}%
+\contentsline {subsection}{\numberline {A.4.1}Building from Source}{42}{subsection.A.4.1}%
+\contentsline {subsection}{\numberline {A.4.2}OpenWrt Installation}{43}{subsection.A.4.2}%
+\contentsline {chapter}{\nonumberline List of Figures}{44}{chapter*.25}%
+\contentsline {chapter}{\nonumberline List of Tables}{45}{chapter*.26}%
+\contentsline {chapter}{\nonumberline Bibliography}{46}{chapter*.27}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

@@ -1,0 +1,202 @@
+% !TeX root = ../main.tex
+
+\chapter{The Control Loop}\label{chapter:control}
+
+This chapter formalizes the mathematical foundations of MycoFlow's reflexive control loop, covering metric sensing and smoothing, the six-class persona classification engine, the twelve-class flow-level service taxonomy, and the congestion detection and bandwidth adaptation policy.
+
+\section{Metric Sensing and Smoothing}
+
+\subsection{RTT and Jitter}
+
+Every cycle, \texttt{myco\_sense} issues three ICMP echo requests to a configurable probe host (default \texttt{1.1.1.1}), measuring mean RTT and standard deviation (jitter) from the replies. Packet loss is computed as:
+\begin{equation}
+  \ell_t = \frac{N_{\rm sent} - N_{\rm received}}{N_{\rm sent}}
+  \label{eq:loss}
+\end{equation}
+
+Raw measurements are smoothed by an Exponentially Weighted Moving Average (EWMA) with parameter $\alpha$:
+\begin{equation}
+  \hat{r}_t = \alpha\, r_t + (1-\alpha)\,\hat{r}_{t-1}, \quad
+  \hat{j}_t = \alpha\, j_t + (1-\alpha)\,\hat{j}_{t-1}.
+  \label{eq:ewma}
+\end{equation}
+
+The default $\alpha = 0.30$ provides a time constant of approximately 3~cycles (3~s at 1~Hz), balancing responsiveness and noise rejection.
+
+\subsection{Queue Statistics}
+
+A raw NETLINK\_ROUTE socket (RTM\_GETQDISC) retrieves the CAKE qdisc's \texttt{backlog} (bytes currently queued), \texttt{drops}, and \texttt{overlimits} each cycle. A non-zero backlog is a direct kernel-side bufferbloat indicator, faster and more reliable than the RTT probe alone because it detects congestion before it propagates to the probe host RTT.
+
+\subsection{Flow Statistics}
+
+\texttt{myco\_flow} parses \texttt{/proc/net/nf\_conntrack} into a userspace LRU hash table (256~entries, FNV-1a hash). For each entry, both forward (src$\to$dst) and reverse (dst$\to$src) byte counts are extracted; the reverse direction carries download volume, which is essential for distinguishing STREAMING (high download, low upload) from BULK (high download, high upload). Stale entries (no activity for 60~s) are evicted each cycle.
+
+An \emph{elephant flow} is defined as a single flow carrying more than 60\% of a device's total bytes in the measurement window.
+
+\section{Six-Class Per-Device Persona Engine}
+
+\texttt{myco\_device} maintains a per-device record keyed by source IP. Each cycle, flows from the conntrack table are aggregated per source IP, and the device's behavioral profile is updated: total active flows, total bytes, reverse bytes, average packet size, and elephant flow flag.
+
+\subsection{Decision Tree}
+
+The six personas are inferred via the priority-ordered decision tree shown in Table~\ref{tab:persona}. The conditions are evaluated in order; the first matching rule wins.
+
+\begin{table}[h]
+\caption{Persona Inference Decision Table (first matching rule wins)}
+\label{tab:persona}
+\centering
+\small
+\begin{tabular}{p{5cm}p{3cm}}
+\toprule
+\textbf{Condition (priority order)} & \textbf{Persona} \\
+\midrule
+$F > 30$ & \textsc{Torrent} \\
+$E$ and $B_{rx}/B < 0.25$ & \textsc{Streaming} \\
+$E$ & \textsc{Bulk} \\
+$\bar{s} < 120$~B and $\dot{B} < 200$~kbps & \textsc{Voip} \\
+$\bar{s} < 350$~B and $F < 8$ & \textsc{Gaming} \\
+$200\,\text{kbps} \le \dot{B} \le 8\,\text{Mbps}$ & \textsc{Video} \\
+otherwise & \textsc{Unknown} \\
+\bottomrule
+\multicolumn{2}{l}{\footnotesize $F$: active flows; $E$: elephant flag; $B_{rx}$: reverse bytes; $B$: total bytes;} \\
+\multicolumn{2}{l}{\footnotesize $\bar{s}$: avg packet size; $\dot{B}$: device throughput (bytes/s).} \\
+\end{tabular}
+\end{table}
+
+\subsection{Majority-Vote Stability}
+
+A three-of-five majority vote over a sliding history window prevents rapid class oscillation. Let $h_{t-4}, \ldots, h_t$ be the raw persona inferences from the five most recent cycles. The current persona is updated only when a single class $c^*$ satisfies:
+\begin{equation}
+  \sum_{i=t-4}^{t} \mathbf{1}[h_i = c^*] \geq k, \quad k = 3
+  \label{eq:majority}
+\end{equation}
+
+If no class satisfies this condition, the previous persona is retained.
+
+\subsection{Persona-to-DSCP Mapping}
+
+Each persona maps to a DSCP value enforced by an iptables mangle rule in the \texttt{mycoflow\_dscp} chain:
+
+\begin{table}[h]
+\caption{Persona-to-DSCP-to-CAKE-Tin Mapping}
+\label{tab:dscpmap}
+\centering
+\small
+\begin{tabular}{llcl}
+\toprule
+\textbf{Persona} & \textbf{DSCP} & \textbf{Prec.} & \textbf{CAKE Tin} \\
+\midrule
+VOIP      & EF   & 6 & Voice       \\
+GAMING    & CS4  & 4 & Voice       \\
+VIDEO     & CS3  & 3 & Video       \\
+STREAMING & CS2  & 2 & Video       \\
+BULK      & CS1  & 1 & Bulk        \\
+TORRENT   & CS1  & 1 & Bulk        \\
+UNKNOWN   & CS0  & 0 & Best Effort \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+When a device's persona changes, the old mangle rule is removed and a new rule is inserted atomically, ensuring no packets are classified under an intermediate state.
+
+\section{Flow-Aware Service Classification (v3)}
+
+The per-device persona layer delivers correct behavior when each LAN host runs a single dominant application, but collapses when one source~IP simultaneously carries a video call, a bulk download, and a torrent swarm. MycoFlow~v3 adds a second classification axis operating on individual conntrack 5-tuples.
+
+\subsection{Service Taxonomy}
+
+Twelve service classes cover the traffic types commonly seen on home links (Table~\ref{tab:services}). Each class carries a target RTT, a default DSCP mark, and a demotion successor for the RTT auto-corrector.
+
+\begin{table}[h]
+\caption{Flow-Level Service Taxonomy}
+\label{tab:services}
+\centering
+\small
+{\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llrl}
+\toprule
+\textbf{Service Class} & \textbf{DSCP} & \textbf{Target RTT} & \textbf{Demotes to} \\
+\midrule
+\texttt{game\_rt}          & EF   & 20~ms  & \texttt{web\_interactive} \\
+\texttt{voip\_call}        & EF   & 30~ms  & \texttt{web\_interactive} \\
+\texttt{video\_conf}       & CS4  & 50~ms  & \texttt{web\_interactive} \\
+\texttt{video\_live}       & CS3  & 100~ms & \texttt{bulk\_dl} \\
+\texttt{video\_vod}        & CS2  & 150~ms & \texttt{bulk\_dl} \\
+\texttt{web\_interactive}  & CS2  & 80~ms  & \texttt{bulk\_dl} \\
+\texttt{game\_launcher}    & CS1  & 200~ms & \texttt{bulk\_dl} \\
+\texttt{file\_sync}        & CS1  & 200~ms & \texttt{bulk\_dl} \\
+\texttt{bulk\_dl}          & CS1  & 250~ms & \texttt{torrent} \\
+\texttt{torrent}           & CS1  & 400~ms & \texttt{torrent} \\
+\texttt{system}            & CS0  & ---    & \texttt{unknown} \\
+\texttt{unknown}           & CS0  & ---    & \texttt{unknown} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\subsection{Three-Signal Weighted Voter}
+
+For every active conntrack entry, \texttt{myco\_classifier} produces a score for each candidate service class by summing three independently normalized signals:
+\begin{equation}
+  S_c(f) = w_{\rm dns}\,D_c(f) + w_{\rm port}\,P_c(f) + w_{\rm behav}\,B_c(f),
+  \label{eq:voter}
+\end{equation}
+with weights $(w_{\rm dns}, w_{\rm port}, w_{\rm behav}) = (0.6, 0.3, 0.1)$ and an acceptance threshold $\theta = 0.3$.
+
+The three signal components are:
+
+\begin{itemize}
+  \item \textbf{$D_c(f)$ --- DNS signal:} A passive DNS snooping cache records, for each resolved name, the set of service classes its suffix pattern matches (e.g., \texttt{discord.gg} $\to$ \textsc{voip\_call}). $D_c(f) = 1$ if the flow's destination IP matches a cached hostname associated with class $c$, otherwise 0.
+  \item \textbf{$P_c(f)$ --- Port hint signal:} A destination-port hint table maps well-known ports to service classes (e.g., UDP/3478 STUN $\to$ \textsc{voip\_call}, UDP/27015 Source-engine $\to$ \textsc{game\_rt}). $P_c(f) \in [0, 1]$ based on port match quality.
+  \item \textbf{$B_c(f)$ --- Behavioral fingerprint:} \texttt{myco\_profile} computes mean packet size, packets-per-second, inter-arrival jitter, and burstiness. $B_c(f) \in [0, 1]$ based on how well the flow's behavioral fingerprint matches the expected profile for class $c$.
+\end{itemize}
+
+The class with the highest score above $\theta$ wins; otherwise the flow remains \textsc{unknown} and is re-evaluated next cycle.
+
+\subsection{Stability Gate}
+
+A classification decision is committed only after it has been observed in two consecutive ticks ($\approx 1$~s at 1~Hz). This suppresses oscillation from short-lived flows (DNS queries, TCP handshakes) that never accumulate sufficient signal.
+
+\section{Congestion Detection and Bandwidth Policy}
+
+\subsection{Adaptive Thresholds}
+
+Let $\mathcal{L}=\{\text{VOIP, GAMING, VIDEO}\}$ (latency-sensitive) and $\mathcal{B}=\{\text{BULK, STREAMING, TORRENT}\}$ (bulk-tolerant). Congestion is declared when any of the following conditions hold:
+\begin{align}
+  \hat{r}_t &> r_{\rm base}\cdot(1+\gamma) \label{eq:rtt_cong}\\
+  \hat{j}_t &> j_{\rm base}\cdot(1+\gamma) \label{eq:jit_cong}\\
+  \text{backlog}_t &> 0 \label{eq:bl_cong}\\
+  \ell_t &> 0.02 \label{eq:loss_cong}
+\end{align}
+where $r_{\rm base}$, $j_{\rm base}$ are the sliding baselines, $\gamma=0.30$ is the margin factor (tunable), and $\ell_t$ is the probe packet loss fraction. The thresholds are clamped to prevent false triggers on near-zero baselines: $\theta_r \in [8, 60]$~ms, $\theta_j \in [4, 30]$~ms.
+
+\subsection{Bandwidth Policy}
+
+When congestion is detected or cleared, the WAN bandwidth cap is adjusted:
+\begin{equation}
+  u_{t+1} =
+  \begin{cases}
+    u_t - \lfloor\Delta/2\rfloor & \text{cong.},\; p \in \mathcal{L} \\
+    u_t - \Delta                 & \text{cong.},\; p \in \mathcal{B} \\
+    u_t + \Delta                 & \text{clear},\; p \in \{\text{VOIP, GAMING}\} \\
+    u_t                          & \text{otherwise,}
+  \end{cases}
+  \label{eq:policy}
+\end{equation}
+where $\Delta \equiv \Delta_{\rm step}$ (default 2,000~kbit/s) and $u_t \in [u_{\rm min}, u_{\rm max}]$. Latency-sensitive personas receive a gentler reduction to preserve forward progress; bulk-tolerant personas are throttled more aggressively. Actions are gated by a minimum interval (cooldown $\tau = 3$~s) and a maximum action rate $\rho$ (default 0.5~Hz).
+
+\section{Action Feedback Ring}
+
+A circular buffer of $N=8$ slots records the effect of each actuation. Each slot stores: timestamp $t_k$, bandwidth before $u_k^-$, bandwidth after $u_k^+$, and RTT before $r_k^-$. Three cycles after the actuation, the RTT after $r_k^+$ is filled in from the current measurement.
+
+The ring is evaluated whenever a new record is filled: if $\geq 4$ filled records exist and more than half satisfy $r_k^+ \geq r_k^- - 2.0$~ms (no RTT improvement), the step size is halved (minimum 500~kbit/s) and the \texttt{step\_adapted} flag is set. This prevents the controller from repeatedly issuing adjustments that fail to improve latency.
+
+\section{Sliding Baseline}
+\label{sec:baseline}
+
+The idle baseline $(r_{\rm base}, j_{\rm base})$ is established at startup using a blocking $N_b$-sample average (default $N_b=5$). During normal operation, the baseline drifts toward current conditions every $T_b$ cycles (default $T_b=60$) using a slow EWMA:
+\begin{equation}
+  r_{\rm base}^{(t+T_b)} = (1-\beta)\,r_{\rm base}^{(t)} + \beta\,\hat{r}_t,
+  \quad \beta = 0.01.
+  \label{eq:baseline}
+\end{equation}
+The same update applies to $j_{\rm base}$. The drift rate of 1\% per minute prevents the baseline from permanently anchoring to favorable conditions observed at boot, while being slow enough to ignore short-lived traffic bursts.

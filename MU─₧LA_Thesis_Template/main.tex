@@ -1,0 +1,58 @@
+% Muğla Sıtkı Koçman Üniversitesi - Lisans Tezi Template
+% Based on TUM Thesis Template (https://github.com/fwalch/tum-thesis-latex)
+% Modified for: Muğla Sıtkı Koçman University
+
+\RequirePackage[l2tabu,orthodox]{nag}
+
+\documentclass[headsepline,footsepline,footinclude=false,oneside,fontsize=11pt,paper=a4,listof=totoc,bibliography=totoc,DIV=12]{scrbook}
+
+\input{settings}
+
+% Thesis information
+\newcommand*{\getUniversity}{Muğla Sıtkı Koçman University}
+\newcommand*{\getFaculty}{Faculty of Engineering / Department of Software Engineering}
+\newcommand*{\getTitle}{MycoFlow: A Bio-Inspired, Reflexive QoS System for Embedded OpenWrt Routers}
+\newcommand*{\getAuthor}{Barış Can Ataklı}
+\newcommand*{\getDoctype}{Bachelor's Thesis}
+\newcommand*{\getSupervisor}{Dr. Öğr. Üyesi Cihat Çetinkaya}
+\newcommand*{\getAdvisor}{Dr. Öğr. Üyesi Cihat Çetinkaya}
+\newcommand*{\getSubmissionDate}{June 2026}
+\newcommand*{\getSubmissionLocation}{Muğla}
+
+\begin{document}
+
+\selectlanguage{english}
+
+\frontmatter{}
+
+\input{pages/title}
+\input{pages/abstract}
+\microtypesetup{protrusion=false}
+\tableofcontents{}
+\microtypesetup{protrusion=true}
+
+\mainmatter{}
+
+\input{chapters/01_introduction}
+\input{chapters/02_background}
+\input{chapters/03_related_work}
+\input{chapters/04_design}
+\input{chapters/05_architecture}
+\input{chapters/06_control_loop}
+\input{chapters/07_implementation}
+\input{chapters/08_evaluation}
+\input{chapters/09_discussion}
+\input{chapters/10_conclusion}
+
+\appendix{}
+
+\input{pages/appendix}
+
+\microtypesetup{protrusion=false}
+\listoffigures{}
+\listoftables{}
+\microtypesetup{protrusion=true}
+\bibliographystyle{unsrtnat}
+\bibliography{bibliography}
+
+\end{document}

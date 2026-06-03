@@ -1,0 +1,89 @@
+% !TeX root = ../main.tex
+
+\chapter{Design Rationale}\label{chapter:design}
+
+This chapter presents the biological motivation for MycoFlow's architecture and maps each mycelial mechanism to a concrete engineering decision. We do not claim that our mechanisms are algorithmically derived from biology; rather, the analogy clarifies why particular engineering choices are well-suited to the embedded QoS domain.
+
+\section{The Mycelial Network Analogy}
+
+MycoFlow's architecture is motivated by an analogy with fungal mycelial networks~\cite{fricker2017mycelium,fukasawa2023foraging}, which face a structurally similar resource allocation problem: a single nutrient source must be distributed among competing consumers with heterogeneous requirements, under dynamic and partially observable conditions.
+
+A fungal mycelium consists of a network of hyphae (thread-like filaments) that grow from a central colony into the surrounding environment. As hyphae explore the soil, they sense chemical gradients from nutrient sources and redirect growth toward productive regions. When a rich nutrient source is found, transport channels widen; when a source is depleted, channels narrow or retract. This adaptive behavior emerges from purely local chemical signaling without any central controller.
+
+The home router faces an analogous problem. The WAN link is a single shared resource. Multiple clients---gaming consoles, laptops, streaming devices, phones---compete for bandwidth with heterogeneous requirements. The optimal allocation changes as application patterns shift throughout the day. No central authority classifies traffic; all classification must be inferred from observable signals at the router.
+
+\section{Mycelial Principles Mapped to MycoFlow}
+
+Table~\ref{tab:bio} maps the four key mycelial mechanisms to their MycoFlow engineering equivalents.
+
+\begin{table}[h]
+\caption{Mycelial Principles Mapped to MycoFlow Mechanisms}
+\label{tab:bio}
+\centering
+\small
+\begin{tabular}{p{2.8cm}p{9cm}}
+\toprule
+\textbf{Biological Mechanism} & \textbf{MycoFlow Engineering Equivalent} \\
+\midrule
+Hyphal tip sensing & ICMP multi-ping probes; Netlink qdisc statistics; conntrack flow statistics; passive DNS snooping; BPF passive TCP RTT observer \\[4pt]
+Adaptive nutrient redistribution & Per-device and per-flow DSCP marking into CAKE priority tins (via iptables mangle chain and CONNMARK restore) \\[4pt]
+Hysteresis \& structural memory & Majority-vote window ($k$-of-$m$ over sliding history); two-tick flow stability gate; action cooldown timers \\[4pt]
+Load-triggered remodeling & Sliding EWMA baseline; step adaptation via action feedback ring; per-flow RTT demote/re-promote ladder \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hyphal Tip Sensing}
+
+In mycelium, hyphal tips are the primary sensory organs: they detect chemical concentration gradients and relay signals back to the transport network. MycoFlow implements its sensing layer through multiple complementary probes:
+
+\begin{itemize}
+  \item \textbf{ICMP multi-ping:} Three echo requests per cycle to a configurable probe host measure mean RTT and standard deviation (jitter). This provides a direct measurement of user-perceived latency.
+  \item \textbf{Netlink qdisc statistics:} Raw NETLINK\_ROUTE socket queries retrieve CAKE's backlog, drops, and overlimits per cycle. Non-zero backlog is a kernel-side bufferbloat indicator, faster and more reliable than RTT alone.
+  \item \textbf{conntrack flow statistics:} \texttt{/proc/net/nf\_conntrack} provides per-flow byte counts in both directions, enabling device-level behavioral profiling without packet capture.
+  \item \textbf{Passive DNS snooping:} An AF\_PACKET socket on the LAN-facing interface captures DNS responses, building a hostname-to-IP cache that enriches flow classification.
+  \item \textbf{BPF passive TCP RTT:} A TC~clsact eBPF program samples TCP timestamp options, maintaining per-flow smoothed RTT in a BPF map.
+\end{itemize}
+
+The diversity of sensing channels provides redundancy analogous to mycelial sensing: if one signal is unavailable (e.g., eBPF not supported on a kernel build), the system continues operating with reduced fidelity rather than failing.
+
+\subsection{Adaptive Nutrient Redistribution}
+
+Mycelial transport channels redistribute nutrients toward productive consumers and away from depleted regions. MycoFlow's equivalent is DSCP-based traffic steering: once a device or flow is classified, DSCP marks redirect it into the appropriate CAKE tin, ensuring that gaming and VoIP packets receive Voice tin priority while bulk transfers are confined to the Bulk tin.
+
+The key engineering insight is that DSCP marks are persistent once applied---a packet's DSCP travels with it to the network edge. For per-flow CONNMARK marks, the persistence is at the conntrack level: once marked, all future packets of a flow are DSCP-restored by the iptables POSTROUTING rule without re-running the classifier.
+
+\subsection{Hysteresis and Structural Memory}
+
+Mycelial networks do not oscillate between resource allocation states because transport channels have inertia: they require a sustained signal above a threshold before remodeling occurs. This hysteresis prevents wasted energy on transient fluctuations.
+
+MycoFlow implements three hysteresis mechanisms:
+
+\begin{enumerate}
+  \item \textbf{$k$-of-$m$ majority vote} (default $k=3$, $m=5$ cycles): A device's persona changes only when the same class wins in at least 3 of the 5 most recent cycles. This prevents rapid oscillation from momentary traffic spikes.
+  \item \textbf{Two-tick flow stability gate:} A flow-level classification decision is committed only after it has been observed in two consecutive cycles. Short-lived DNS queries and TCP handshakes do not trigger CONNMARK writes.
+  \item \textbf{Action cooldown timers:} WAN bandwidth adjustments are gated by a minimum interval ($\tau = 3$~s) and a maximum action rate ($\rho = 0.5$~Hz), preventing control loop oscillation.
+\end{enumerate}
+
+\subsection{Load-Triggered Remodeling}
+
+When mycelium encounters sustained resource stress, it undergoes structural remodeling: existing pathways widen or narrow, and new growth is redirected. MycoFlow's equivalent is the adaptive baseline and feedback ring:
+
+\begin{itemize}
+  \item \textbf{Sliding EWMA baseline:} The idle RTT and jitter baselines drift toward current conditions at a rate of 1\% per minute, preventing the controller from becoming permanently anchored to favorable boot-time conditions.
+  \item \textbf{Action feedback ring:} A circular buffer records the effects of actuation. If repeated adjustments fail to reduce RTT, the step size is halved, preventing the controller from thrashing.
+  \item \textbf{Per-flow RTT demote/re-promote ladder:} Individual flows that persistently exceed their service RTT target are demoted to a lower-priority class, then re-promoted when conditions recover.
+\end{itemize}
+
+\section{Design Principles}
+
+The mycelial analogy motivates six design principles that constrain every component of MycoFlow:
+
+\begin{enumerate}
+  \item \textbf{Local decision-making:} All classification and control decisions derive from metrics collected on the router itself. No cloud service, SDN controller, or external database is required.
+  \item \textbf{Graceful degradation:} When a sensing channel is unavailable (e.g., eBPF not loaded, DNS cache cold), the system operates with reduced precision rather than failing.
+  \item \textbf{Flash safety:} No state is written to NAND flash during normal operation. All state is RAM-resident and resets cleanly on reboot.
+  \item \textbf{Hysteresis over reactivity:} Stability is preferred over rapid response. A 1-second reaction latency is acceptable in exchange for elimination of oscillation.
+  \item \textbf{Zero DPI, zero ML:} All classification runs from header-visible metadata (IP addresses, ports, packet counts, sizes) and DNS hostnames. No payload bytes are read.
+  \item \textbf{Composability:} MycoFlow augments CAKE; it does not replace it. Removing MycoFlow restores the system to vanilla CAKE behavior.
+\end{enumerate}

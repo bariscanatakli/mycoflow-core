@@ -1,0 +1,105 @@
+\begin{thebibliography}{15}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Gettys and Nichols(2011)]{gettys2012}
+Jim Gettys and Kathleen Nichols.
+\newblock Bufferbloat: Dark buffers in the {Internet}.
+\newblock \emph{ACM Queue}, 9\penalty0 (11):\penalty0 40--54, 2011.
+\newblock \doi{10.1145/2063176.2071893}.
+
+\bibitem[Nichols and Jacobson(2012)]{nichols2012}
+Kathleen Nichols and Van Jacobson.
+\newblock Controlling queue delay.
+\newblock \emph{ACM Queue}, 10\penalty0 (5), 2012.
+
+\bibitem[H{\o}iland-J{\o}rgensen et~al.(2018{\natexlab{a}})]{hoeiland2018}
+Toke H{\o}iland-J{\o}rgensen et~al.
+\newblock Piece of {CAKE}: A comprehensive queue management solution for home
+  gateways.
+\newblock In \emph{Proc.\ IEEE LANMAN}, pages 1--6, 2018{\natexlab{a}}.
+
+\bibitem[H{\o}iland-J{\o}rgensen
+  et~al.(2018{\natexlab{b}})H{\o}iland-J{\o}rgensen, Morton, Taht, and
+  Gettys]{cake2018}
+Toke H{\o}iland-J{\o}rgensen, Jonathan Morton, Dave Taht, and Jim Gettys.
+\newblock The {CAKE} algorithm for network shaping and {AQM}.
+\newblock In \emph{Proc.\ IETF Applied Networking Research Workshop},
+  2018{\natexlab{b}}.
+
+\bibitem[Nichols et~al.(1998)Nichols, Blake, Baker, and Black]{rfc2474}
+Kathleen Nichols, Steven Blake, Fred Baker, and David Black.
+\newblock Definition of the differentiated services field ({DS} field) in the
+  {IPv4} and {IPv6} headers.
+\newblock Technical Report RFC 2474, IETF, 1998.
+
+\bibitem[Pan et~al.(2013)Pan, Natarajan, Piglione, Prabhu, Subramanian, Baker,
+  and VerSteeg]{pan2013pie}
+Rong Pan, Preethi Natarajan, Chiara Piglione, Mythili~S. Prabhu, Vijay
+  Subramanian, Fred Baker, and Bill VerSteeg.
+\newblock {PIE}: A lightweight control scheme to address the bufferbloat
+  problem.
+\newblock In \emph{Proc.\ IEEE HPSR}, pages 148--155, 2013.
+
+\bibitem[Trevisan et~al.(2023)Trevisan, Mellia, Chabanne, and
+  Casas]{ggfast2023}
+Martino Trevisan, Marco Mellia, Romain Chabanne, and Pedro Casas.
+\newblock {GGFAST}: Graph-based generative framework for accurate session-type
+  classification.
+\newblock In \emph{Proc.\ ACM SIGCOMM}, pages 1--14, 2023.
+\newblock \doi{10.1145/3603269.3604840}.
+
+\bibitem[Lotfollahi et~al.(2020)Lotfollahi, Siavoshani, Zade, and
+  Saberian]{lotfollahi2020deep}
+Mohammad Lotfollahi, Mahdi~Jafari Siavoshani, Reza Shirali~Hossein Zade, and
+  Mohammadsadegh Saberian.
+\newblock Deep packet: A novel approach for encrypted traffic classification
+  using deep learning.
+\newblock \emph{Soft Computing}, 24\penalty0 (3):\penalty0 1999--2012, 2020.
+
+\bibitem[Deri et~al.(2014)Deri, Martinasso, Breglia, and Sabetta]{ndpi2022}
+Luca Deri, Maurizio Martinasso, Roberto Breglia, and Marco Sabetta.
+\newblock {nDPI}: Open-source high-speed deep packet inspection.
+\newblock In \emph{Proc.\ IEEE TRAC}, 2014.
+
+\bibitem[Magnani et~al.(2022)Magnani, Risso, and Siracusa]{magnani2022}
+Simone Magnani, Fulvio Risso, and Domenico Siracusa.
+\newblock A control plane enabling automated and fully adaptive network traffic
+  monitoring with {eBPF}.
+\newblock \emph{IEEE Access}, 10:\penalty0 93622--93641, 2022.
+\newblock \doi{10.1109/ACCESS.2022.3202644}.
+
+\bibitem[Dorigo et~al.(1996)Dorigo, Maniezzo, and Colorni]{dorigo1996ant}
+Marco Dorigo, Vittorio Maniezzo, and Alberto Colorni.
+\newblock Ant system: Optimization by a colony of cooperating agents.
+\newblock \emph{IEEE Transactions on Systems, Man, and Cybernetics, Part B},
+  26\penalty0 (1):\penalty0 29--41, 1996.
+
+\bibitem[Adamatzky et~al.(2022)]{adamatzky2022logics}
+Andrew Adamatzky et~al.
+\newblock Logics in fungal mycelium networks.
+\newblock \emph{Logica Universalis}, 16:\penalty0 55--80, 2022.
+
+\bibitem[Fricker et~al.(2017)Fricker, Heaton, Jones, and
+  Boddy]{fricker2017mycelium}
+Mark~D. Fricker, Luke L.~M. Heaton, Nick~S. Jones, and Lynne Boddy.
+\newblock The mycelium as a network.
+\newblock \emph{Microbiology Spectrum}, 5\penalty0 (3), 2017.
+
+\bibitem[Fukasawa et~al.(2023)Fukasawa, Savoury, and
+  Boddy]{fukasawa2023foraging}
+Yu~Fukasawa, Morag Savoury, and Lynne Boddy.
+\newblock Foraging strategies of fungal mycelial networks.
+\newblock \emph{Frontiers in Cell and Developmental Biology}, 2023.
+
+\bibitem[Rojas(2019)]{unicauca2019}
+Juan~Sebastian Rojas.
+\newblock {IP} network traffic flows labeled with 75 apps.
+\newblock Universidad del Cauca, Popayon, Colombia, 2019.
+\newblock URL
+  \url{https://www.kaggle.com/datasets/jsrojas/ip-network-traffic-flows-labeled-with-87-apps}.
+
+\end{thebibliography}

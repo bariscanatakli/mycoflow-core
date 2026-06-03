@@ -1,0 +1,152 @@
+% !TeX root = ../main.tex
+
+\chapter{System Architecture}\label{chapter:architecture}
+
+This chapter describes the overall architecture of MycoFlow, its component modules, and how they interact to form the reflexive control loop.
+
+\section{Overview}
+
+MycoFlow consists of seven components deployed on the OpenWrt router:
+
+\begin{enumerate}
+  \item \textbf{\texttt{mycoflowd}} --- the main control daemon, a single static binary compiled for \texttt{aarch64-openwrt-linux-musl}.
+  \item A \textbf{CAKE qdisc} on the WAN egress interface, configured with \texttt{diffserv4}.
+  \item An optional \textbf{CAKE qdisc on an IFB device} for ingress shaping.
+  \item An \textbf{iptables mangle chain} (\texttt{mycoflow\_dscp}) for per-device DSCP marking.
+  \item An \textbf{iptables mangle POSTROUTING chain} that restores per-flow CONNMARKs to DSCP.
+  \item An optional \textbf{BPF TC~clsact program} that samples passive TCP RTT on the WAN interface.
+  \item A \textbf{LuCI web dashboard} served from \texttt{/tmp/myco\_state.json}.
+\end{enumerate}
+
+The daemon runs at a configurable rate (default 1~Hz) and executes four phases per cycle, as shown in Figure~\ref{fig:arch}:
+
+\begin{enumerate}
+  \item \textbf{Sense:} Collect RTT and jitter via ICMP probes, interface byte/packet counters via \texttt{/proc/net/dev}, qdisc statistics via NETLINK\_ROUTE, flow statistics from \texttt{/proc/net/nf\_conntrack}, passive DNS responses from the local resolver, and per-flow smoothed TCP~RTT from the BPF map.
+  \item \textbf{Infer:} Apply EWMA smoothing to raw metrics; run the six-class per-device persona engine and update the system-wide persona via majority vote; run the three-signal weighted voter over each active 5-tuple to assign a flow-level service class.
+  \item \textbf{Act:} If the persona changed, update CAKE AQM target latency and apply per-device DSCP mangle rules. For each newly stable flow, push a CONNMARK so the iptables mangle POSTROUTING chain restores its DSCP on egress. If a flow's RTT exceeds its service target for two ticks, demote it one tier.
+  \item \textbf{Stabilize:} Record actuation outcomes in the feedback ring; evaluate ring for step-size adaptation; update the sliding baseline.
+\end{enumerate}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  node distance=0.8cm and 0.3cm,
+  blk/.style={draw, thick, rounded corners, minimum height=1.0cm,
+              text width=6cm, align=center, font=\small},
+  arr/.style={-{latex}, thick}
+]
+\node[blk, fill=blue!12]   (sense)  {Sense\\{\small ICMP / Netlink / conntrack / DNS / BPF-RTT}};
+\node[blk, fill=green!12,  below=of sense]  (infer)  {Infer\\{\small 6-persona engine + 12-service voter}};
+\node[blk, fill=orange!12, below=of infer]  (act)    {Act\\{\small CAKE + DSCP + CONNMARK + IFB}};
+\node[blk, fill=red!12,    below=of act]    (stab)   {Stabilize\\{\small baseline + feedback ring + RTT demote}};
+
+\draw[arr] (sense.south) -- node[right,font=\small]{metrics}  (infer.north);
+\draw[arr] (infer.south) -- node[right,font=\small]{persona / service class}  (act.north);
+\draw[arr] (act.south)   -- node[right,font=\small]{outcome}  (stab.north);
+
+\coordinate (lbot) at ($(stab.west)+(-1.5,0)$);
+\coordinate (ltop) at ($(sense.west)+(-1.5,0)$);
+\draw[arr, draw=blue!60!black, ultra thick]
+  (stab.west) -- (lbot) --
+  node[left,font=\small,xshift=-1pt,align=right]{next\\cycle}
+  (ltop) -- (sense.west);
+\end{tikzpicture}
+\caption{MycoFlow reflexive control loop. Each phase executes once per second.}
+\label{fig:arch}
+\end{figure}
+
+\section{Module Structure}
+
+The daemon comprises 20 C11 source modules (Table~\ref{tab:modules}) totalling approximately 4,500 lines of code. The modules are grouped into three layers:
+
+\begin{itemize}
+  \item \textbf{Core 1~Hz reflexive loop:} Sensing, EWMA, congestion detection, actuation, configuration, ubus IPC, and logging.
+  \item \textbf{Per-device persona layer:} Six-class decision tree, per-device state table, majority-vote history window.
+  \item \textbf{Flow-aware v3 layer:} Twelve-class service taxonomy, three-signal classifier, passive DNS cache, CONNMARK push engine, passive RTT observer.
+\end{itemize}
+
+\begin{table}[h]
+\caption{MycoFlow Source Modules and Responsibilities}
+\label{tab:modules}
+\centering
+\small
+{\setlength{\tabcolsep}{6pt}
+\begin{tabular}{p{3.5cm}p{8cm}}
+\toprule
+\textbf{Module} & \textbf{Responsibility} \\
+\midrule
+\multicolumn{2}{l}{\emph{Core reflexive loop}} \\
+\texttt{myco\_sense}      & ICMP multi-ping, \texttt{/proc/net/dev}, CPU load \\
+\texttt{myco\_control}    & EWMA, adaptive thresholds, feedback ring \\
+\texttt{myco\_act}        & \texttt{tc}/\texttt{iptables} actuation, IFB setup \\
+\texttt{myco\_ewma}       & Generic EWMA filter library \\
+\texttt{myco\_netlink}    & NETLINK\_ROUTE qdisc statistics \\
+\texttt{myco\_ebpf}       & BPF map reading, TC hook management \\
+\texttt{myco\_config}     & UCI + environment + compiled defaults \\
+\texttt{myco\_ubus}       & ubus IPC + \texttt{/tmp/myco\_state.json} export \\
+\texttt{myco\_log}        & Structured stdout logging \\
+\midrule
+\multicolumn{2}{l}{\emph{Per-device persona layer}} \\
+\texttt{myco\_persona}    & 6-class decision tree, majority-vote window \\
+\texttt{myco\_flow}       & LRU conntrack table, elephant flow detection \\
+\texttt{myco\_device}     & Per-device persona table, DSCP rule lifecycle \\
+\midrule
+\multicolumn{2}{l}{\emph{Flow-aware v3 layer}} \\
+\texttt{myco\_service}    & 12-class service taxonomy + RTT demote ladder \\
+\texttt{myco\_hint}       & Destination-port hint table \\
+\texttt{myco\_dns}        & Passive DNS snooping cache (hostname$\to$IP) \\
+\texttt{myco\_profile}    & Per-flow behavioral fingerprint \\
+\texttt{myco\_classifier} & 3-signal weighted voter + stability gate \\
+\texttt{myco\_mark}       & \texttt{libnetfilter\_conntrack} CT-mark push \\
+\texttt{myco\_mangle}     & iptables mangle POSTROUTING DSCP restore \\
+\texttt{myco\_rtt}        & libbpf TC-clsact passive TCP RTT observer \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\section{Data Flow}
+
+Figure~\ref{fig:dataflow} illustrates the complete data flow from packet arrival to CAKE tin assignment.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  node distance=0.6cm,
+  box/.style={draw, rounded corners, text width=5cm, align=center, font=\small, minimum height=0.7cm},
+  arr/.style={-{latex}, thick}
+]
+\node[box, fill=gray!15] (pkt) {Incoming Packet};
+\node[box, fill=blue!10, below=of pkt] (ct) {conntrack 5-tuple lookup};
+\node[box, fill=green!10, below=of ct] (cls) {3-signal voter\\(DNS + port + behavior)};
+\node[box, fill=orange!10, below=of cls] (mark) {CONNMARK push\\(libnetfilter\_conntrack)};
+\node[box, fill=red!10, below=of mark] (post) {POSTROUTING DSCP restore\\(iptables mangle)};
+\node[box, fill=purple!10, below=of post] (cake) {CAKE diffserv4 tin selection};
+
+\draw[arr] (pkt) -- (ct);
+\draw[arr] (ct) -- (cls);
+\draw[arr] (cls) -- (mark);
+\draw[arr] (mark) -- (post);
+\draw[arr] (post) -- (cake);
+\end{tikzpicture}
+\caption{Per-flow data path from packet arrival to CAKE tin assignment.}
+\label{fig:dataflow}
+\end{figure}
+
+\section{LuCI Web Dashboard}
+
+The daemon exports a JSON state snapshot to \texttt{/tmp/myco\_state.json} (tmpfs, not NAND flash) every cycle via the ubus IPC mechanism. The LuCI dashboard package reads this file and renders:
+
+\begin{itemize}
+  \item Per-device persona table showing IP address, persona class, DSCP mark, and CAKE tin.
+  \item Per-flow service table showing 5-tuple, service class, current DSCP, RTT, and demotion status.
+  \item Bandwidth cap history graph showing the adaptive adjustment timeline.
+  \item CAKE tin statistics (packets, bytes, average delay) per tin.
+\end{itemize}
+
+The dashboard is entirely read-only; all control decisions are made by the daemon. No runtime configuration changes are made through the LuCI interface during normal operation.
+
+\section{Build System and Deployment}
+
+MycoFlow is built using the OpenWrt SDK with a CMake build system. The binary is statically linked against musl libc, \texttt{libnetfilter\_conntrack}, \texttt{libnfnetlink}, \texttt{libmnl}, and \texttt{libbpf} (optional). The resulting \texttt{mycoflowd} binary is approximately 744~KB on \texttt{aarch64}.
+
+The daemon is managed by OpenWrt's \texttt{procd} process supervisor, which provides automatic restart on crash and log collection to the RAM-resident \texttt{logd} ring buffer. Configuration is stored in OpenWrt UCI (\texttt{/etc/config/mycoflow}) and can be hot-reloaded by sending SIGHUP to the daemon.

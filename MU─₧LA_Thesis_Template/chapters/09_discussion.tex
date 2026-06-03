@@ -1,0 +1,91 @@
+% !TeX root = ../main.tex
+
+\chapter{Discussion}\label{chapter:discussion}
+
+This chapter discusses the interpretation of the experimental results, the limitations of the current system, and the implications for future deployment and research.
+
+\section{Why 38\% and Not More?}
+
+The primary limiting factor in the six-persona scenario (S5) is the gamer's misclassification as UNKNOWN. In the two-client scenario (S3), the gamer correctly enters the Voice tin at 2~$\mu$s average delay---a 5000$\times$ improvement over its unmanaged Best~Effort delay. The misclassification occurs because the \texttt{iperf3} benchmark framework generates additional control flows that inflate the gamer's flow count above the GAMING threshold ($F < 8$).
+
+In real-world deployment, gaming clients (Steam, consoles) generate 1--4 persistent UDP flows at low packet rates with small packets---an unambiguous GAMING signal. The benchmark edge case is an artifact of the test harness, not an inherent limitation of the classifier. Routing benchmark control flows separately from data flows (e.g., via a dedicated management VLAN) would eliminate the false UNKNOWN classification and is expected to push the S5 improvement well beyond 38\%.
+
+\section{Classification Accuracy Discussion}
+
+\subsection{Per-Device Heuristic Design}
+
+The six-persona heuristic was designed for real household device behavior, not for synthetic benchmarks. The decision tree parameters (flow count thresholds, packet size ranges, throughput bounds) were derived from analysis of typical device traffic patterns:
+
+\begin{itemize}
+  \item Real gaming clients: 1--4 persistent UDP flows, small packets (60--120~B), low throughput (50--500~kbps).
+  \item Real streaming clients: 1--3 long-lived TCP connections, large packets (1400~B), high sustained throughput (5--25~Mbps).
+  \item Real VoIP clients: 1--2 UDP flows, very small packets (40--80~B), very low throughput (<100~kbps).
+\end{itemize}
+
+The benchmark edge cases (inflated flow counts, artificially low traffic volumes) do not represent these patterns.
+
+\subsection{In-Vivo Classification Ceiling}
+
+The in-vivo classifier accuracy of 70.4\% tin-matched accuracy represents the current ceiling of the three-signal voter on real-world traffic. The primary bottleneck is the DNS catalog completeness: with only 80 domains, tin-matched accuracy is 67.0\%; with 585 domains, it rises to 70.4\%. Expanding the catalog further is expected to yield additional gains.
+
+The remaining 29.6\% of flows that are incorrectly classified fall into three categories:
+\begin{enumerate}
+  \item \textbf{Encrypted traffic without DNS pre-queries:} Applications that use QUIC or WireGuard tunnels without resolvable hostnames cannot be classified by port hints or DNS.
+  \item \textbf{Non-standard ports:} Applications that use random or dynamic ports not covered by the hint table.
+  \item \textbf{Behavioral ambiguity:} Flows with packet size and rate characteristics that match multiple service classes (e.g., a slow TCP download that resembles a VoIP call).
+\end{enumerate}
+
+\section{Comparison with Two-Persona Results}
+
+The two-persona Phase~1 result (154$\times$ tin delay differential) is a stronger isolation proof than the six-persona 38\% improvement, because in Phase~1 the gamer is correctly classified. Together, the two experiments demonstrate complementary aspects of MycoFlow's effectiveness:
+
+\begin{enumerate}
+  \item \textbf{Ideal case (correct classification):} MycoFlow delivers dramatic isolation (154$\times$ tin delay difference), confirming that DSCP-based steering is highly effective when classification is accurate.
+  \item \textbf{Adversarial case (misclassification):} Even with one device misclassified as UNKNOWN, the system still reduces gaming latency meaningfully (38\%) by isolating high-volume background traffic.
+\end{enumerate}
+
+\section{Adaptive Baseline vs.\ Static Threshold}
+
+The sliding EWMA baseline ensures the controller does not become permanently anchored to favorable boot-time conditions. Consider a router rebooted at 3~AM when ambient RTT is 10~ms: a 30\% margin yields $\theta_r = 13$~ms. Six hours later during peak hours, ambient RTT may be 25~ms; without baseline adaptation, the controller would fire on every cycle. With $\beta = 0.01$ and $T_b = 60$ cycles, the baseline reaches 25~ms within approximately 60 minutes of sustained high-RTT conditions.
+
+\section{Parameter Sensitivity}
+
+MycoFlow's heuristic thresholds ($\alpha=0.30$, $\gamma=0.30$, $k=3$/$m=5$, $\Delta=2{,}000$~kbit/s) were set empirically from a pilot run and have not been varied in a controlled experiment. The parameters with the strongest expected impact are:
+
+\begin{itemize}
+  \item \textbf{Majority-vote window ($k/m$):} A lower ratio increases responsiveness at the cost of more oscillation; a higher ratio increases stability at the cost of slower adaptation.
+  \item \textbf{EWMA factor ($\alpha$):} A higher $\alpha$ accelerates convergence but amplifies noise; a lower $\alpha$ is more stable but slower to react.
+\end{itemize}
+
+A systematic grid search over these parameters is an explicit item in the future work roadmap.
+
+\section{Privacy and Security}
+
+MycoFlow inspects only IP headers and conntrack metadata---no payload bytes are read. The passive DNS snooping captures only DNS response packets (UDP/53 and UDP/853), not the content of encrypted flows. The behavioral fingerprint records only aggregate statistics (mean packet size, packets per second, inter-arrival jitter) that are observable from header information.
+
+The eBPF program is loaded into the kernel with standard capability separation; the userspace daemon runs without root after initial setup (capability dropping is planned for a future release). The ubus interface is protected by OpenWrt's native ACL mechanism; all bandwidth and DSCP commands are rate-limited.
+
+\section{Threats to Validity}
+
+\begin{enumerate}
+  \item \textbf{QEMU overhead:} QEMU introduces CPU overhead not present on bare metal; the FIFO and CAKE-only baselines share this overhead, making relative comparisons valid but absolute latency values slightly inflated.
+
+  \item \textbf{Short scenario duration:} The 30-second scenario duration may exhibit higher variance than longer real-world runs; Phase~3 ($N{=}15$ runs) shows $\sigma{\approx}0.09$~ms on RTT delta, consistent with the estimated $\pm$0.2~ms bound.
+
+  \item \textbf{Benchmark control traffic:} The test harness injects control traffic that inflates flow counts; this is a measurement artifact, not a production scenario.
+
+  \item \textbf{Replayed flow fidelity:} Phase~4 replayed flows preserve per-flow median packet size and rate but not bursty arrival patterns; the behavioral fingerprint signal ($w=0.1$) is consequently weaker than in live deployment.
+
+  \item \textbf{Ground truth quality:} Unicauca uses nDPI-based ground truth, which has its own finite accuracy; a flow labeled \texttt{voip\_call} may in fact be DNS overhead from a VoIP application.
+
+  \item \textbf{Hardware generalization:} Generalization to other consumer SoCs (Qualcomm, Broadcom) is plausible given OpenWrt's portability but not directly measured.
+\end{enumerate}
+
+\section{Limitations}
+
+\begin{itemize}
+  \item MycoFlow does not inspect payload or SNI; encrypted tunnels (QUIC, WireGuard) may fool the packet-size and flow-count heuristics.
+  \item The 1~Hz control rate introduces a reaction latency of up to 1~s between the onset of congestion and the first actuation.
+  \item The voip\_call service class achieves only 1.3\% recall in both ablation modes, a notable weakness caused by the Unicauca dataset conflating multiple application types under the same label.
+  \item The per-flow RTT demote/re-promote ladder is implemented and active on the live router, but a controlled evaluation of its isolated latency impact is deferred to future work.
+\end{itemize}

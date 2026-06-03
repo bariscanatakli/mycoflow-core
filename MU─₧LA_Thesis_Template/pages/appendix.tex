@@ -1,0 +1,120 @@
+\chapter{Additional Materials}\label{chapter:appendix}
+
+Bu bölümde tezde yer almayan ek materyaller sunulmaktadır.
+
+\section{Configuration Parameters Reference}
+
+Table~\ref{tab:cfg_full} provides a complete listing of all MycoFlow UCI configuration parameters, their types, default values, and acceptable ranges.
+
+\begin{table}[h]
+\caption{Complete MycoFlow UCI Configuration Reference}
+\label{tab:cfg_full}
+\centering
+\small
+{\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{4cm}p{1.5cm}p{2cm}p{5cm}}
+\toprule
+\textbf{Parameter} & \textbf{Type} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{sample\_hz}         & float & 1.0     & Sense cycle frequency; range [0.1, 10.0] Hz \\
+\texttt{ewma\_alpha}        & float & 0.30    & EWMA smoothing factor; range (0, 1) \\
+\texttt{rtt\_margin}        & float & 0.30    & Congestion threshold margin $\gamma$; range (0, 1) \\
+\texttt{baseline\_decay}    & float & 0.01    & Baseline drift rate $\beta$; range (0, 0.1) \\
+\texttt{baseline\_interval} & int   & 60      & Cycles between baseline updates \\
+\texttt{bw\_step}           & int   & 2000    & Bandwidth adjustment step (kbit/s) \\
+\texttt{bw\_min}            & int   & 1000    & Minimum WAN cap (kbit/s) \\
+\texttt{bw\_max}            & int   & 1000000 & Maximum WAN cap (kbit/s) \\
+\texttt{action\_cooldown}   & float & 3.0     & Minimum action interval (s) \\
+\texttt{baseline\_samples}  & int   & 5       & Startup calibration sample count \\
+\texttt{per\_device}        & bool  & 1       & Enable per-device DSCP marking \\
+\texttt{flow\_aware}        & bool  & 1       & Enable v3 per-flow classifier + CONNMARK \\
+\texttt{ingress\_enabled}   & bool  & 0       & Enable IFB ingress shaping \\
+\texttt{wan\_interface}     & string & eth0   & WAN interface name \\
+\texttt{probe\_host}        & string & 1.1.1.1 & ICMP probe target host \\
+\texttt{rtt\_bpf\_obj}      & string & ---    & Path to mycoflow\_rtt.bpf.o \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\section{Unicauca Dataset Service Class Mapping}
+
+Table~\ref{tab:unicauca_map} shows the mapping between Unicauca dataset application labels and MycoFlow service classes used in the Phase~4 evaluation.
+
+\begin{table}[h]
+\caption{Unicauca Application Label to MycoFlow Service Class Mapping}
+\label{tab:unicauca_map}
+\centering
+\small
+\begin{tabular}{ll}
+\toprule
+\textbf{Unicauca Label} & \textbf{MycoFlow Service Class} \\
+\midrule
+Game (UDP)     & \texttt{game\_rt} \\
+VoIP           & \texttt{voip\_call} \\
+Video Call     & \texttt{video\_conf} \\
+Live Streaming & \texttt{video\_live} \\
+Video on Demand & \texttt{video\_vod} \\
+Web Browsing   & \texttt{web\_interactive} \\
+File Transfer  & \texttt{file\_sync} \\
+P2P (BitTorrent) & \texttt{torrent} \\
+FTP / Bulk     & \texttt{bulk\_dl} \\
+Game Launcher  & \texttt{game\_launcher} \\
+DNS / System   & \texttt{system} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{CAKE Tin Target Delay Summary}
+
+CAKE's internal AQM target delay is computed from the \texttt{rtt} parameter as $\text{target} \approx \text{rtt}/20$. Table~\ref{tab:cake_targets} shows the AQM targets applied per persona:
+
+\begin{table}[h]
+\caption{Persona-Driven CAKE AQM Target Delays}
+\label{tab:cake_targets}
+\centering
+\small
+\begin{tabular}{lcc}
+\toprule
+\textbf{Persona Group} & \textbf{CAKE rtt param} & \textbf{AQM target} \\
+\midrule
+VOIP, GAMING    & 50~ms  & 2.5~ms \\
+VIDEO           & 75~ms  & 3.75~ms \\
+STREAMING       & 150~ms & 7.5~ms \\
+BULK, TORRENT   & 200~ms & 10~ms \\
+UNKNOWN         & 100~ms & 5~ms (CAKE default) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Build and Installation Instructions}
+
+\subsection{Building from Source}
+
+\begin{lstlisting}[language=bash, basicstyle=\ttfamily\small]
+# Install OpenWrt SDK for aarch64-openwrt-linux-musl
+# Set SDK_PATH to the SDK root directory
+
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=${SDK_PATH}/toolchain.cmake \
+         -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+ctest --output-on-failure  # Run all 13 test suites
+\end{lstlisting}
+
+\subsection{OpenWrt Installation}
+
+\begin{lstlisting}[language=bash, basicstyle=\ttfamily\small]
+# Copy binary to router
+scp mycoflowd root@192.168.1.1:/usr/sbin/
+
+# Install required kernel module (OpenWrt 24.10+)
+opkg install kmod-nf-conntrack-netlink
+
+# Configure via UCI
+uci set mycoflow.main.wan_interface=eth1
+uci set mycoflow.main.flow_aware=1
+uci commit mycoflow
+
+# Start daemon
+/etc/init.d/mycoflow start
+\end{lstlisting}

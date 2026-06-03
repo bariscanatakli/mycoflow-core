@@ -1,0 +1,253 @@
+% !TeX root = ../main.tex
+
+\chapter{Evaluation}\label{chapter:evaluation}
+
+This chapter reports the results of four controlled experiments designed to validate MycoFlow's classification accuracy, QoS performance gains, and resource efficiency.
+
+\section{Experimental Setup}
+
+All QEMU-based experiments run inside a Docker container (privileged mode) hosting a QEMU~6.x virtual machine running OpenWrt~23.05.5~x86-64 (Linux~5.15, \texttt{sch\_cake}, \texttt{iptables-nft}). The WAN link is emulated at 20~Mbit/s using \texttt{tc tbf}. Network namespaces represent distinct client hosts connected via an OpenWrt NAT bridge. \texttt{iperf3} servers listen on ports 5201--5210 in a dedicated server namespace. Latency is measured by 1~Hz ICMP echo requests from the gaming namespace to the server; CAKE tin statistics are collected via \texttt{tc -s qdisc show}. Each scenario runs for 30~seconds with a 3-second settling period before measurement begins.
+
+The in-vivo hardware experiment (Phase~4) runs on the author's live home router: Xiaomi~AX3000T (MediaTek~MT7981B, $2\times$Cortex-A53 @ 1.3~GHz, 256~MB LPDDR4, 128~MB NAND; OpenWrt~24.10.2, Linux~6.6).
+
+\section{Phase 1: Two-Persona Validation}
+
+\subsection{Setup}
+
+Two client namespaces simulate a gamer (192.168.1.10) sending UDP at 300~kbps with 91-byte packets, and a bulk client (192.168.1.20) saturating the link with a single TCP stream. Three scenarios are compared: FIFO (no QoS), CAKE diffserv4 without MycoFlow, and CAKE~+~MycoFlow with two-persona classification.
+
+\subsection{Gaming Latency Results}
+
+Table~\ref{tab:phase1} reports gaming latency under each scenario. FIFO induces 693~ms of queuing delay under link saturation with 12.5\% packet loss---confirming the severity of unbuffered bufferbloat. CAKE eliminates the queuing delay entirely, reducing the loaded latency increase to +0.2~ms with zero packet loss, demonstrating the fundamental effectiveness of AQM. MycoFlow further reduces the loaded latency increase to +0.1~ms.
+
+\begin{table}[h]
+\caption{Phase~1: Two-Persona Gaming Latency (20~Mbit/s WAN)}
+\label{tab:phase1}
+\centering
+\small
+\begin{tabular}{lcccl}
+\toprule
+\textbf{Scenario} & \textbf{Idle (ms)} & \textbf{Loaded (ms)} & \textbf{$\Delta$ (ms)} & \textbf{Loss (\%)} \\
+\midrule
+FIFO (no QoS)     & 0.45 & 693.82 & $+693.4$ & 12.5 \\
+CAKE only         & 0.43 &   0.63 & $+0.2$   & 0.0  \\
+CAKE + MycoFlow   & 0.58 &   0.71 & $+0.1$   & 0.0  \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{CAKE Tin Statistics}
+
+The key result of Phase~1 is the tin-level delay separation (Table~\ref{tab:tins1}). Without MycoFlow, all traffic lands in Best~Effort; peak in-tin delay reaches 6.2~ms. With MycoFlow, the gamer is steered to the Voice tin (CS4) and the bulk client to the Bulk tin (CS1), resulting in a \textbf{154$\times$ difference} in average in-tin delay: Voice at 225~$\mu$s versus Bulk at 34.7~ms.
+
+\begin{table}[h]
+\caption{Phase~1 CAKE Tin Delay: CAKE-only vs.\ MycoFlow}
+\label{tab:tins1}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+ & \multicolumn{2}{c}{\textbf{Avg Delay}} & \multicolumn{2}{c}{\textbf{Packets}} \\
+\textbf{Tin} & CAKE & +MycoFlow & CAKE & +MycoFlow \\
+\midrule
+Voice       & ---    & \textbf{225~$\mu$s} & 0        & 6\,015 \\
+Best Effort & 4.2~ms & 4.2~ms              & 111\,910 & 68\,185 \\
+Bulk        & ---    & 34.7~ms             & 0        & 136\,694 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This result isolates the core contribution of per-device classification: even without flow-level awareness, correctly marking the gamer as GAMING produces a 154$\times$ tin delay advantage over an unmanaged baseline.
+
+\section{Phase 2: Six-Persona Mixed Workload}
+
+\subsection{Setup}
+
+Six client namespaces simulate a realistic home network (Table~\ref{tab:workload}). Five scenarios (S1--S5) cover FIFO, CAKE-only, and MycoFlow configurations in both 2-client and 5-client variants.
+
+\begin{table}[h]
+\caption{Phase~2 Client Workload Profiles}
+\label{tab:workload}
+\centering
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Namespace} & \textbf{Protocol} & \textbf{Rate} & \textbf{Pkt Size} \\
+\midrule
+gamer   & UDP (iperf3)        & 300~kbps   & $\sim$120~B \\
+voip    & UDP (iperf3)        & 64~kbps    & 64~B \\
+video   & UDP bidirectional   & 2~Mbps     & 800~B \\
+stream  & TCP reverse         & 15~Mbps    & 1400~B \\
+torrent & TCP (30 parallel)   & WAN cap    & 1400~B \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Latency Results}
+
+Table~\ref{tab:phase2} summarizes the five-scenario results. The 818$\times$ improvement of CAKE over FIFO (from 558~ms to 0.68~ms) confirms the baseline necessity of AQM. Under the 5-client workload (S4 vs.\ S5), MycoFlow reduces gaming latency by \textbf{38\%} (1.43~ms $\to$ 1.10~ms).
+
+\begin{table}[h]
+\caption{Phase~2 Gaming Latency: Five Scenarios}
+\label{tab:phase2}
+\centering
+\small
+\begin{tabular}{clccc}
+\toprule
+\textbf{\#} & \textbf{Scenario} & \textbf{Idle (ms)} & \textbf{Loaded (ms)} & \textbf{$\Delta$ (ms)} \\
+\midrule
+S1 & FIFO              & 0.52 & 558.03 & $+557.5$ \\
+S2 & CAKE, 2-client    & 0.59 &   0.68 & $+0.1$   \\
+S3 & CAKE+MF, 2-pers.  & 0.63 &   0.69 & $+0.1$   \\
+S4 & CAKE, 5-client    & 0.59 &   1.43 & $+0.8$   \\
+S5 & CAKE+MF, 6-pers.  & 0.56 &   1.10 & $+0.5$   \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{CAKE Tin Distribution}
+
+Table~\ref{tab:tins2} compares tin occupancy between S4 (CAKE only) and S5 (MycoFlow). Without MycoFlow, all 191,188 packets share Best~Effort with 42,557 drops and a 9.5~ms average in-tin delay. With MycoFlow, traffic separates across three tins: 95,199 torrent packets move to Bulk (29.9~ms avg delay), 37,237 packets enter Video (252~$\mu$s avg delay), and 59,751 remaining Best~Effort packets experience only 304~$\mu$s average delay. The Voice tin shows 2~$\mu$s average delay for gaming and VoIP.
+
+\begin{table}[h]
+\caption{Phase~2 CAKE Tin Statistics: S4 vs.\ S5}
+\label{tab:tins2}
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+& \multicolumn{2}{c}{\textbf{Avg Delay}} & \multicolumn{2}{c}{\textbf{Packets}} \\
+\textbf{Tin} & S4 & S5 & S4 & S5 \\
+\midrule
+Voice       & ---    & \textbf{2~$\mu$s}   & 1         & 2 \\
+Video       & ---    & 252~$\mu$s          & 0         & 37\,237 \\
+Best Effort & 9.5~ms & 304~$\mu$s          & 191\,188  & 59\,751 \\
+Bulk        & ---    & 29.9~ms             & 0         & 95\,199 \\
+\midrule
+Drops       & 42\,557 & 34\,528            & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The 38\% improvement operates through two channels: direct isolation (95,199 torrent packets moved to Bulk) and Best~Effort de-congestion (fewer competing flows allow CAKE's per-flow fair queuing to more effectively isolate gaming ICMP packets, reducing Best~Effort delay from 9.5~ms to 304~$\mu$s).
+
+\section{Phase 3: Single-IP Multi-App Flow Separation}
+
+\subsection{Motivation}
+
+Phase~2 edge cases reveal a structural limitation of per-device classification: when a single host runs multiple applications simultaneously, one persona must be chosen for all traffic. Phase~3 tests whether the v3 flow-aware classifier resolves this limitation.
+
+\subsection{Setup}
+
+All four applications run from the same \texttt{gamer} network namespace (single src~IP 192.168.1.10): a UDP stream to port 27015 (\textsc{game\_rt}), a UDP stream to port 3478 (\textsc{voip\_call}), a TCP stream to port 9000 (\textsc{bulk\_dl}), and a 20-way parallel TCP stream to port 6881 (\textsc{torrent}). Two modes are compared over $N=15$ independent runs: Mode~A (\texttt{flow\_aware=0}, per-device only) and Mode~B (\texttt{flow\_aware=1}, per-flow v3).
+
+\subsection{Results}
+
+Table~\ref{tab:phase3} reports the $N{=}15$ multi-run results. In Mode~A, the 20-way torrent stream dominates the per-device persona vote, assigning CS1 (Bulk tin) to all four applications; only 3 Voice-tin packets per run are observed. In Mode~B, the \textsc{game\_rt} and \textsc{voip\_call} streams receive EF and fill the Voice tin with $14{,}193 \pm 21$ packets per run ($p < 10^{-40}$, Welch $t$-test). ICMP RTT delta is significantly lower in Mode~B ($0.216$ vs.\ $0.292$~ms, $p = 0.020$).
+
+\begin{table}[h]
+\centering
+\caption{Phase~3: Per-Device vs.\ Per-Flow Under Single-IP Multi-App Load ($N{=}15$ runs)}
+\label{tab:phase3}
+\begin{tabular}{lrrrr}
+\toprule
+Mode & Voice-tin (pkts) & $\Delta$RTT (ms) & 95\% CI (ms) & $p$ \\
+\midrule
+Per-device (v2) & $3 \pm 1$         & $0.292$ & $[0.241,\,0.343]$ & --- \\
+Per-flow   (v3) & $14{,}193 \pm 21$ & $0.216$ & $[0.173,\,0.259]$ & $0.020$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Phase 4: DNS Signal Ablation and In-Vivo Classifier Accuracy}
+
+\subsection{Motivation}
+
+Phases~1--3 measure QoS outcome on synthetic QEMU workloads. Phase~4 directly quantifies classifier accuracy on real-world traffic using the public Universidad del Cauca (Unicauca) dataset~\cite{unicauca2019} (2.4M labeled flows captured April--June 2019 at a university gateway).
+
+\subsection{Offline Temporal Validation}
+
+The dataset is split at 2019-06-01: calibration (Apr--May) and a held-out set (June). No development decisions were made after inspecting the June partition. Table~\ref{tab:temporal} shows that the calibration-to-holdout accuracy gap is at most $-0.44$~pt, confirming that MycoFlow's heuristic thresholds generalize across the calibration boundary without temporal overfitting.
+
+\begin{table}[h]
+\caption{Temporal Generalization Gap on the Unicauca Dataset}
+\label{tab:temporal}
+\centering
+\small
+\begin{tabular}{l|cc|c}
+\toprule
+\textbf{Signal Set} & \textbf{Apr--May} & \textbf{June (held-out)} & $\Delta$ \\
+\midrule
+Port + behavior       & 42.95\% & 42.51\% & $-$0.44 \\
+Port + behavior + DNS & 47.43\% & 47.04\% & $-$0.39 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{In-Vivo Validation}
+
+For each of 11 service classes, $N=150$ flows are drawn via stratified random sampling (seed=42) from Unicauca and replayed against the live Xiaomi~AX3000T in two ablation modes:
+\begin{itemize}
+  \item \textbf{Mode~A (IP-only):} Traffic directed to fixed public IPs without prior DNS queries; $h_{dns}=0$ for all flows.
+  \item \textbf{Mode~B (hostname):} A DNS A-record query for the flow's canonical hostname is issued before traffic begins.
+\end{itemize}
+
+Table~\ref{tab:invivo} reports the results across five runs on two testbeds (WSL2 laptop and bare-metal Ubuntu~24.04).
+
+\begin{table}[h]
+\caption{In-Vivo Classifier Accuracy ($N=1{,}650$ stratified-random flows, Wilson 95\% CI for the best run)}
+\label{tab:invivo}
+\centering
+\small
+{\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l|ccc}
+\toprule
+\textbf{Run} & \textbf{Svc-acc} & \textbf{Tin-acc} & \textbf{Tin-match} \\
+\midrule
+WSL    Mode~A             & 20.00\% & 30.42\% & 49.46\% \\
+WSL    Mode~B             & 32.48\% & 45.39\% & 64.42\% \\
+Ubuntu Mode~A             & 20.24\% & 30.61\% & 49.26\% \\
+Ubuntu Mode~B (80 dom.)   & 33.39\% & 48.61\% & 66.97\% \\
+Ubuntu Mode~B (585 dom.)  & \textbf{37.88\%} & \textbf{52.42\%} & \textbf{70.41\%} \\
+                          & [35.6, 40.3] & [50.0, 54.8] & [67.6, 73.1] \\
+\midrule
+\multicolumn{4}{l}{\footnotesize Mode A vs.\ B invariance (WSL vs.\ Ubuntu): $|\Delta| < 0.5$~pt} \\
+\multicolumn{4}{l}{\footnotesize DNS lift: $+17.6$~pt svc-acc, $+21.2$~pt tin-match (585-domain)} \\
+\multicolumn{4}{l}{\footnotesize McNemar ($p < 10^{-63}$): $b{=}291$, $c{=}0$} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+The tin-matched accuracy with the full 585-domain DNS catalog reaches \textbf{70.41\%} [67.6\%, 73.1\%] on the bare-metal Ubuntu testbed. McNemar's paired test rejects the null of equal classifiers at $p = 1.8{\times}10^{-63}$: 291 flows are correctly assigned by Mode~B but missed by Mode~A, and \emph{zero} flows are degraded by DNS evidence---DNS is strictly additive.
+
+\subsection{AF\_PACKET Requirement}
+
+A naive implementation using \texttt{AF\_INET SOCK\_RAW} captures only packets destined for the router's own IP, missing transit DNS from clients with hard-coded public resolvers (1.1.1.1, 8.8.8.8). In a pre-fix run, Mode~B accuracy (19.1\%) was statistically indistinguishable from Mode~A (18.6\%). Replacing the socket with \texttt{AF\_PACKET SOCK\_DGRAM ETH\_P\_IP} captures all IPv4 frames on the LAN-facing interface; after the fix, Mode~B reached 32.5\% vs.\ Mode~A's 20.0\%---a $+12.5$~pt lift ($p < 10^{-44}$).
+
+\section{Resource Overhead}
+
+Table~\ref{tab:resources} summarizes the resource footprint measured on the live Xiaomi~AX3000T with the full v3 stack active ($n{=}523$ clean one-second samples during normal residential traffic).
+
+\begin{table}[h]
+\caption{Resource Overhead (AX3000T, \texttt{/proc}-sampled, $n{=}523$ samples, full v3 stack)}
+\label{tab:resources}
+\centering
+\small
+{\setlength{\tabcolsep}{5pt}
+\begin{tabular}{l|ccc}
+\toprule
+\textbf{Metric} & \textbf{p50} & \textbf{p95} & \textbf{max} \\
+\midrule
+System CPU (\%)      & 17  & 43  & 61  \\
+mycoflowd CPU (\%)   & 6   & 8   & 12  \\
+Conntrack entries    & 357 & 442 & 503 \\
+CT marks active      & 56  & 79  & 117 \\
+\midrule
+mycoflowd RSS        & \multicolumn{3}{c}{\textbf{1{,}152~KB (constant)}} \\
+Flash (mtd)          & \multicolumn{3}{c}{0 writes} \\
+Crashes              & \multicolumn{3}{c}{0 / 523} \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Key observations: (1) RSS held constant at 1,152~KB across all 523 samples---the daemon is allocation-static after startup; (2) median CPU is 6\% on a single 1.3~GHz A53 core; (3) median 56 conntrack entries carry per-flow CT marks, confirming the CONNMARK pipeline is operational; (4) zero flash writes and zero crashes across the measurement window.

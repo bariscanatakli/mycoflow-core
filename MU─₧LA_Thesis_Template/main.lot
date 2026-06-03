@@ -1,0 +1,34 @@
+\babel@toc {english}{}\relax 
+\babel@toc {english}{}\relax 
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Comparison of Related QoS Approaches. Emb.=runs fully on CPE; Auto=automatic classification; No~ML=no ML model required; No~DPI=no payload inspection; Adapt=runtime adaptation.}}{10}{table.caption.4}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Mycelial Principles Mapped to MycoFlow Mechanisms}}{12}{table.caption.5}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {5.1}{\ignorespaces MycoFlow Source Modules and Responsibilities}}{17}{table.caption.7}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {6.1}{\ignorespaces Persona Inference Decision Table (first matching rule wins)}}{20}{table.caption.9}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces Persona-to-DSCP-to-CAKE-Tin Mapping}}{21}{table.caption.10}%
+\contentsline {table}{\numberline {6.3}{\ignorespaces Flow-Level Service Taxonomy}}{21}{table.caption.11}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {7.1}{\ignorespaces Key Configuration Parameters and Compiled Defaults}}{26}{table.caption.12}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {8.1}{\ignorespaces Phase~1: Two-Persona Gaming Latency (20~Mbit/s WAN)}}{29}{table.caption.13}%
+\contentsline {table}{\numberline {8.2}{\ignorespaces Phase~1 CAKE Tin Delay: CAKE-only vs.\ MycoFlow}}{29}{table.caption.14}%
+\contentsline {table}{\numberline {8.3}{\ignorespaces Phase~2 Client Workload Profiles}}{29}{table.caption.15}%
+\contentsline {table}{\numberline {8.4}{\ignorespaces Phase~2 Gaming Latency: Five Scenarios}}{30}{table.caption.16}%
+\contentsline {table}{\numberline {8.5}{\ignorespaces Phase~2 CAKE Tin Statistics: S4 vs.\ S5}}{30}{table.caption.17}%
+\contentsline {table}{\numberline {8.6}{\ignorespaces Phase~3: Per-Device vs.\ Per-Flow Under Single-IP Multi-App Load ($N{=}15$ runs)}}{31}{table.caption.18}%
+\contentsline {table}{\numberline {8.7}{\ignorespaces Temporal Generalization Gap on the Unicauca Dataset}}{32}{table.caption.19}%
+\contentsline {table}{\numberline {8.8}{\ignorespaces In-Vivo Classifier Accuracy ($N=1{,}650$ stratified-random flows, Wilson 95\% CI for the best run)}}{32}{table.caption.20}%
+\contentsline {table}{\numberline {8.9}{\ignorespaces Resource Overhead (AX3000T, \texttt {/proc}-sampled, $n{=}523$ samples, full v3 stack)}}{33}{table.caption.21}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {A.1}{\ignorespaces Complete MycoFlow UCI Configuration Reference}}{41}{table.caption.22}%
+\contentsline {table}{\numberline {A.2}{\ignorespaces Unicauca Application Label to MycoFlow Service Class Mapping}}{42}{table.caption.23}%
+\contentsline {table}{\numberline {A.3}{\ignorespaces Persona-Driven CAKE AQM Target Delays}}{42}{table.caption.24}%
+\addvspace {10\p@ }
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

@@ -1,0 +1,118 @@
+% !TeX root = ../main.tex
+
+\chapter{Implementation}\label{chapter:implementation}
+
+This chapter describes the concrete implementation choices that realize MycoFlow's architecture on OpenWrt embedded hardware, including CAKE integration, ingress shaping, eBPF telemetry, configuration management, flash safety, and test coverage.
+
+\section{CAKE Integration}
+
+CAKE is configured with \texttt{diffserv4} and a \texttt{rtt} parameter that sets the AQM target delay. MycoFlow sets the CAKE \texttt{rtt} value per persona on the egress (WAN) interface using \texttt{tc qdisc change}:
+
+\begin{itemize}
+  \item VOIP / GAMING $\to$ 50~ms AQM target
+  \item VIDEO $\to$ 75~ms AQM target
+  \item STREAMING $\to$ 150~ms AQM target
+  \item BULK / TORRENT $\to$ 200~ms AQM target
+\end{itemize}
+
+The actuation uses \texttt{change} first and falls back to \texttt{replace} if the qdisc does not yet exist, ensuring idempotent operation. The CAKE \texttt{rtt} parameter affects the internal AQM target delay as $\text{target} \approx \text{rtt}/20$, so setting \texttt{rtt=50ms} yields a 2.5~ms AQM target in the GAMING persona.
+
+\section{Per-Device DSCP Mangle Chain}
+
+Per-device DSCP marking is implemented via an iptables mangle chain inserted before POSTROUTING:
+
+\begin{enumerate}
+  \item At startup, MycoFlow creates the \texttt{mycoflow\_dscp} chain and adds a jump rule in the PREROUTING table.
+  \item When a device's persona is assigned, an iptables rule is added: \texttt{-s <device\_ip> -j DSCP --set-dscp-class <class>}.
+  \item When the persona changes, the old rule is removed and a new rule is inserted atomically via a two-step \texttt{iptables -D} / \texttt{iptables -I} sequence.
+  \item At shutdown, the chain is flushed and the jump rule is removed.
+\end{enumerate}
+
+This approach ensures that DSCP marking persists even if the daemon is briefly restarted, as the iptables rules survive daemon restarts.
+
+\section{Per-Flow CONNMARK Pipeline}
+
+The per-flow classification pipeline requires two iptables mangle rules that work in concert:
+
+\begin{enumerate}
+  \item \textbf{CONNMARK restore rule} (PREROUTING): Restores the stored conntrack mark to the packet mark at ingress: \texttt{-m conntrack --ctstate ESTABLISHED,RELATED -j CONNMARK --restore-mark}.
+  \item \textbf{DSCP restore rule} (POSTROUTING): Sets the DSCP field from the packet mark: \texttt{-m mark ! --mark 0 -j DSCP --set-dscp-from-mark}.
+\end{enumerate}
+
+When the daemon classifies a flow as a specific service class, it calls \texttt{nfct\_query(NFCT\_Q\_UPDATE)} via \texttt{libnetfilter\_conntrack} to set the conntrack entry's mark to the service tag. All subsequent packets of that flow automatically receive the correct DSCP mark without re-running the classifier.
+
+\subsection{Critical Kernel Module Dependency}
+
+Per-flow CONNMARK updates via \texttt{nfct\_query(NFCT\_Q\_UPDATE)} require \texttt{kmod-nf-conntrack-netlink}, the kernel module that registers the conntrack netlink subsystem. This module is not installed by default on OpenWrt~24.10. The daemon detects this condition at runtime and logs a warning if CONNMARK updates fail with \texttt{EINVAL}. Installing the package (\texttt{opkg install kmod-nf-conntrack-netlink}) resolves the issue. This dependency is not documented in any OpenWrt QoS guide identified during this research.
+
+\section{Ingress Shaping via IFB}
+
+Download-side bufferbloat is addressed using an Intermediate Functional Block (IFB) device. At startup, MycoFlow:
+\begin{enumerate}
+  \item Creates and brings up \texttt{ifb0}.
+  \item Attaches a \texttt{tc mirred} ingress redirect from the WAN interface to \texttt{ifb0}.
+  \item Installs a CAKE qdisc on \texttt{ifb0} with the same \texttt{diffserv4} mode and a configurable ingress rate.
+\end{enumerate}
+
+Persona-driven AQM target updates are applied symmetrically to both the egress and ingress CAKE instances. The ingress bandwidth cap tracks egress adaptations: whenever the egress cap is adjusted by $\delta$~kbit/s, the ingress cap is adjusted by the same $\delta$ to maintain proportionality.
+
+\section{eBPF Telemetry}
+
+A BPF program (\texttt{mycoflow.bpf.c}) is compiled for the TC hook using \texttt{clang -target bpf -g} with BTF generation. The program samples passive TCP RTT from the TCP timestamp option (TSval/TSecr pair) and records the elapsed time, maintaining a smoothed per-flow RTT in a \texttt{BPF\_MAP\_TYPE\_HASH} map keyed by 5-tuple.
+
+The eBPF integration is optional: when \texttt{libbpf} is unavailable or loading fails (e.g., kernel BTF not available), the daemon falls back gracefully to netlink-only statistics. The LuCI dashboard renders \texttt{rtt\_ms=0} for all flows and suppresses the demotion indicator when BPF is inactive.
+
+\section{Configuration Hierarchy}
+
+Parameters are resolved in priority order: OpenWrt UCI (\texttt{/etc/config/mycoflow}) $\to$ environment variables $\to$ compiled defaults. Key defaults are summarized in Table~\ref{tab:cfg}.
+
+\begin{table}[h]
+\caption{Key Configuration Parameters and Compiled Defaults}
+\label{tab:cfg}
+\centering
+\small
+{\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{4cm}p{1.2cm}p{7cm}}
+\toprule
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\midrule
+\texttt{sample\_hz}         & 1.0  & Sense cycle frequency (Hz) \\
+\texttt{ewma\_alpha}        & 0.30 & EWMA smoothing factor $\alpha$ \\
+\texttt{rtt\_margin}        & 0.30 & Congestion margin $\gamma$ \\
+\texttt{baseline\_decay}    & 0.01 & Baseline drift rate $\beta$ \\
+\texttt{baseline\_interval} & 60   & Cycles between baseline updates \\
+\texttt{bw\_step}           & 2000 & BW step $\Delta$ (kbit/s) \\
+\texttt{action\_cooldown}   & 3.0  & Min. action interval (s) \\
+\texttt{baseline\_samples}  & 5    & Startup calibration samples \\
+\texttt{per\_device}        & 1    & Enable per-device DSCP marking \\
+\texttt{flow\_aware}        & 1    & Enable v3 per-flow classifier + CONNMARK \\
+\texttt{rtt\_bpf\_obj}      & ---  & Path to \texttt{mycoflow\_rtt.bpf.o} \\
+\texttt{ingress\_enabled}   & 0    & Enable IFB ingress shaping \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+All parameters can be changed at runtime via \texttt{uci set} followed by \texttt{kill -HUP \$(pidof mycoflowd)} (SIGHUP triggers config reload and baseline recalibration without daemon restart).
+
+\section{Flash Safety}
+
+The daemon is designed to write zero bytes to NAND flash during normal operation---a critical requirement for routers with limited flash endurance. The target Xiaomi~AX3000T has 128~MB NAND with a write endurance of approximately $10^5$ program/erase cycles per block.
+
+All state is RAM-resident:
+\begin{itemize}
+  \item Log output $\to$ \texttt{stdout} $\to$ \texttt{procd} $\to$ \texttt{logd} ring buffer (RAM, typically 64~KB).
+  \item State snapshot \texttt{/tmp/myco\_state.json} $\to$ \texttt{tmpfs} (RAM disk, automatically cleared on reboot).
+  \item Persona history and baseline values: in-process RAM variables; intentionally reset on reboot to ensure fresh baseline calibration.
+\end{itemize}
+
+\section{Test Coverage}
+
+Thirteen CTest suites cover all modules across the core loop, the per-device persona layer, and the v3 flow-aware layer. All 13/13 suites pass (approximately 190 assertions total):
+
+\begin{itemize}
+  \item \emph{Core:} \texttt{test\_ewma} (EWMA convergence with $\alpha \in \{0.1, 0.3, 0.9\}$); \texttt{test\_act} (IFB setup/teardown, interface-name injection guard, DSCP rule lifecycle); \texttt{test\_control} (congestion, clear, outlier, feedback-ring); \texttt{test\_config} (UCI parsing, env overrides, boundary clamping).
+
+  \item \emph{Persona layer:} \texttt{test\_persona} (6-class decision tree, majority vote, edge cases); \texttt{test\_device} (per-device aggregation, stale eviction, DSCP rule updates).
+
+  \item \emph{Flow-aware v3:} \texttt{test\_service} (12-class taxonomy + demote ladder); \texttt{test\_hint} (destination-port hint table); \texttt{test\_dns} (passive DNS snoop cache, TTL expiry); \texttt{test\_profile} (behavioral fingerprint scoring); \texttt{test\_classifier} (3-signal voter, stability gate, mark commit); \texttt{test\_mangle} (nftables DSCP-restore rule generation); \texttt{test\_rtt} (BPF map parsing, demote/re-promote hysteresis).
+\end{itemize}

@@ -1,0 +1,59 @@
+% !TeX root = ../main.tex
+
+\chapter{Introduction}\label{chapter:introduction}
+
+The modern household router is the single most critical network device for millions of users, yet it typically operates a fixed, administrator-configured Quality of Service (QoS) policy that was set at installation time and never updated. Meanwhile, the application mix on a home network changes continuously: a gaming session demands sub-5~ms latency, a video conference requires stable 200--400~kbps throughput with jitter below 15~ms, a streaming client needs 8--25~Mbps without packet loss, and a background BitTorrent process competes for any remaining bandwidth with hundreds of simultaneous TCP connections.
+
+\textbf{Bufferbloat}~\cite{gettys2012}---the phenomenon where excess queuing inside network devices inflates round-trip time by hundreds of milliseconds---remains the dominant cause of degraded user experience on home networks. A single saturating TCP flow can fill a 1000-packet FIFO queue in under 100~ms on a 20~Mbit/s WAN link, rendering gaming and VoIP completely unusable until the flow terminates.
+
+Active Queue Management (AQM) algorithms such as CoDel~\cite{nichols2012}, fq\_CoDel~\cite{hoeiland2018}, and CAKE~\cite{cake2018} have made significant progress against bufferbloat. CAKE in particular, which is the default AQM on OpenWrt since version~22.03, combines shaping, per-flow fair queuing, and Differentiated Services (DiffServ) priority tins in a single qdisc. However, two fundamental challenges remain unsolved for home deployments:
+
+\begin{itemize}
+  \item \textbf{No automatic traffic classification.} CAKE's diffserv mode relies on DSCP markings in IP headers. On home networks, most traffic arrives with CS0 (Best Effort) markings, so every flow---gaming, streaming, torrent---lands in the same tin regardless of its latency sensitivity.
+  \item \textbf{Static WAN rate limit.} The CAKE bandwidth parameter is set once at installation. It cannot react to congestion detected through probe-based measurements or queue depth signals.
+\end{itemize}
+
+\section{Research Background}
+
+Home network quality has become increasingly important as remote work, online gaming, and video streaming have become everyday activities. Despite advances in AQM, two layers of the problem remain unaddressed: intelligent classification of application types and dynamic adaptation of the bandwidth cap.
+
+The biological concept of mycelial networks---the underground root-like structures of fungi---provides an unexpectedly apt analogy for the home router control problem. A fungal mycelium continuously senses its environment through hyphal tips, redistributes nutrients adaptively using hysteresis-controlled transport, and restructures itself in response to persistent stress. These same principles---local sensing, hysteresis, and adaptive redistribution---map directly to the challenges of home QoS.
+
+\subsection{Problem Definition}
+
+Current home router QoS solutions face three structural limitations:
+
+\begin{enumerate}
+  \item Traffic classification requires manual configuration by technically skilled administrators, which is unavailable to most residential users.
+  \item Per-device classification fails when a single host runs multiple application types simultaneously (e.g., a gaming session and a background torrent).
+  \item Bandwidth caps are static and do not respond to real-time congestion signals.
+\end{enumerate}
+
+\section{Objectives and Contributions}
+
+This thesis presents \textbf{MycoFlow}, a lightweight C11 daemon that addresses all three problems. Its primary objective is to enable automatic, zero-touch QoS management on consumer-grade OpenWrt routers without requiring DPI, machine learning, or external cloud infrastructure.
+
+The specific contributions of this work are:
+
+\begin{enumerate}
+  \item A \textbf{six-class per-device persona engine} and a \textbf{twelve-class per-flow service taxonomy}, both operating without DPI or machine learning, connected by a three-signal weighted voter (passive DNS snooping, destination-port hints, behavioral fingerprints) and a CONNMARK-based DSCP pipeline.
+  \item A \textbf{passive BPF TCP RTT observer} (TC~clsact hook) and a \textbf{feedback-driven hysteresis controller} with sliding EWMA baseline for WAN bandwidth adaptation.
+  \item A \textbf{practical architectural fix} for in-router DNS sniffing, demonstrating that \texttt{AF\_INET SOCK\_RAW} silently misses transit DNS from clients that bypass the local resolver.
+  \item An \textbf{in-vivo DNS signal ablation} ($N=1{,}650$ stratified-random flows) with Wilson 95\% confidence intervals and paired McNemar testing.
+\end{enumerate}
+
+\section{Thesis Structure}
+
+The remainder of this thesis is organized as follows:
+
+\begin{itemize}
+  \item \textbf{Chapter~\ref{chapter:background}}: Provides background on bufferbloat, AQM algorithms, CAKE, and DiffServ.
+  \item \textbf{Chapter~\ref{chapter:related}}: Surveys related work in traffic classification, adaptive QoS, and bio-inspired networking.
+  \item \textbf{Chapter~\ref{chapter:design}}: Presents the bio-inspired design rationale and mapping of mycelial principles.
+  \item \textbf{Chapter~\ref{chapter:architecture}}: Describes the system architecture and module structure.
+  \item \textbf{Chapter~\ref{chapter:control}}: Formalizes the reflexive control loop and its mathematical foundations.
+  \item \textbf{Chapter~\ref{chapter:implementation}}: Details the implementation choices, CAKE integration, eBPF telemetry, and flash safety.
+  \item \textbf{Chapter~\ref{chapter:evaluation}}: Reports results from four controlled experiments.
+  \item \textbf{Chapter~\ref{chapter:discussion}}: Discusses findings, limitations, and implications.
+  \item \textbf{Chapter~\ref{chapter:conclusion}}: Concludes and outlines future work.
+\end{itemize}

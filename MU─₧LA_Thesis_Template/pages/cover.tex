@@ -1,0 +1,28 @@
+\begin{titlepage}
+  \oddsidemargin=\evensidemargin\relax
+  \textwidth=\dimexpr\paperwidth-2\evensidemargin-2in\relax
+  \hsize=\textwidth\relax
+
+  \centering
+
+  \IfFileExists{logos/image.png}{%
+    \includegraphics[height=20mm]{logos/image.png}
+  }{%
+    \vspace*{20mm}
+  }
+
+  \vspace{20mm}
+  {\large\MakeUppercase{\getUniversity()}}\\
+
+  \vspace{30mm}
+  {\Large \getDoctype{}}
+
+  \vspace{20mm}
+  {\huge\bfseries \getTitle{}}
+
+  \vspace{30mm}
+  {\LARGE \getAuthor{}}
+
+  \vfill{}
+  {\normalsize \getSubmissionLocation{}, \getSubmissionDate{}}
+\end{titlepage}

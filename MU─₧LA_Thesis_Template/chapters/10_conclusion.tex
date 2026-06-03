@@ -1,0 +1,65 @@
+% !TeX root = ../main.tex
+
+\chapter{Conclusion}\label{chapter:conclusion}
+
+This thesis has presented MycoFlow, a bio-inspired reflexive QoS daemon for OpenWrt routers that addresses the two fundamental limitations of consumer-grade home network management: the inability to automatically classify traffic without DPI or machine learning, and the inability to adapt the WAN bandwidth cap to real-time congestion signals.
+
+\section{Summary of Contributions}
+
+The primary contributions of this work are:
+
+\begin{enumerate}
+  \item \textbf{A two-level traffic classification architecture} combining a six-class per-device persona engine (operating on aggregate device-level behavioral metrics) and a twelve-class per-flow service taxonomy (operating on individual conntrack 5-tuples), both driven by heuristic decision trees without DPI or ML.
+
+  \item \textbf{A three-signal weighted voter} that combines passive DNS snooping, destination-port hints, and behavioral fingerprints with learned weights $(w_{\rm dns}, w_{\rm port}, w_{\rm behav}) = (0.6, 0.3, 0.1)$, enabling robust classification of encrypted traffic where port hints alone fail.
+
+  \item \textbf{A practical AF\_PACKET fix for in-router DNS sniffing}, demonstrating that \texttt{AF\_INET SOCK\_RAW} silently misses transit DNS from clients with hard-coded public resolvers---a trap that reduces DNS classification lift by 12.5 percentage points with no error indication.
+
+  \item \textbf{A feedback-driven hysteresis controller} with sliding EWMA baseline, action feedback ring, and per-flow RTT demote/re-promote ladder, enabling closed-loop bandwidth adaptation without oscillation.
+
+  \item \textbf{A quantitative in-vivo DNS ablation study} ($N=1{,}650$ flows, Universidad del Cauca dataset) with Wilson 95\% confidence intervals and McNemar testing, providing rigorous evidence that passive transit-DNS is the most informative classification signal, lifting tin-matched accuracy from 30\% to 70.4\% ($p < 10^{-63}$, $c=0$ flows degraded).
+\end{enumerate}
+
+\section{Experimental Findings}
+
+Four controlled experiments demonstrate the system's effectiveness:
+
+\begin{itemize}
+  \item \textbf{Phase~1 (two-persona):} A 154$\times$ in-tin delay advantage for gaming over bulk (225~$\mu$s vs.\ 34.7~ms) when per-device classification is correct, confirming that DSCP-based tin steering delivers dramatic isolation.
+
+  \item \textbf{Phase~2 (six-persona, 5 clients):} A 38\% reduction in gaming latency (1.43~ms $\to$ 1.10~ms) under a mixed-persona workload, achieved by isolating 95,199 torrent packets into the Bulk tin and reducing Best~Effort congestion from 9.5~ms to 304~$\mu$s average delay.
+
+  \item \textbf{Phase~3 (single-IP multi-app):} Correct per-flow service separation when a single source IP simultaneously runs game, VoIP, bulk, and torrent traffic, filling the CAKE Voice tin with $14{,}193 \pm 21$ packets per run vs.\ $3 \pm 1$ without per-flow classification ($p < 10^{-40}$).
+
+  \item \textbf{Phase~4 (in-vivo DNS ablation):} Passive transit-DNS lifts tin-matched accuracy from 30\% to 70.4\%, with zero flows degraded by DNS evidence and no temporal overfitting ($\Delta_{\rm cal\to holdout} < 0.5$~pt).
+\end{itemize}
+
+The daemon runs at constant 1,152~KB RSS (including statically linked CONNMARK libraries) with median 6\% CPU on a single 1.3~GHz Cortex-A53 core and writes zero bytes to NAND flash, making it deployable on any OpenWrt-compatible consumer router without hardware modifications.
+
+\section{Bio-Inspired Design Validation}
+
+The bio-inspired design philosophy---local sensing, adaptive redistribution, hysteresis-guided stability, and continuous baseline recalibration---proved well-suited to the embedded QoS domain. Each mycelial principle maps cleanly to an engineering mechanism: hyphal sensing to multi-source metric collection, adaptive transport to DSCP-based tin steering, hysteresis to majority-vote stability, and load-triggered remodeling to sliding baseline adaptation.
+
+The system achieves its objectives without requiring external infrastructure: no cloud service, SDN controller, model training pipeline, or payload inspection capability is needed. This design simplicity is both a practical advantage for consumer deployment and a validation of the mycelial analogy---complex adaptive behavior emerging from simple local rules.
+
+\section{Future Directions}
+
+Several extensions are planned for future work:
+
+\begin{itemize}
+  \item \textbf{Cooperative ``mycelium maps'':} Neighboring routers could exchange aggregated congestion signals over a lightweight IPC protocol, enabling coordinated bandwidth adaptation without a central controller.
+
+  \item \textbf{Sub-second eBPF-driven sensing:} Replacing the 1~Hz ICMP probe with \texttt{BPF\_MAP\_TYPE\_RINGBUF}-based event streaming would reduce the congestion detection reaction time from 1~s to under 100~ms.
+
+  \item \textbf{Optional TinyML persona prediction:} A strict 1~MB model budget for a gradient-boosted tree trained on conntrack features could handle encrypted tunnel classification cases that the heuristic decision tree cannot resolve.
+
+  \item \textbf{STUN/RTP application-layer fingerprinting:} Adding recognition of STUN session establishment and RTP header patterns would resolve the voip\_call recall limitation identified in Phase~4.
+
+  \item \textbf{Parameter optimization:} A systematic grid search over $(\alpha, \gamma, k/m, \Delta)$ under controlled workloads would provide principled guidance for parameter selection across different deployment environments.
+
+  \item \textbf{Enterprise deployment:} SDN integration via OpenWrt's ubus IPC would allow coordinated DSCP policy enforcement across managed enterprise-grade deployments.
+\end{itemize}
+
+\section{Acknowledgements}
+
+The author thanks the OpenWrt community for CAKE and the embedded Linux QoS infrastructure; the Linux kernel team for eBPF, conntrack, and netlink subsystems; and the maintainers of QEMU and Docker for enabling reproducible embedded-systems research. Special thanks to Dr.\ Cihat Çetinkaya for guidance throughout this project.
